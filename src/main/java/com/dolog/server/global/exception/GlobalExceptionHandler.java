@@ -1,11 +1,11 @@
 package com.dolog.server.global.exception;
 
-import com.likelion.server.global.exception.jwt.JwtExpiredException;
-import com.likelion.server.global.exception.jwt.JwtInvalidException;
-import com.likelion.server.global.exception.jwt.JwtMalformedException;
-import com.likelion.server.global.exception.jwt.JwtUnsupportedException;
-import com.likelion.server.global.response.ErrorResponse;
-import com.likelion.server.global.response.code.GlobalErrorCode;
+import com.dolog.server.global.exception.jwt.JwtExpiredException;
+import com.dolog.server.global.exception.jwt.JwtInvalidException;
+import com.dolog.server.global.exception.jwt.JwtMalformedException;
+import com.dolog.server.global.exception.jwt.JwtUnsupportedException;
+import com.dolog.server.global.response.ErrorResponse;
+import com.dolog.server.global.response.code.GlobalErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
