@@ -3,7 +3,7 @@ package com.dolog.server.global.response.code;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import static com.likelion.server.global.constant.StaticValue.*;
+import static com.dolog.server.global.constant.StaticValue.*;
 
 @Getter
 @AllArgsConstructor
