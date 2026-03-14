@@ -6,6 +6,7 @@ import com.dolog.server.global.exception.jwt.JwtMalformedException;
 import com.dolog.server.global.exception.jwt.JwtUnsupportedException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -16,14 +17,19 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    // 비밀키
-    private static final String SECRET_KEY = "12345";
+    // 비밀키 (환경변수에서 읽기, 없을 경우 기본값)
+    private final String secretKey;
 
     // 토큰 유효기간
     private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 60;       // 1시간
     private static final long REFRESH_TOKEN_EXPIRATION = 1000 * 60 * 60 * 24 * 7; // 7일
 
-    private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    private final Key key;
+
+    public JwtTokenProvider(@Value("${jwt.secret-key:defaultSecretKeyPleaseChangeThisInProductionEnvironmentWith32BytesOr256Bits}") String secretKey) {
+        this.secretKey = secretKey;
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
 
     /** 1. 토큰 생성 */
     /** Access Token */
