@@ -44,6 +44,7 @@ jobs:
             sudo docker rm be || true
             
             sudo docker run -d --name be \
+              --network dolog-net \
               --env-file ~/.env \
               -v /etc/localtime:/etc/localtime:ro \
               -v /etc/timezone:/etc/timezone:ro \
