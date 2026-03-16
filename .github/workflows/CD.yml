@@ -31,24 +31,26 @@ jobs:
 
             # (프라이빗 레포일 경우) Docker Hub 로그인
             if [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
-            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+              echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
             fi
 
-            echo "${{ secrets.ENV_FILE }}" > /home/${{ secrets.SSH_USER }}/.env
+            echo "${{ secrets.ENV_FILE }}" > ~/.env
+            
             echo "[1/3] Pull latest Docker image..."
-            docker pull ${{ env.IMAGE }}:latest
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/be:latest
 
             echo "[2/3] Restart container with new image..."
-            docker stop be || true
-            docker rm be || true
-            docker run -d --name be \
-              --env-file /home/${{ secrets.SSH_USER }}/.env \
+            sudo docker stop be || true
+            sudo docker rm be || true
+            
+            sudo docker run -d --name be \
+              --env-file ~/.env \
               -v /etc/localtime:/etc/localtime:ro \
               -v /etc/timezone:/etc/timezone:ro \
               -e TZ=Asia/Seoul \
               -p 8080:8080 \
-              ${{ env.IMAGE }}:latest
+              ${{ secrets.DOCKER_USERNAME }}/be:latest
 
 
             echo "[3/3] Cleanup unused images..."
-            docker image prune -f
+            sudo docker image prune -f
