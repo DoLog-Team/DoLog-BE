@@ -1,17 +1,19 @@
 package com.dolog.server.domain.bts.entity;
 
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "bts")
 public class Bts extends BaseEntity {
@@ -22,10 +24,14 @@ public class Bts extends BaseEntity {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
+    @JoinColumn(name = "exhibition_id")
     private Exhibition exhibition;
 
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "artist_id")
+    private Artist artist;
+
+    @Column(length = 255)
     private String title;
 
     @Column(name = "content_url", columnDefinition = "TEXT")
@@ -33,4 +39,23 @@ public class Bts extends BaseEntity {
 
     @Column(name = "main_img", columnDefinition = "TEXT")
     private String mainImg;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "bts", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BtsArtworkMap> artworkMaps = new ArrayList<>();
+
+    public void updateBtsInfo(String title, String contentUrl, String mainImg, Artist artist) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (contentUrl != null) {
+            this.contentUrl = contentUrl;
+        }
+        if (mainImg != null) {
+            this.mainImg = mainImg;
+        }
+        if (artist != null) {
+            this.artist = artist;
+        }
+    }
 }

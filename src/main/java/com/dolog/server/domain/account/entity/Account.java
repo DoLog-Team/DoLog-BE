@@ -31,27 +31,25 @@ public class Account extends BaseEntity {
     @Column(nullable = false)
     private Role role;
 
-    @Column(length = 50)
+    @Column(name = "social_provider", length = 50)
     private String socialProvider;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "account_status")
-    private AccountStatus status;
+    private AccountStatus accountStatus;
 
-    private String name;
-
-    private String nickname;
-
-    public void updateProfile(String name, String nickname) {
-        this.name = name;
-        this.nickname = nickname;
-    }
-
-    public void changePassword(String password) {
-        this.password = password;
-    }
-
-    public void updateStatus(AccountStatus status) {
-        this.status = status;
+    public void update(String password, Role role, String socialProvider, AccountStatus accountStatus) {
+        if (password != null && !password.isBlank()) {
+            this.password = password;
+        }
+        if (role != null) {
+            this.role = role;
+        }
+        if (socialProvider != null) {
+            this.socialProvider = socialProvider;
+        }
+        if (accountStatus != null) {
+            this.accountStatus = accountStatus;
+        }
     }
 }

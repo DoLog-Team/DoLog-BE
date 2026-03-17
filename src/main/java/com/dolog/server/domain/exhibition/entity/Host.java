@@ -8,9 +8,8 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access=AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "hosts")
 public class Host extends BaseEntity {
@@ -21,7 +20,7 @@ public class Host extends BaseEntity {
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
+    @JoinColumn(name = "exhibition_id")
     private Exhibition exhibition;
 
     @Column(nullable = false, length = 100)

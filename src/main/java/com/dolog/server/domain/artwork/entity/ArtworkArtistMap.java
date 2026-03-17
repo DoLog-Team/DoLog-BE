@@ -7,9 +7,8 @@ import lombok.*;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "artwork_artist_maps")
 public class ArtworkArtistMap extends BaseEntity {
@@ -26,6 +25,12 @@ public class ArtworkArtistMap extends BaseEntity {
     @JoinColumn(name = "artist_id", nullable = false)
     private Artist artist;
 
-    @Column(name = "artist_role", length = 50)
+    @Column(name = "artist_role", length = 100, nullable = false)
     private String artistRole;
+
+    public void updateRole(String artistRole) {
+        if (artistRole != null) {
+            this.artistRole = artistRole;
+        }
+    }
 }

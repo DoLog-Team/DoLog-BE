@@ -8,9 +8,8 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "artwork_imgs")
 public class ArtworkImg extends BaseEntity {
@@ -31,5 +30,17 @@ public class ArtworkImg extends BaseEntity {
     private String description;
 
     @Column(name = "order_index")
-    private int orderIndex;
+    private Integer orderIndex;
+
+    public void update(String imageUrl, String description, Integer orderIndex) {
+        if (imageUrl != null) {
+            this.imageUrl = imageUrl;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+        if (orderIndex != null) {
+            this.orderIndex = orderIndex;
+        }
+    }
 }

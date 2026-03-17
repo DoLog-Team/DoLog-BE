@@ -8,9 +8,8 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access=AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "partners")
 public class Partner extends BaseEntity {

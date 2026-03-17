@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.entity;
 
 import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.exhibition.entity.enums.ThemeType;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,12 +34,15 @@ public class Exhibition extends BaseEntity {
     @Column(name = "is_public", nullable = false)
     private boolean isPublic;
 
-    public void updateExhibitionInfo(String univName, String deptName) {
-        this.univName = univName;
-        this.deptName = deptName;
-    }
-
-    public void togglePublicStatus(boolean isPublic) {
-        this.isPublic = isPublic;
+    public void updateBasicInfo(String univName, String deptName, Boolean isPublic) {
+        if (univName != null) {
+            this.univName = univName;
+        }
+        if (deptName != null) {
+            this.deptName = deptName;
+        }
+        if (isPublic != null) {
+            this.isPublic = isPublic;
+        }
     }
 }

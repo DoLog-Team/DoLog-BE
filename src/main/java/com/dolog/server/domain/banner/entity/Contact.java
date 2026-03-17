@@ -6,9 +6,8 @@ import lombok.*;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "contacts")
 public class Contact extends BaseEntity {
@@ -17,9 +16,9 @@ public class Contact extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "image_url")
+    @Column(name = "image_url", length = 255)
     private String imageUrl;
 
-    @Column(name = "consultation_url")
+    @Column(name = "consultation_url", length = 255)
     private String consultationUrl;
 }

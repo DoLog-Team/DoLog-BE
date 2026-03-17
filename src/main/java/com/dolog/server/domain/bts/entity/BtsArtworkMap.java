@@ -7,11 +7,10 @@ import lombok.*;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Table(name = "bts_artwork_maps")
+@Table(name = "bts_artwork_map")
 public class BtsArtworkMap extends BaseEntity {
 
     @Id
@@ -19,10 +18,10 @@ public class BtsArtworkMap extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bts_id", nullable = false)
+    @JoinColumn(name = "bts_id")
     private Bts bts;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "artwork_id", nullable = false)
+    @JoinColumn(name = "artwork_id")
     private Artwork artwork;
 }

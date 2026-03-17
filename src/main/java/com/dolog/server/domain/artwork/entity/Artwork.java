@@ -29,7 +29,7 @@ public class Artwork extends BaseEntity {
     @JoinColumn(name = "zone_id")
     private ExhibitionZone exhibitionZone;
 
-    @Column(nullable = false)
+    @Column(length = 255)
     private String title;
 
     @Column(length = 100)
@@ -39,28 +39,35 @@ public class Artwork extends BaseEntity {
 
     private String size;
 
-    @Column(columnDefinition = "TEXT")
+    @Lob
+    @Column
     private String description;
 
-    @Column(length = 50)
-    private String zone;
-
-    @Column(name = "main_img", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "main_img")
     private String mainImg;
 
     @Column(name = "purchase_url")
     private String purchaseUrl;
 
-    public void updateArtwork(String title, String category, String material, String size, String description, String mainImg) {
-        this.title = title;
-        this.category = category;
-        this.material = material;
-        this.size = size;
-        this.description = description;
-        this.mainImg = mainImg;
+    @Column(name = "zone", length = 50)
+    private String zone;
+
+
+    public void updateBasicInfo(String title, String description, String purchaseUrl) {
+        if (title != null) this.title = title;
+        if (description != null) this.description = description;
+        if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
 
-    public void updateZone(ExhibitionZone zone) {
-        this.exhibitionZone = zone;
+    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone, String material, String size, String mainImg, String purchaseUrl) {
+        if (title != null) this.title = title;
+        if (description != null) this.description = description;
+        if (category != null) this.category = category;
+        if (exhibitionZone != null) this.exhibitionZone = exhibitionZone;
+        if (material != null) this.material = material;
+        if (size != null) this.size = size;
+        if (mainImg != null) this.mainImg = mainImg;
+        if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
 }

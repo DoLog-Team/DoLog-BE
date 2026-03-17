@@ -8,9 +8,8 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "exhibition_maps")
 public class ExhibitionMap extends BaseEntity {
@@ -21,12 +20,15 @@ public class ExhibitionMap extends BaseEntity {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
+    @JoinColumn(name = "exhibition_id")
     private Exhibition exhibition;
 
     @Column(length = 100)
     private String description;
-    
-    @Column(name = "image_url")
-    private String imageUrl;
+
+    public void update(String description) {
+        if (description != null) {
+            this.description = description;
+        }
+    }
 }

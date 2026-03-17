@@ -6,9 +6,8 @@ import lombok.*;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "main_banners")
 public class MainBanner extends BaseEntity {
@@ -17,12 +16,12 @@ public class MainBanner extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "image_url")
+    @Column(name = "image_url", length = 255)
     private String imageUrl;
 
     @Column(name = "order_index")
-    private int orderIndex;
+    private Integer orderIndex;
 
-    @Column(name = "is_visible", nullable = false)
-    private boolean isVisible = true;
+    @Column(name = "is_visible")
+    private Boolean isVisible;
 }

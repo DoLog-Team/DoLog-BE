@@ -9,9 +9,8 @@ import java.util.UUID;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "plans")
 public class Plan extends BaseEntity {
@@ -21,7 +20,7 @@ public class Plan extends BaseEntity {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String name;
 
     @Column(precision = 10, scale = 2)
@@ -30,6 +29,6 @@ public class Plan extends BaseEntity {
     @Column(length = 300)
     private String description;
 
-    @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
+    @Column(name = "is_active")
+    private Boolean isActive = true;
 }

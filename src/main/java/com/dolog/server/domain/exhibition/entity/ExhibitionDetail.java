@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.entity;
 
 import com.dolog.server.domain.exhibition.entity.enums.SortType;
+import com.dolog.server.domain.exhibition.entity.enums.ThemeType;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,7 +26,7 @@ public class ExhibitionDetail extends BaseEntity {
     @JoinColumn(name = "exhibition_id", nullable = false, unique = true)
     private Exhibition exhibition;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String title;
 
     @Column(columnDefinition = "TEXT")
@@ -50,19 +51,51 @@ public class ExhibitionDetail extends BaseEntity {
     private String addressInfo;
 
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     @Column(name = "sort_type", nullable = false)
-    private SortType sortType;
+    private SortType sortType = SortType.ABC;
 
-    public void updateDetails(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate, String address) {
-        this.title = title;
-        this.description = description;
-        this.exhibitionImg = exhibitionImg;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.address = address;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(name = "theme_type")
+    private ThemeType themeType;
 
-    public void updateSortType(SortType sortType) {
-        this.sortType = sortType;
+    @Column(name = "splash_img")
+    private String splashImg;
+
+    public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
+                       String dateInfo, String address, String addressInfo, SortType sortType, ThemeType themeType, String splashImg) {
+        if (title != null) {
+            this.title = title;
+        }
+        if (description != null) {
+            this.description = description;
+        }
+        if (exhibitionImg != null) {
+            this.exhibitionImg = exhibitionImg;
+        }
+        if (startDate != null) {
+            this.startDate = startDate;
+        }
+        if (endDate != null) {
+            this.endDate = endDate;
+        }
+        if (dateInfo != null) {
+            this.dateInfo = dateInfo;
+        }
+        if (address != null) {
+            this.address = address;
+        }
+        if (addressInfo != null) {
+            this.addressInfo = addressInfo;
+        }
+        if (sortType != null) {
+            this.sortType = sortType;
+        }
+        if (themeType != null) {
+            this.themeType = themeType;
+        }
+        if (splashImg != null) {
+            this.splashImg = splashImg;
+        }
     }
 }

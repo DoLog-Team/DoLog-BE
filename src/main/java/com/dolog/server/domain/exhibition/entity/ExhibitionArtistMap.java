@@ -1,6 +1,6 @@
 package com.dolog.server.domain.exhibition.entity;
 
-import com.dolog.server.domain.account.entity.Artist;
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -13,7 +13,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Table(name = "exhibition_artist_maps")
+@Table(name = "exhibition_artist_map")
 public class ExhibitionArtistMap extends BaseEntity {
 
     @Id
@@ -22,11 +22,11 @@ public class ExhibitionArtistMap extends BaseEntity {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
+    @JoinColumn(name = "exhibition_id")
     private Exhibition exhibition;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "artist_id", nullable = false)
+    @JoinColumn(name = "artist_id")
     private Artist artist;
 
     @Enumerated(EnumType.STRING)
