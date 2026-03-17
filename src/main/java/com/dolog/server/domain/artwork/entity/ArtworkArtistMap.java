@@ -1,6 +1,6 @@
 package com.dolog.server.domain.artwork.entity;
 
-import com.dolog.server.domain.account.entity.Artist;
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
