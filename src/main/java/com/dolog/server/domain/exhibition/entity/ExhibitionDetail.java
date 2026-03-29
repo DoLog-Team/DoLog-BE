@@ -62,8 +62,15 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "splash_img")
     private String splashImg;
 
+    @Column(length = 255)
+    private String email;
+
+    @Column(length = 255)
+    private String copyright;
+
     public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                       String dateInfo, String address, String addressInfo, SortType sortType, ThemeType themeType, String splashImg) {
+                       String dateInfo, String address, String addressInfo, SortType sortType, ThemeType themeType, String splashImg,
+                       String email, String copyright) {
         if (title != null) {
             this.title = title;
         }
@@ -96,6 +103,12 @@ public class ExhibitionDetail extends BaseEntity {
         }
         if (splashImg != null) {
             this.splashImg = splashImg;
+        }
+        if (email != null) {
+            this.email = email;
+        }
+        if (copyright != null) {
+            this.copyright = copyright;
         }
     }
 }
