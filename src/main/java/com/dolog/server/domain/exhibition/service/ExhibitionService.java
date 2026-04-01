@@ -1,0 +1,61 @@
+package com.dolog.server.domain.exhibition.service;
+
+import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
+import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMessageResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class ExhibitionService {
+
+    private final ExhibitionRepository exhibitionRepository;
+
+    public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
+        Exhibition exhibition = Exhibition.builder()
+                .account(null) // TODO: JWT 연동 후 인증된 계정으로 교체
+                .univName(request.getUnivName())
+                .deptName(request.getDeptName())
+                .isPublic(request.getIsPublic() != null ? request.getIsPublic() : true)
+                .build();
+
+        Exhibition saved = exhibitionRepository.save(exhibition);
+
+        return ExhibitionCreateResponse.builder()
+                .exhibitionId(saved.getId().toString())
+                .message("전시회가 성공적으로 등록되었습니다.")
+                .build();
+    }
+
+    public ExhibitionMessageResponse updateExhibition(UUID exhibitionId, ExhibitionUpdateRequest request) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        exhibition.updateBasicInfo(request.getUnivName(), request.getDeptName(), request.getIsPublic());
+
+        return ExhibitionMessageResponse.builder()
+                .message("기본 정보가 성공적으로 수정되었습니다.")
+                .build();
+    }
+
+    public ExhibitionMessageResponse deleteExhibition(UUID exhibitionId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        exhibitionRepository.delete(exhibition);
+
+        return ExhibitionMessageResponse.builder()
+                .message("전시회가 성공적으로 삭제되었습니다.")
+                .build();
+    }
+}
