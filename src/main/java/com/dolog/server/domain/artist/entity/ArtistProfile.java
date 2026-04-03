@@ -12,7 +12,12 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Table(name = "artist_profiles")
+@Table(
+        name = "artist_profiles",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"artist_id", "exhibition_id"})
+        }
+)
 public class ArtistProfile extends BaseEntity {
 
     @Id
