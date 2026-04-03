@@ -21,8 +21,8 @@ public class Artist extends BaseEntity {
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", nullable = false)
-    private Account account;
+    @JoinColumn(name = "account_id", unique = true)
+    private Account account; // v2 에서 nullable false (추후 account 연동)
 
     @Column(name = "name_ko", nullable = false, length = 100)
     private String nameKo;
