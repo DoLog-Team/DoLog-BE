@@ -30,15 +30,16 @@ public class ExhibitionService {
     private final ExhibitionDetailRepository exhibitionDetailRepository;
 
     @Transactional(readOnly = true)
-    public Object getExhibitions(Boolean main, String univName, String search) {
-        if (Boolean.TRUE.equals(main)) {
-            List<ExhibitionDetail> details = exhibitionDetailRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
-            List<ExhibitionListItemResponse> items = details.stream()
-                    .map(ExhibitionListItemResponse::from)
-                    .collect(Collectors.toList());
-            return ExhibitionMainResponse.builder().mainExhibitions(items).build();
-        }
+    public ExhibitionMainResponse getMainExhibitions() {
+        List<ExhibitionDetail> details = exhibitionDetailRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
+        List<ExhibitionListItemResponse> items = details.stream()
+                .map(ExhibitionListItemResponse::from)
+                .collect(Collectors.toList());
+        return ExhibitionMainResponse.builder().mainExhibitions(items).build();
+    }
 
+    @Transactional(readOnly = true)
+    public List<ExhibitionListItemResponse> getExhibitions(String univName, String search) {
         List<ExhibitionDetail> details = exhibitionDetailRepository.findPublicExhibitions(univName, search);
         return details.stream()
                 .map(ExhibitionListItemResponse::from)
