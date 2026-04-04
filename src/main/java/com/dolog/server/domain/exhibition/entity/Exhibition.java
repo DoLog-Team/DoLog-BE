@@ -18,11 +18,12 @@ public class Exhibition extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
+    @Column(name = "exhibition_id", columnDefinition = "BINARY(16)")
     private UUID id;
 
+    // TODO: JWT 연동 후 nullable = false 로 복구
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", nullable = false)
+    @JoinColumn(name = "account_id", nullable = true)
     private Account account;
 
     @Column(name = "univ_name", length = 100)
