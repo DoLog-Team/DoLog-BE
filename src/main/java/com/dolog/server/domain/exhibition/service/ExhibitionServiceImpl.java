@@ -129,4 +129,24 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 artist.getNameKo()
         );
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId) {
+
+        // 전시 존재 확인
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+
+        List<ExhibitionArtistMap> maps =
+                exhibitionArtistMapRepository.findByExhibitionId(exhibitionId);
+
+        return maps.stream()
+                .map(map -> ExhibitionArtistListResponse.from(
+                        map.getArtist().getId(),
+                        map.getArtist().getNameKo()
+                ))
+                .toList();
+    }
 }

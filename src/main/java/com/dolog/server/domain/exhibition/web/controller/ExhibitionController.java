@@ -62,6 +62,20 @@ public class ExhibitionController {
     }
 
 //   -----------------------------------------------------------------------------
+    // 전시 참여 작가 목록 조회
+    @GetMapping("/{exhibitionId}/artists")
+    public SuccessResponse<List<ExhibitionArtistListResponse>> getArtists(
+            @PathVariable UUID exhibitionId
+    ) {
+        List<ExhibitionArtistListResponse> data =
+                exhibitionService.getArtistsByExhibition(exhibitionId);
+
+        return SuccessResponse.ok(
+                data,
+                "전시 작가 목록 조회 성공"
+        );
+    }
+
     //전시 작가 추가
     @PostMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistAddResponse> addArtist(
@@ -76,4 +90,6 @@ public class ExhibitionController {
                 "작가가 전시에 추가되었습니다."
         );
     }
+
+
 }
