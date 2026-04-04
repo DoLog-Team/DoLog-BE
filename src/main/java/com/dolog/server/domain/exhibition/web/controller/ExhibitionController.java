@@ -21,6 +21,15 @@ public class ExhibitionController {
 
     private final ExhibitionService exhibitionService;
 
+    // 전시회 전체 목록 조회
+    @GetMapping
+    public ResponseEntity<SuccessResponse<?>> getExhibitions(
+            @RequestParam(required = false) Boolean main,
+            @RequestParam(name = "univ_name", required = false) String univName,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getExhibitions(main, univName, search)));
+    }
+
     // 전시회 기본정보 등록
     @PostMapping
     public ResponseEntity<SuccessResponse<ExhibitionCreateResponse>> createExhibition(
