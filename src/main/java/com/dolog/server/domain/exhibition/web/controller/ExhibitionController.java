@@ -1,12 +1,10 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
-import com.dolog.server.domain.exhibition.service.ExhibitionService;
+import com.dolog.server.domain.exhibition.service.ExhibitionServiceImpl;
+import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionListItemResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMainResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMessageResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.*;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ExhibitionController {
 
-    private final ExhibitionService exhibitionService;
+    private final ExhibitionServiceImpl exhibitionService;
 
     // 전시회 전체 목록 조회
     @GetMapping
@@ -61,5 +59,21 @@ public class ExhibitionController {
             @PathVariable UUID exhibitionId) {
         ExhibitionMessageResponse response = exhibitionService.deleteExhibition(exhibitionId);
         return ResponseEntity.ok(SuccessResponse.ok(response));
+    }
+
+//   -----------------------------------------------------------------------------
+    //전시 작가 추가
+    @PostMapping("/{exhibitionId}/artists")
+    public SuccessResponse<ExhibitionArtistAddResponse> addArtist(
+            @PathVariable UUID exhibitionId,
+            @RequestBody AddArtistRequest request
+    ) {
+        ExhibitionArtistAddResponse data =
+                exhibitionService.addArtistToExhibition(exhibitionId, request.getArtistId());
+
+        return SuccessResponse.ok(
+                data,
+                "작가가 전시에 추가되었습니다."
+        );
     }
 }
