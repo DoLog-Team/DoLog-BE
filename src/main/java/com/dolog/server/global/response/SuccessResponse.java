@@ -26,6 +26,17 @@ public class SuccessResponse<T> extends BaseResponse{
         return new SuccessResponse<>(data, GlobalSuccessCode.SUCCESS_OK);
     }
 
+    public static <T> SuccessResponse<T> ok(T data, String message) {
+        return new SuccessResponse<>(
+                data,
+                new BaseResponseCode() {
+                    public String getCode() { return "SUCCESS_200"; }
+                    public int getHttpStatus() { return 200; }
+                    public String getMessage() { return message; }
+                }
+        );
+    }
+
     // 201 Created 응답
     public static <T> SuccessResponse<T> created(T data) {
         return new SuccessResponse<>(data, GlobalSuccessCode.SUCCESS_CREATED);
