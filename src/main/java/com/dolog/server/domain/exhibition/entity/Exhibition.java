@@ -18,7 +18,7 @@ public class Exhibition extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(columnDefinition = "BINARY(16)")
+    @Column(name = "exhibition_id", columnDefinition = "BINARY(16)")
     private UUID id;
 
     // TODO: JWT 연동 후 nullable = false 로 복구
