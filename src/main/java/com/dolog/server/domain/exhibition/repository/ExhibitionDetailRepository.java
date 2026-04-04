@@ -14,7 +14,7 @@ public interface ExhibitionDetailRepository extends JpaRepository<ExhibitionDeta
     @Query("SELECT ed FROM ExhibitionDetail ed JOIN FETCH ed.exhibition e " +
             "WHERE e.isPublic = true " +
             "AND (:univName IS NULL OR e.univName = :univName) " +
-            "AND (:search IS NULL OR ed.title LIKE %:search%)")
+            "AND (:search IS NULL OR ed.title LIKE CONCAT('%', :search, '%'))")
     List<ExhibitionDetail> findPublicExhibitions(
             @Param("univName") String univName,
             @Param("search") String search);
