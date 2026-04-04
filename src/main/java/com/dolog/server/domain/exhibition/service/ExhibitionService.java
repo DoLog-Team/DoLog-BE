@@ -39,8 +39,8 @@ public class ExhibitionService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExhibitionListItemResponse> getExhibitions(String univName, String search) {
-        List<ExhibitionDetail> details = exhibitionDetailRepository.findPublicExhibitions(univName, search);
+    public List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search) {
+        List<ExhibitionDetail> details = exhibitionDetailRepository.findExhibitions(isPublic, univName, search);
         return details.stream()
                 .map(ExhibitionListItemResponse::from)
                 .collect(Collectors.toList());
@@ -57,7 +57,7 @@ public class ExhibitionService {
         Exhibition saved = exhibitionRepository.save(exhibition);
 
         return ExhibitionCreateResponse.builder()
-                .exhibitionId(saved.getId().toString())
+                .id(saved.getId().toString())
                 .message("전시회가 성공적으로 등록되었습니다.")
                 .build();
     }

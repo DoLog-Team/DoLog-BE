@@ -12,10 +12,11 @@ import java.util.UUID;
 public interface ExhibitionDetailRepository extends JpaRepository<ExhibitionDetail, UUID> {
 
     @Query("SELECT ed FROM ExhibitionDetail ed JOIN FETCH ed.exhibition e " +
-            "WHERE e.isPublic = true " +
+            "WHERE (:isPublic IS NULL OR e.isPublic = :isPublic) " +
             "AND (:univName IS NULL OR e.univName = :univName) " +
             "AND (:search IS NULL OR ed.title LIKE CONCAT('%', :search, '%'))")
-    List<ExhibitionDetail> findPublicExhibitions(
+    List<ExhibitionDetail> findExhibitions(
+            @Param("isPublic") Boolean isPublic,
             @Param("univName") String univName,
             @Param("search") String search);
 
