@@ -16,25 +16,19 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ArtistService {
+public class ArtistServiceImpl implements ArtistService {
 
     private final ArtistRepository artistRepository;
 
-    //작가 생성
+    // 작가 생성
+    @Override
     public ArtistResponse createArtist(ArtistCreateRequest request) {
 
         if (request.getNameKo() == null || request.getNameKo().isBlank()) {
             throw new ArtistBadRequestException();
         }
 
-        // 1. Account당 Artist 하나 제한 -> V2 에 적용
-//        if (artistRepository.existsByAccount(account)) {
-//            throw new IllegalStateException("이미 Artist가 존재합니다.");
-//        }
-
-        // 2. Artist 생성
         Artist artist = Artist.builder()
-//                .account(account)
                 .nameKo(request.getNameKo())
                 .nameEn(request.getNameEn())
                 .phone(request.getPhone())
@@ -42,12 +36,11 @@ public class ArtistService {
 
         artistRepository.save(artist);
 
-        // 3. Response 반환
         return ArtistResponse.from(artist);
     }
 
     // 업데이트
-    @Transactional
+    @Override
     public ArtistResponse updateArtist(UUID artistId, ArtistUpdateRequest request) {
 
         Artist artist = artistRepository.findById(artistId)
@@ -63,13 +56,12 @@ public class ArtistService {
     }
 
     // 삭제
-    @Transactional
+    @Override
     public ArtistResponse deleteArtist(UUID artistId) {
 
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        // 삭제 전에 DTO로 변환
         ArtistResponse response = ArtistResponse.from(artist);
 
         artistRepository.delete(artist);
