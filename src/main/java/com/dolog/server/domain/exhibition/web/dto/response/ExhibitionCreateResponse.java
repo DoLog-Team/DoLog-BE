@@ -7,6 +7,6 @@ import lombok.Getter;
 @Builder
 public class ExhibitionCreateResponse {
 
-    private String exhibitionId;
+    private String id;
     private String message;
 }

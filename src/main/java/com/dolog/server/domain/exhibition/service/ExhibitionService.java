@@ -11,7 +11,7 @@ public interface ExhibitionService {
 
     ExhibitionMainResponse getMainExhibitions();
 
-    List<ExhibitionListItemResponse> getExhibitions(String univName, String search);
+    List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search);
 
     ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request);
 

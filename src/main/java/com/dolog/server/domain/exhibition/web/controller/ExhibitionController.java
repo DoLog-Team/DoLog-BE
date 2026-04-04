@@ -26,9 +26,10 @@ public class ExhibitionController {
     // 전시회 전체 목록 조회
     @GetMapping
     public ResponseEntity<SuccessResponse<List<ExhibitionListItemResponse>>> getExhibitions(
+            @RequestParam(name = "is_public", required = false) Boolean isPublic,
             @RequestParam(name = "univ_name", required = false) String univName,
             @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getExhibitions(univName, search)));
+        return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getExhibitions(isPublic, univName, search)));
     }
 
     // 메인 전시회 조회
