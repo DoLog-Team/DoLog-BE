@@ -149,4 +149,29 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 ))
                 .toList();
     }
+
+    // 전시 작가 삭제
+    @Override
+    public ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId) {
+
+        ExhibitionArtistMap map = exhibitionArtistMapRepository
+                .findByExhibitionIdAndArtistId(exhibitionId, artistId)
+                .orElseThrow(() -> new ExhibitionArtistException(
+                        ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_FOUND
+                ));
+
+        Exhibition exhibition = map.getExhibition();
+        Artist artist = map.getArtist();
+
+        // 삭제 (or soft delete)
+        exhibitionArtistMapRepository.delete(map);
+        // map.updateStatus(ExhibitionArtistStatus.REMOVED);
+
+        return ExhibitionArtistRemoveResponse.of(
+                exhibition.getId(),
+                exhibition.getUnivName(),
+                artist.getId(),
+                artist.getNameKo()
+        );
+    }
 }

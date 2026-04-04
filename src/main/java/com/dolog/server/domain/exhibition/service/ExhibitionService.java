@@ -22,4 +22,6 @@ public interface ExhibitionService {
     ExhibitionArtistAddResponse addArtistToExhibition(UUID exhibitionId, UUID artistId);
 
     List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId);
+
+    ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId);
 }

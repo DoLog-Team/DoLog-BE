@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.service.ExhibitionServiceImpl;
 import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
@@ -89,6 +90,18 @@ public class ExhibitionController {
                 data,
                 "작가가 전시에 추가되었습니다."
         );
+    }
+
+    //전시 작가 삭제
+    @DeleteMapping("/{exhibitionId}/artists")
+    public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
+            @PathVariable UUID exhibitionId,
+            @RequestBody RemoveArtistRequest request
+    ) {
+        ExhibitionArtistRemoveResponse data =
+                exhibitionService.removeArtistFromExhibition(exhibitionId, request.getArtistId());
+
+        return SuccessResponse.ok(data);
     }
 
 
