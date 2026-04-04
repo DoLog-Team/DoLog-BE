@@ -1,18 +1,25 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionListItemResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMainResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMessageResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +27,24 @@ import java.util.UUID;
 public class ExhibitionService {
 
     private final ExhibitionRepository exhibitionRepository;
+    private final ExhibitionDetailRepository exhibitionDetailRepository;
+
+    @Transactional(readOnly = true)
+    public ExhibitionMainResponse getMainExhibitions() {
+        List<ExhibitionDetail> details = exhibitionDetailRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
+        List<ExhibitionListItemResponse> items = details.stream()
+                .map(ExhibitionListItemResponse::from)
+                .collect(Collectors.toList());
+        return ExhibitionMainResponse.builder().mainExhibitions(items).build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExhibitionListItemResponse> getExhibitions(String univName, String search) {
+        List<ExhibitionDetail> details = exhibitionDetailRepository.findPublicExhibitions(univName, search);
+        return details.stream()
+                .map(ExhibitionListItemResponse::from)
+                .collect(Collectors.toList());
+    }
 
     public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
         Exhibition exhibition = Exhibition.builder()
