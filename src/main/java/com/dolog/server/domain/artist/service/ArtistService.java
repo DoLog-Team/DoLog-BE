@@ -1,8 +1,8 @@
 package com.dolog.server.domain.artist.service;
 
-import com.dolog.server.domain.artist.web.dto.ArtistCreateRequest;
-import com.dolog.server.domain.artist.web.dto.ArtistResponse;
-import com.dolog.server.domain.artist.web.dto.ArtistUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
+import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 
 import java.util.List;
 import java.util.UUID;
