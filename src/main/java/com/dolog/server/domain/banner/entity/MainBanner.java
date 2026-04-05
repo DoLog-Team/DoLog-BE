@@ -19,6 +19,9 @@ public class MainBanner extends BaseEntity {
     @Column(name = "image_url", length = 255)
     private String imageUrl;
 
+    @Column(name = "link_url", length = 255)
+    private String linkUrl;
+
     @Column(name = "order_index")
     private Integer orderIndex;
 
