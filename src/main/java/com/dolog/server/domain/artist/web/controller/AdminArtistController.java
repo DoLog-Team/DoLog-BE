@@ -1,9 +1,9 @@
 package com.dolog.server.domain.artist.web.controller;
 
 import com.dolog.server.domain.artist.service.ArtistServiceImpl;
-import com.dolog.server.domain.artist.web.dto.ArtistCreateRequest;
-import com.dolog.server.domain.artist.web.dto.ArtistResponse;
-import com.dolog.server.domain.artist.web.dto.ArtistUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
+import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,7 +1,7 @@
 package com.dolog.server.domain.artist.web.controller;
 
 import com.dolog.server.domain.artist.service.ArtistService;
-import com.dolog.server.domain.artist.web.dto.ArtistResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
