@@ -1,6 +1,10 @@
 package com.dolog.server.domain.banner.service;
 
+import com.dolog.server.domain.banner.entity.MainBanner;
+import com.dolog.server.domain.banner.exception.BannerErrorCode;
+import com.dolog.server.domain.banner.exception.BannerException;
 import com.dolog.server.domain.banner.repository.MainBannerRepository;
+import com.dolog.server.domain.banner.web.dto.request.MainBannerUpdateRequest;
 import com.dolog.server.domain.banner.web.dto.response.MainBannerResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,5 +26,16 @@ public class MainBannerServiceImpl implements MainBannerService {
                 .stream()
                 .map(MainBannerResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public MainBannerResponse updateMainBanner(Long id, MainBannerUpdateRequest request) {
+        MainBanner banner = mainBannerRepository.findById(id)
+                .orElseThrow(() -> new BannerException(BannerErrorCode.BANNER_NOT_FOUND));
+
+        banner.update(request.getImageUrl(), request.getLinkUrl(), request.getOrderIndex());
+
+        return MainBannerResponse.from(banner);
     }
 }

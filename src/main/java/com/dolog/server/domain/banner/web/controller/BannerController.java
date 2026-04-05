@@ -1,13 +1,14 @@
 package com.dolog.server.domain.banner.web.controller;
 
 import com.dolog.server.domain.banner.service.MainBannerService;
+import com.dolog.server.domain.banner.web.dto.request.MainBannerUpdateRequest;
 import com.dolog.server.domain.banner.web.dto.response.MainBannerResponse;
 import com.dolog.server.global.response.SuccessResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,6 +22,15 @@ public class BannerController {
     @GetMapping("/mainbanner")
     public ResponseEntity<SuccessResponse<List<MainBannerResponse>>> getMainBanners() {
         List<MainBannerResponse> response = mainBannerService.getMainBanners();
+        return ResponseEntity.ok(SuccessResponse.ok(response));
+    }
+
+    @PutMapping("/mainbanner/{id}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<MainBannerResponse>> updateMainBanner(
+            @PathVariable Long id,
+            @Valid @RequestBody MainBannerUpdateRequest request) {
+        MainBannerResponse response = mainBannerService.updateMainBanner(id, request);
         return ResponseEntity.ok(SuccessResponse.ok(response));
     }
 }

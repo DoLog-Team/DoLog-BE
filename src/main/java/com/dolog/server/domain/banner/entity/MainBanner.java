@@ -27,4 +27,10 @@ public class MainBanner extends BaseEntity {
 
     @Column(name = "is_visible")
     private Boolean isVisible;
+
+    public void update(String imageUrl, String linkUrl, Integer orderIndex) {
+        this.imageUrl = imageUrl;
+        this.linkUrl = linkUrl;
+        this.orderIndex = orderIndex;
+    }
 }
