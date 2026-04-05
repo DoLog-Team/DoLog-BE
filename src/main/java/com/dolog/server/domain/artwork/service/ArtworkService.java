@@ -32,9 +32,9 @@ public class ArtworkService {
     private final ArtworkImgRepository artworkImgRepository;
 
     @Transactional
-    public ArtworkCreateResponse createArtwork(ArtworkCreateRequest request) {
+    public ArtworkCreateResponse createArtwork(UUID exhibitionId, ArtworkCreateRequest request) {
         // 1. 전시회 조회
-        Exhibition exhibition = exhibitionRepository.findById(request.getExhibitionId())
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         // 2. 전시 구역(Zone) 조회 및 검증
@@ -46,8 +46,9 @@ public class ArtworkService {
 
             // TODO: 해당 구역이 요청된 전시회의 구역이 맞는지 검증하는 로직 및 에러 코드(INVALID_ZONE) 추가 필요
             /*
-            if (!zone.getExhibition().getId().equals(exhibition.getId())) {
-                throw new ExhibitionException(ExhibitionErrorCode.INVALID_ZONE_FOR_EXHIBITION);
+            if (!zone.getExhibition().getId().equals(exhibitionId)) {
+                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+                // 위 코드는 임시이며, 나중에 INVALID_ZONE_FOR_EXHIBITION 같은 에러로 바꿔야 함.
             }
             */
         }

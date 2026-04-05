@@ -16,7 +16,6 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/artworks")
 public class ArtworkController {
 
     private final ArtworkService artworkService;
@@ -25,17 +24,18 @@ public class ArtworkController {
      * 작품 기본 정보 등록
      * [요구사항] Developer 권한을 가진 계정만 데이터 입력 가능
      */
-    @PostMapping
+    @PostMapping("/exhibitions/{exhibitionId}/artworks")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> createArtwork(
+            @PathVariable UUID exhibitionId, // 경로에서 받은 exhibitionId
             @Valid @RequestBody ArtworkCreateRequest request) {
-
-        ArtworkCreateResponse data = artworkService.createArtwork(request);
+        // 서비스 메서드에 exhibitionId를 넘겨주도록 수정이 필요할 수 있습니다.
+        ArtworkCreateResponse data = artworkService.createArtwork(exhibitionId, request);
 
         return SuccessResponse.created(data);
     }
 
-    @PostMapping("/{artworkId}/images")
+    @PostMapping("/artworks/{artworkId}/images")
     @PreAuthorize("hasRole('DEVELOPER')") // 권한 설정 확인!
     public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
             @PathVariable UUID artworkId,
