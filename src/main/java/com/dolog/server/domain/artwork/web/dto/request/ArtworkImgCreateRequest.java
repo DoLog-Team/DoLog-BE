@@ -9,11 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ArtworkImgCreateRequest {
 
-    @JsonProperty("image_url")
     private String imageUrl;
-
     private String description;
-
-    @JsonProperty("order_index")
     private Integer orderIndex;
 }

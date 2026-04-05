@@ -1,6 +1,5 @@
 package com.dolog.server.domain.artwork.web.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -22,16 +21,13 @@ public class ArtworkCreateRequest {
     private String description;
 
     @NotNull(message = "전시회 ID는 필수입니다.")
-    @JsonProperty("exhibition_id")
-    private UUID exhibitionId;
+    private UUID exhibitionId; // exhibition_id 제거
 
-    @JsonProperty("zone_id")
-    private UUID zoneId;
+    private UUID zoneId;       // zone_id 제거
 
-    @JsonProperty("main_image")
-    private String mainImage;
-    @JsonProperty("purchase_url")
-    private String purchaseUrl;
-    @JsonProperty("order_index")
-    private Integer orderIndex;
+    private String mainImage;   // main_image 제거
+
+    private String purchaseUrl; // purchase_url 제거
+
+    private Integer orderIndex; // order_index 제거
 }
