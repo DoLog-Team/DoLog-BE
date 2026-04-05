@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artist.web.dto;
+package com.dolog.server.domain.artist.web.dto.response;
 
 import com.dolog.server.domain.artist.entity.Artist;
 import lombok.Builder;

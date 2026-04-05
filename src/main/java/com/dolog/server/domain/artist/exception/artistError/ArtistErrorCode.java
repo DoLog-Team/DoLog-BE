@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artist.exception;
+package com.dolog.server.domain.artist.exception.artistError;
 
 import com.dolog.server.global.response.code.BaseResponseCode;
 import lombok.AllArgsConstructor;

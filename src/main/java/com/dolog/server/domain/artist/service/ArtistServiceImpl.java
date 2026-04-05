@@ -1,12 +1,12 @@
 package com.dolog.server.domain.artist.service;
 
 import com.dolog.server.domain.artist.entity.Artist;
-import com.dolog.server.domain.artist.exception.ArtistBadRequestException;
-import com.dolog.server.domain.artist.exception.ArtistNotFoundException;
+import com.dolog.server.domain.artist.exception.artistError.ArtistBadRequestException;
+import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
-import com.dolog.server.domain.artist.web.dto.ArtistCreateRequest;
-import com.dolog.server.domain.artist.web.dto.ArtistResponse;
-import com.dolog.server.domain.artist.web.dto.ArtistUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
+import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

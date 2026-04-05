@@ -53,11 +53,38 @@ public class ArtistProfile extends BaseEntity {
     private String profileImg;
 
     public void updateProfile(String nameKo, String nameEn, String bio, String email, String profileImg) {
-        this.nameKo = nameKo;
-        this.nameEn = nameEn;
-        this.bio = bio;
-        this.email = email;
-        this.profileImg = profileImg;
+        // 값이 존재할 때만 업데이트 (기존 값 유지)
+        if (nameKo != null && !nameKo.isBlank()) {
+            this.nameKo = nameKo;
+        }
+        if (nameEn != null && !nameEn.isBlank()) {
+            this.nameEn = nameEn;
+        }
+        if (bio != null && !bio.isBlank()) {
+            this.bio = bio;
+        }
+        if (email != null && !email.isBlank()) {
+            this.email = email;
+        }
+        if (profileImg != null && !profileImg.isBlank()) {
+            this.profileImg = profileImg;
+        }
+    }
+
+    // 처음 등록할 때 Artist의 기본 정보를 자동으로 채워줌
+    public void fillDefaultInfoFromArtist() {
+        if (this.nameKo == null || this.nameKo.isBlank()) {
+            this.nameKo = this.artist.getNameKo();
+        }
+        if (this.nameEn == null || this.nameEn.isBlank()) {
+            this.nameEn = this.artist.getNameEn();
+        }
+        // 이메일 자동 채우기 추가
+        if (this.email == null || this.email.isBlank()) {
+            if (this.artist.getAccount() != null) {
+                this.email = this.artist.getAccount().getEmail();
+            }
+        }
     }
 
     public void togglePublicStatus(boolean isPublic) {
