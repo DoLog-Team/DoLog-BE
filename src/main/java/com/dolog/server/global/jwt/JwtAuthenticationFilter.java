@@ -8,15 +8,15 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.filter.OncePerRequestFilter;
+
 import java.io.IOException;
+import java.util.Set;
 
 /**
  * JWT 인증 필터
- * - 요청 헤더의 Authorization에서 JWT 토큰 추출
- * - 유효성 검증 후 SecurityContext에 인증 저장
  */
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -25,47 +25,51 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUserDetailsService userDetailsService;
     private final AuthenticationEntryPoint authenticationEntryPoint;
 
+    // 인증 제외 경로
+    private static final Set<String> EXCLUDE_URLS = Set.of(
+            "/api/auth/login",
+            "/api/auth/refresh",
+            "/api/signup"
+    );
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        String uri = request.getRequestURI();
+
         try {
+            // 인증 제외 경로는 패스
+            if (EXCLUDE_URLS.contains(uri)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             String token = resolveToken(request);
 
-            // 토큰이 없으면 그냥 다음 필터로 pass
+            // 토큰 없으면 인증 필요 없음 → 401 처리
             if (token == null) {
-                filterChain.doFilter(request, response);
-                return;
+                throw new RuntimeException("JWT 토큰이 존재하지 않습니다.");
             }
 
-            // 유효한 토큰이면 인증 설정
-            jwtTokenProvider.validateToken(token); // BaseException 가능
+            // 토큰 유효성 검증
+            jwtTokenProvider.validateToken(token);
 
-            String nickname = jwtTokenProvider.getNicknameFromToken(token);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(nickname);
+            // 토큰에서 이메일 추출
+            String email = jwtTokenProvider.getNicknameFromToken(token); // nickname 대신 email 사용 가능
 
+            // UserDetails 로드
+            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+
+            // SecurityContext 세팅
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            filterChain.doFilter(request, response);
 
-        } catch (BaseException e) { // JwtExpiredException, JwtInvalidException 등
-            // 인증이 필요 없는 URL에서는 JWT 오류를 조용히 무시하고 통과시킴
-            String uri = request.getRequestURI();
-            if (uri.startsWith("/signup") || uri.startsWith("/login") || uri.startsWith("/refresh")) {
-                // 로그 안 찍고 통과
-                filterChain.doFilter(request, response);
-                return;
-            }
-
-            // 나머지 URL은 기존처럼 EntryPoint 로 처리
+        } catch (BaseException e) {
             request.setAttribute("jwt_exception", e);
             SecurityContextHolder.clearContext();
             authenticationEntryPoint.commence(
@@ -73,11 +77,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     response,
                     new org.springframework.security.authentication.InsufficientAuthenticationException(e.getMessage(), e)
             );
+            return; // 필터 체인 종료
         }
+
+        filterChain.doFilter(request, response);
     }
 
+    // Authorization 헤더에서 Bearer 토큰 추출
     private String resolveToken(HttpServletRequest request) {
         String bearer = request.getHeader("Authorization");
-        return (bearer != null && bearer.startsWith("Bearer ")) ? bearer.substring(7) : null;
+        if (bearer != null && bearer.startsWith("Bearer ")) {
+            return bearer.substring(7);
+        }
+        return null;
     }
 }
