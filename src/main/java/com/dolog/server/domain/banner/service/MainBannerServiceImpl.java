@@ -5,6 +5,7 @@ import com.dolog.server.domain.banner.exception.BannerErrorCode;
 import com.dolog.server.domain.banner.exception.BannerException;
 import com.dolog.server.domain.banner.repository.MainBannerRepository;
 import com.dolog.server.domain.banner.web.dto.request.MainBannerUpdateRequest;
+import com.dolog.server.domain.banner.web.dto.response.BannerMessageResponse;
 import com.dolog.server.domain.banner.web.dto.response.MainBannerResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,5 +38,18 @@ public class MainBannerServiceImpl implements MainBannerService {
         banner.update(request.getImageUrl(), request.getLinkUrl(), request.getOrderIndex());
 
         return MainBannerResponse.from(banner);
+    }
+
+    @Override
+    @Transactional
+    public BannerMessageResponse deleteMainBanner(Long id) {
+        MainBanner banner = mainBannerRepository.findById(id)
+                .orElseThrow(() -> new BannerException(BannerErrorCode.BANNER_NOT_FOUND));
+
+        mainBannerRepository.delete(banner);
+
+        return BannerMessageResponse.builder()
+                .message("이미지가 삭제되었습니다")
+                .build();
     }
 }

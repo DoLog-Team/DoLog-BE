@@ -2,6 +2,7 @@ package com.dolog.server.domain.banner.web.controller;
 
 import com.dolog.server.domain.banner.service.MainBannerService;
 import com.dolog.server.domain.banner.web.dto.request.MainBannerUpdateRequest;
+import com.dolog.server.domain.banner.web.dto.response.BannerMessageResponse;
 import com.dolog.server.domain.banner.web.dto.response.MainBannerResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
@@ -31,6 +32,14 @@ public class BannerController {
             @PathVariable Long id,
             @Valid @RequestBody MainBannerUpdateRequest request) {
         MainBannerResponse response = mainBannerService.updateMainBanner(id, request);
+        return ResponseEntity.ok(SuccessResponse.ok(response));
+    }
+
+    @DeleteMapping("/mainbanner/{id}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<BannerMessageResponse>> deleteMainBanner(
+            @PathVariable Long id) {
+        BannerMessageResponse response = mainBannerService.deleteMainBanner(id);
         return ResponseEntity.ok(SuccessResponse.ok(response));
     }
 }
