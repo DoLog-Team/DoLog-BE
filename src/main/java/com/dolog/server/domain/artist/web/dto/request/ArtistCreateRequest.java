@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artist.web.dto;
+package com.dolog.server.domain.artist.web.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;

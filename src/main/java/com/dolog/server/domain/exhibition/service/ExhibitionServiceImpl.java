@@ -1,7 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.artist.entity.Artist;
-import com.dolog.server.domain.artist.exception.ArtistNotFoundException;
+import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
