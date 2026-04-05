@@ -1,6 +1,8 @@
 package com.dolog.server.domain.artist.service;
 
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistNotRegisteredInExhibitionException;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAlreadyExistsException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileErrorCode;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
@@ -9,6 +11,7 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +30,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final ArtistProfileRepository profileRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ArtistRepository artistRepository;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
     @Transactional
     @Override
@@ -35,14 +39,19 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         UUID exhibitionId = UUID.fromString(exhibitionIdStr);
         UUID artistId = UUID.fromString(request.getArtistId());
 
-        // 1. 존재 여부 확인
+        // 1. 전시 및 작가 존재 확인
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
         var artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        // 중복 체크
+        // [선 등록 여부 검증] 해당 전시에 등록된 사람인지 확인
+        if (!exhibitionArtistMapRepository.existsByExhibitionIdAndArtistId(exhibitionId, artistId)) {
+            throw new ArtistNotRegisteredInExhibitionException();
+        }
+
+        // 중복 체크 (이미 프로필이 있는지)
         if (profileRepository.existsByArtistAndExhibition(artist, exhibition)) {
             throw new ArtistProfileAlreadyExistsException();
         }
@@ -64,7 +73,10 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         // 3. DB 저장용 경로
         String dbImageUrl = "/uploads" + subDir + filename;
 
-        // 4. Entity 생성 및 저장
+
+
+
+        // [1] Entity 생성 (빌더 패턴)
         ArtistProfile profile = ArtistProfile.builder()
                 .artist(artist)
                 .exhibition(exhibition)
@@ -76,8 +88,14 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .isPublic(true)
                 .build();
 
+        // [2] 자동 저장 기능 실행 (값이 없는 경우 Artist 정보에서 긁어옴)
+        // 이 단계에서 profile.nameKo, profile.email 등이 자동으로 채워짐
+        profile.fillDefaultInfoFromArtist();
+
+        // [3] DB 저장
         profileRepository.save(profile);
 
+        // [4] 결과 반환
         return new ArtistProfileResponse(
                 profile.getId(),
                 profile.getNameKo(),
