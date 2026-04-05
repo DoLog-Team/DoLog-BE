@@ -1,9 +1,13 @@
 package com.dolog.server.domain.artwork.service;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkImg;
+import com.dolog.server.domain.artwork.repository.ArtworkImgRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -14,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -24,6 +29,7 @@ public class ArtworkService {
     private final ArtworkRepository artworkRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
+    private final ArtworkImgRepository artworkImgRepository;
 
     @Transactional
     public ArtworkCreateResponse createArtwork(ArtworkCreateRequest request) {
@@ -57,12 +63,37 @@ public class ArtworkService {
                 .description(request.getDescription())
                 .mainImg(request.getMainImage())
                 .purchaseUrl(request.getPurchaseUrl())
-                // TODO: Artwork 엔티티에 orderIndex 필드 추가 후 아래 주석 해제
-                // .orderIndex(request.getOrderIndex())
+                .orderIndex(request.getOrderIndex())
                 .build();
 
         Artwork savedArtwork = artworkRepository.save(artwork);
 
         return ArtworkCreateResponse.from(savedArtwork.getId());
+    }
+
+    @Transactional
+    public ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests) {
+        // 2. 작품(부모) 존재 확인
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        // 3. 요청(DTO) 리스트를 엔티티 리스트로 변환
+        List<ArtworkImg> artworkImgs = requests.stream()
+                .map(req -> ArtworkImg.builder()
+                        .artwork(artwork)
+                        .imageUrl(req.getImageUrl())    // req.imageUrl 대신 req.getImageUrl()
+                        .description(req.getDescription()) // req.description 대신 req.getDescription()
+                        .orderIndex(req.getOrderIndex())   // req.orderIndex 대신 req.getOrderIndex()
+                        .build())
+                .toList();
+        // 4. 한 번에 저장
+        List<ArtworkImg> savedImgs = artworkImgRepository.saveAll(artworkImgs);
+
+        // 5. 생성된 ID 리스트 반환
+        List<UUID> imageIds = savedImgs.stream()
+                .map(ArtworkImg::getId)
+                .toList();
+
+        return new ArtworkImgCreateResponse(artworkId, imageIds);
     }
 }
