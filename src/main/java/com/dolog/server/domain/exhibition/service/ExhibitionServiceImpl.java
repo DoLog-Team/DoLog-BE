@@ -6,14 +6,17 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
+import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionArtistException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +35,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
+    private final ExhibitionMapRepository exhibitionMapRepository;
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
@@ -148,6 +152,32 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         map.getArtist().getNameKo()
                 ))
                 .toList();
+    }
+
+    // 전시 장소 정보 등록
+    @Override
+    public ExhibitionMapCreateResponse createExhibitionMap(UUID exhibitionId, ExhibitionMapCreateRequest request) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (exhibitionMapRepository.existsByExhibitionId(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_ALREADY_EXISTS);
+        }
+
+        ExhibitionMap exhibitionMap = ExhibitionMap.builder()
+                .exhibition(exhibition)
+                .address(request.getAddress())
+                .detailLocation(request.getDetailLocation())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .build();
+
+        ExhibitionMap saved = exhibitionMapRepository.save(exhibitionMap);
+
+        return ExhibitionMapCreateResponse.builder()
+                .mapId(saved.getId().toString())
+                .exhibitionId(exhibition.getId().toString())
+                .build();
     }
 
     // 전시 작가 삭제

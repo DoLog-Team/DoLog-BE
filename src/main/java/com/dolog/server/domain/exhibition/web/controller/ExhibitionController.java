@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.web.controller;
 import com.dolog.server.domain.exhibition.service.ExhibitionServiceImpl;
 import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -91,6 +93,16 @@ public class ExhibitionController {
                 data,
                 "작가가 전시에 추가되었습니다."
         );
+    }
+
+    // 전시 장소 정보 등록
+    @PostMapping("/{exhibitionId}/map")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<ExhibitionMapCreateResponse>> createExhibitionMap(
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExhibitionMapCreateRequest request) {
+        ExhibitionMapCreateResponse response = exhibitionService.createExhibitionMap(exhibitionId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(response));
     }
 
     //전시 작가 삭제
