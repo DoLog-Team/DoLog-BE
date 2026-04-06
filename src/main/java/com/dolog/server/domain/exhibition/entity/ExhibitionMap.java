@@ -20,7 +20,7 @@ public class ExhibitionMap extends BaseEntity {
     private UUID id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
+    @JoinColumn(name = "exhibition_id", nullable = false, unique = true)
     private Exhibition exhibition;
 
     @Column(name = "address", nullable = false)

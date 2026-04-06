@@ -35,6 +35,9 @@ public class Exhibition extends BaseEntity {
     @Column(name = "is_public", nullable = false)
     private boolean isPublic;
 
+    @OneToOne(mappedBy = "exhibition", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private ExhibitionMap exhibitionMap;
+
     public void updateBasicInfo(String univName, String deptName, Boolean isPublic) {
         if (univName != null) {
             this.univName = univName;
