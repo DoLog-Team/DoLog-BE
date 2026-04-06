@@ -30,4 +30,6 @@ public interface ExhibitionService {
     ExhibitionMapCreateResponse createExhibitionMap(UUID exhibitionId, ExhibitionMapCreateRequest request);
 
     ExhibitionMapUpdateResponse updateExhibitionMap(UUID exhibitionId, ExhibitionMapUpdateRequest request);
+
+    void deleteExhibitionMap(UUID exhibitionId);
 }

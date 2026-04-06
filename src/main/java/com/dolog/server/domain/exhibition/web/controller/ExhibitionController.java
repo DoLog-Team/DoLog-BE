@@ -116,6 +116,15 @@ public class ExhibitionController {
         return ResponseEntity.ok(SuccessResponse.ok(response, "장소 정보 수정에 성공하였습니다."));
     }
 
+    // 전시 장소 정보 삭제
+    @DeleteMapping("/{exhibitionId}/map")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<Void>> deleteExhibitionMap(
+            @PathVariable UUID exhibitionId) {
+        exhibitionService.deleteExhibitionMap(exhibitionId);
+        return ResponseEntity.ok(SuccessResponse.ok(null, "장소 정보 삭제에 성공하였습니다."));
+    }
+
     //전시 작가 삭제
     @DeleteMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(

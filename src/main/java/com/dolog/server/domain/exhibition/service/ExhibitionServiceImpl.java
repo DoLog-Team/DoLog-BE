@@ -203,6 +203,15 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .build();
     }
 
+    // 전시 장소 정보 삭제
+    @Override
+    public void deleteExhibitionMap(UUID exhibitionId) {
+        ExhibitionMap exhibitionMap = exhibitionMapRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+
+        exhibitionMapRepository.delete(exhibitionMap);
+    }
+
     // 전시 작가 삭제
     @Override
     public ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId) {
