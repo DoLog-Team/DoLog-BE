@@ -1,8 +1,9 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
-import com.dolog.server.domain.exhibition.service.ExhibitionServiceImpl;
+import com.dolog.server.domain.exhibition.service.ExhibitionService;
 import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
@@ -24,7 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ExhibitionController {
 
-    private final ExhibitionServiceImpl exhibitionService;
+    private final ExhibitionService exhibitionService;
 
     // 전시회 전체 목록 조회
     @GetMapping
@@ -137,5 +138,13 @@ public class ExhibitionController {
         return SuccessResponse.ok(data);
     }
 
-
+    // 전시 상세정보 등록/수정
+    @PutMapping("/{exhibitionId}/details")
+    public SuccessResponse<ExhibitionDetailUpsertResponse> upsertExhibitionDetail(
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExhibitionDetailUpsertRequest request
+    ) {
+        ExhibitionDetailUpsertResponse data = exhibitionService.upsertExhibitionDetail(exhibitionId, request);
+        return SuccessResponse.ok(data);
+    }
 }
