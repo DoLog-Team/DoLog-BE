@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -247,11 +248,13 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        ExhibitionDetail exhibitionDetail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
-                .orElseGet(() -> ExhibitionDetail.builder()
-                        .exhibition(exhibition)
-                        .title(request.getTitle())
-                        .build());
+        Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+        boolean isNew = exhibitionDetailOpt.isEmpty();
+
+        ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() -> ExhibitionDetail.builder()
+                .exhibition(exhibition)
+                .title(request.getTitle())
+                .build());
 
         exhibitionDetail.updateBasicInfo(
                 request.getTitle(),
@@ -263,9 +266,11 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
         exhibitionDetailRepository.save(exhibitionDetail);
 
+        String message = isNew ? "상세 정보가 성공적으로 등록되었습니다." : "상세 정보가 성공적으로 수정되었습니다.";
+
         return ExhibitionDetailUpsertResponse.builder()
                 .exhibitionId(exhibition.getId())
-                .message("상세 정보가 성공적으로 등록되었습니다.")
+                .message(message)
                 .build();
     }
 }
