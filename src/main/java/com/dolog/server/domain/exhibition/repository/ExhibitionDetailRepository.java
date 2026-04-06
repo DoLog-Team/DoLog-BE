@@ -14,6 +14,8 @@ public interface ExhibitionDetailRepository extends JpaRepository<ExhibitionDeta
 
     Optional<ExhibitionDetail> findByExhibitionId(UUID exhibitionId);
 
+    List<ExhibitionDetail> findByExhibitionIdIn(List<UUID> exhibitionIds);
+
     @Query("SELECT ed FROM ExhibitionDetail ed JOIN FETCH ed.exhibition e " +
             "WHERE (:isPublic IS NULL OR e.isPublic = :isPublic) " +
             "AND (:univName IS NULL OR e.univName = :univName) " +
