@@ -155,6 +155,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                 .map(entry -> {
                     String categoryName = entry.getKey();
                     List<CategoryArtworkResponse.SimpleArtworkResponse> simpleArtworks = entry.getValue().stream()
+                            .sorted(Comparator.comparingInt(a -> a.getOrderIndex() != null ? a.getOrderIndex() : Integer.MAX_VALUE))
                             .limit(3)
                             .map(a -> CategoryArtworkResponse.SimpleArtworkResponse.builder()
                                     .id(a.getId())
