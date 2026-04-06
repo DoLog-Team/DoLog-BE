@@ -41,7 +41,6 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Override
     @Transactional(readOnly = true)
     public Object getArtworks(Boolean main, String category, String search) {
-        System.out.println(">>> getArtworks called: main=" + main + ", category=" + category + ", search=" + search);
         Specification<Artwork> spec = Specification
                 .where(ArtworkSpecification.withExhibitionFetch())
                 .and(ArtworkSpecification.withCategory(category))

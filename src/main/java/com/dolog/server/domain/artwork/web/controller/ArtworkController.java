@@ -27,7 +27,6 @@ public class ArtworkController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search
     ) {
-        System.out.println(">>> Controller received: main=" + main + ", category=" + category + ", search=" + search);
         Object data = artworkService.getArtworks(main, category, search);
         return SuccessResponse.ok(data);
     }
