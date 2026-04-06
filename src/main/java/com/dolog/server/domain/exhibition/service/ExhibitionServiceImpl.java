@@ -17,6 +17,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
 import lombok.RequiredArgsConstructor;
@@ -177,6 +178,28 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         return ExhibitionMapCreateResponse.builder()
                 .mapId(saved.getId().toString())
                 .exhibitionId(exhibition.getId().toString())
+                .build();
+    }
+
+    // 전시 장소 정보 수정
+    @Override
+    public ExhibitionMapUpdateResponse updateExhibitionMap(UUID exhibitionId, ExhibitionMapUpdateRequest request) {
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+
+        ExhibitionMap exhibitionMap = exhibitionMapRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+
+        exhibitionMap.update(
+                request.getAddress(),
+                request.getDetailLocation(),
+                request.getLatitude(),
+                request.getLongitude()
+        );
+
+        return ExhibitionMapUpdateResponse.builder()
+                .mapId(exhibitionMap.getId().toString())
                 .build();
     }
 

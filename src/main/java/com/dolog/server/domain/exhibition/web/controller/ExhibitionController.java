@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.service.ExhibitionServiceImpl;
 import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
@@ -103,6 +104,16 @@ public class ExhibitionController {
             @Valid @RequestBody ExhibitionMapCreateRequest request) {
         ExhibitionMapCreateResponse response = exhibitionService.createExhibitionMap(exhibitionId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(response));
+    }
+
+    // 전시 장소 정보 수정
+    @PatchMapping("/{exhibitionId}/map")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<ExhibitionMapUpdateResponse>> updateExhibitionMap(
+            @PathVariable UUID exhibitionId,
+            @RequestBody ExhibitionMapUpdateRequest request) {
+        ExhibitionMapUpdateResponse response = exhibitionService.updateExhibitionMap(exhibitionId, request);
+        return ResponseEntity.ok(SuccessResponse.ok(response, "장소 정보 수정에 성공하였습니다."));
     }
 
     //전시 작가 삭제
