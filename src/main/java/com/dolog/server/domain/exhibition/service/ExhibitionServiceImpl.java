@@ -253,13 +253,12 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         .title(request.getTitle())
                         .build());
 
-        exhibitionDetail.update(
+        exhibitionDetail.updateBasicInfo(
                 request.getTitle(),
                 request.getDescription(),
                 request.getExhibitionImg(),
                 request.getStartDate(),
-                request.getEndDate(),
-                null, null, null, null, null, null, null, null
+                request.getEndDate()
         );
 
         exhibitionDetailRepository.save(exhibitionDetail);
