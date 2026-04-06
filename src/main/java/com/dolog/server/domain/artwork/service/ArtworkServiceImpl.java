@@ -6,6 +6,7 @@ import com.dolog.server.domain.artwork.entity.ArtworkImg;
 import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkImgRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.*;
@@ -18,6 +19,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +41,12 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Override
     @Transactional(readOnly = true)
     public Object getArtworks(Boolean main, String category, String search) {
-        List<Artwork> artworks = artworkRepository.searchArtworks(category, search);
+        System.out.println(">>> getArtworks called: main=" + main + ", category=" + category + ", search=" + search);
+        Specification<Artwork> spec = Specification
+                .where(ArtworkSpecification.withExhibitionFetch())
+                .and(ArtworkSpecification.withCategory(category))
+                .and(ArtworkSpecification.withSearch(search));
+        List<Artwork> artworks = artworkRepository.findAll(spec);
 
         if (artworks.isEmpty()) {
             if (Boolean.TRUE.equals(main)) {
