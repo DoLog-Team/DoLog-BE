@@ -8,7 +8,6 @@ import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateReq
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionDetailUpsertResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
