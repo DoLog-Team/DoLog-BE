@@ -16,6 +16,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
@@ -239,5 +240,33 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 artist.getId(),
                 artist.getNameKo()
         );
+    }
+
+    @Override
+    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        ExhibitionDetail exhibitionDetail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+                .orElseGet(() -> ExhibitionDetail.builder()
+                        .exhibition(exhibition)
+                        .title(request.getTitle())
+                        .build());
+
+        exhibitionDetail.update(
+                request.getTitle(),
+                request.getDescription(),
+                request.getExhibitionImg(),
+                request.getStartDate(),
+                request.getEndDate(),
+                null, null, null, null, null, null, null, null
+        );
+
+        exhibitionDetailRepository.save(exhibitionDetail);
+
+        return ExhibitionDetailUpsertResponse.builder()
+                .exhibitionId(exhibition.getId())
+                .message("상세 정보가 성공적으로 등록되었습니다.")
+                .build();
     }
 }
