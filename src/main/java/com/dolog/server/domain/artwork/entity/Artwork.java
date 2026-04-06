@@ -53,6 +53,9 @@ public class Artwork extends BaseEntity {
     @Column(name = "zone", length = 50)
     private String zone;
 
+    @Column(name = "order_index")
+    private Integer orderIndex;
+
 
     public void updateBasicInfo(String title, String description, String purchaseUrl) {
         if (title != null) this.title = title;
