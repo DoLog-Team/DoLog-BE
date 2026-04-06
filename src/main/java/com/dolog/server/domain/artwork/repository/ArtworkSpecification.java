@@ -1,6 +1,5 @@
 package com.dolog.server.domain.artwork.repository;
 
-import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import jakarta.persistence.criteria.JoinType;

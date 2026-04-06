@@ -4,9 +4,6 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkListResponse;
-import com.dolog.server.domain.artwork.web.dto.response.MainCategoryResponse;
-
 import java.util.List;
 import java.util.UUID;
 
