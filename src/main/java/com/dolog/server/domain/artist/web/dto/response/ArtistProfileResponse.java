@@ -1,12 +1,12 @@
 package com.dolog.server.domain.artist.web.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionListItemResponse;
+import lombok.*;
 
 import java.util.UUID;
 
-@Data
+@Getter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ArtistProfileResponse {
@@ -16,4 +16,7 @@ public class ArtistProfileResponse {
     private String bio;
     private String email;
     private String profileImg; // 파일 경로 또는 URL
+
+    // 전시회 정보
+    private ExhibitionListItemResponse exhibition;
 }

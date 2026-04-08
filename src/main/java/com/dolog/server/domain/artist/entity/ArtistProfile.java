@@ -90,4 +90,5 @@ public class ArtistProfile extends BaseEntity {
     public void togglePublicStatus(boolean isPublic) {
         this.isPublic = isPublic;
     }
+
 }
