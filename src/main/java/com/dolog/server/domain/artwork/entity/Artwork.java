@@ -5,6 +5,8 @@ import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.util.UUID;
 
@@ -28,6 +30,10 @@ public class Artwork extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "zone_id")
     private ExhibitionZone exhibitionZone;
+
+    @Builder.Default // Builder 사용 시 기본값으로 초기화되도록 설정
+    @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ArtworkImg> artworkImg = new ArrayList<>();
 
     @Column(length = 255)
     private String title;
