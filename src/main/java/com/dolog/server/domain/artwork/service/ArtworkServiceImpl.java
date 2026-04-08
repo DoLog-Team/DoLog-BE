@@ -9,6 +9,7 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
@@ -132,6 +133,61 @@ public class ArtworkServiceImpl implements ArtworkService {
         List<UUID> imgIds = savedImgs.stream().map(ArtworkImg::getId).collect(Collectors.toList());
 
         return ArtworkImgCreateResponse.from(artworkId, imgIds);
+    }
+
+    /**
+     * 작품 기본 정보 수정 (추가)
+     */
+    @Override
+    @Transactional
+    public ArtworkCreateResponse updateArtwork(UUID exhibitionId, UUID artworkId, ArtworkUpdateRequest request) {
+        // 1. 작품 조회
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        // 2. 검증: 요청된 전시회 ID와 작품이 속한 전시회 ID가 일치하는지 확인
+        if (!artwork.getExhibition().getId().equals(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+
+        // 3. 전시 구역(Zone) 변경이 있는 경우 조회
+        ExhibitionZone zone = null;
+        if (request.getZoneId() != null) {
+            zone = exhibitionZoneRepository.findById(request.getZoneId())
+                    .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+        }
+
+        // 4. 엔티티의 업데이트 메서드 호출
+        artwork.updateAllInfo(
+                request.getTitle(),
+                request.getDescription(),
+                request.getCategory(),
+                zone,
+                request.getMaterial(),
+                request.getSize(),
+                request.getMainImage(),
+                request.getPurchaseUrl()
+        );
+
+        return ArtworkCreateResponse.from(artwork.getId());
+    }
+
+    /**
+     * 작품 삭제 (추가)
+     */
+    @Override
+    @Transactional
+    public void deleteArtwork(UUID exhibitionId, UUID artworkId) {
+        // 1. 존재 확인 및 전시회 매칭 검증
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (!artwork.getExhibition().getId().equals(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+
+        // 2. 삭제 실행 (Artwork 엔티티에 Cascade 설정이 되어 있어야 상세 이미지도 같이 지워집니다)
+        artworkRepository.delete(artwork);
     }
 
     /**

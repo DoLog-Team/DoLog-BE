@@ -1,11 +1,18 @@
 package com.dolog.server.domain.artwork.web.controller;
 
+import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
+import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
+import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.global.response.SuccessResponse;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -55,5 +62,33 @@ public class ArtworkController {
         ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, requests);
 
         return SuccessResponse.ok(response, "작품 상세 이미지 등록에 성공하였습니다.");
+    }
+
+    /**
+     * 작품 기본 정보 수정 (PATCH)
+     * [요구사항] 변경하고 싶은 데이터만 전송 (Partial Update)
+     */
+    @PatchMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<ArtworkCreateResponse> updateArtwork(
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID artworkId,
+            @Valid @RequestBody ArtworkUpdateRequest request) {
+
+        ArtworkCreateResponse data = artworkService.updateArtwork(exhibitionId, artworkId, request);
+        return SuccessResponse.ok(data, "정보가 성공적으로 수정되었습니다.");
+    }
+
+    /**
+     * 작품 삭제 (DELETE)
+     */
+    @DeleteMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<Void> deleteArtwork(
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID artworkId) {
+
+        artworkService.deleteArtwork(exhibitionId, artworkId);
+        return SuccessResponse.ok(null, "작품이 성공적으로 삭제되었습니다.");
     }
 }
