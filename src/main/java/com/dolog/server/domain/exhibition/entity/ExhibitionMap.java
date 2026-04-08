@@ -19,16 +19,34 @@ public class ExhibitionMap extends BaseEntity {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "exhibition_id", nullable = false, unique = true)
     private Exhibition exhibition;
 
-    @Column(length = 100)
-    private String description;
+    @Column(name = "address", nullable = false)
+    private String address;
 
-    public void update(String description) {
-        if (description != null) {
-            this.description = description;
+    @Column(name = "detail_location")
+    private String detailLocation;
+
+    @Column(name = "latitude", nullable = false)
+    private String latitude;
+
+    @Column(name = "longitude", nullable = false)
+    private String longitude;
+
+    public void update(String address, String detailLocation, String latitude, String longitude) {
+        if (address != null) {
+            this.address = address;
+        }
+        if (detailLocation != null) {
+            this.detailLocation = detailLocation;
+        }
+        if (latitude != null) {
+            this.latitude = latitude;
+        }
+        if (longitude != null) {
+            this.longitude = longitude;
         }
     }
 }

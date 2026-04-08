@@ -8,14 +8,19 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
+import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionArtistException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionDetailUpsertRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -34,6 +40,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
+    private final ExhibitionMapRepository exhibitionMapRepository;
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
@@ -152,6 +159,67 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .toList();
     }
 
+    // 전시 장소 정보 등록
+    @Override
+    public ExhibitionMapCreateResponse createExhibitionMap(UUID exhibitionId, ExhibitionMapCreateRequest request) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (exhibitionMapRepository.existsByExhibitionId(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_ALREADY_EXISTS);
+        }
+
+        ExhibitionMap exhibitionMap = ExhibitionMap.builder()
+                .exhibition(exhibition)
+                .address(request.getAddress())
+                .detailLocation(request.getDetailLocation())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .build();
+
+        ExhibitionMap saved = exhibitionMapRepository.save(exhibitionMap);
+
+        return ExhibitionMapCreateResponse.builder()
+                .mapId(saved.getId().toString())
+                .exhibitionId(exhibition.getId().toString())
+                .build();
+    }
+
+    // 전시 장소 정보 수정
+    @Override
+    public ExhibitionMapUpdateResponse updateExhibitionMap(UUID exhibitionId, ExhibitionMapUpdateRequest request) {
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+
+        ExhibitionMap exhibitionMap = exhibitionMapRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+
+        exhibitionMap.update(
+                request.getAddress(),
+                request.getDetailLocation(),
+                request.getLatitude(),
+                request.getLongitude()
+        );
+
+        return ExhibitionMapUpdateResponse.builder()
+                .mapId(exhibitionMap.getId().toString())
+                .build();
+    }
+
+    // 전시 장소 정보 삭제
+    @Override
+    public void deleteExhibitionMap(UUID exhibitionId) {
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+
+        ExhibitionMap exhibitionMap = exhibitionMapRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+
+        exhibitionMapRepository.delete(exhibitionMap);
+    }
+
     // 전시 작가 삭제
     @Override
     public ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId) {
@@ -177,4 +245,34 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         );
     }
 
+    @Override
+    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+        boolean isNew = exhibitionDetailOpt.isEmpty();
+
+        ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() -> ExhibitionDetail.builder()
+                .exhibition(exhibition)
+                .title(request.getTitle())
+                .build());
+
+        exhibitionDetail.updateBasicInfo(
+                request.getTitle(),
+                request.getDescription(),
+                request.getExhibitionImg(),
+                request.getStartDate(),
+                request.getEndDate()
+        );
+
+        exhibitionDetailRepository.save(exhibitionDetail);
+
+        String message = isNew ? "상세 정보가 성공적으로 등록되었습니다." : "상세 정보가 성공적으로 수정되었습니다.";
+
+        return ExhibitionDetailUpsertResponse.builder()
+                .exhibitionId(exhibition.getId())
+                .message(message)
+                .build();
+    }
 }

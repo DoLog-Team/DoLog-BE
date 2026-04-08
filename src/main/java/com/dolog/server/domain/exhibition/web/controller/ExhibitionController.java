@@ -1,8 +1,11 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
-import com.dolog.server.domain.exhibition.service.ExhibitionServiceImpl;
+import com.dolog.server.domain.exhibition.service.ExhibitionService;
 import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionDetailUpsertRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
@@ -11,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,7 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ExhibitionController {
 
-    private final ExhibitionServiceImpl exhibitionService;
+    private final ExhibitionService exhibitionService;
 
     // 전시회 전체 목록 조회
     @GetMapping
@@ -93,6 +97,35 @@ public class ExhibitionController {
         );
     }
 
+    // 전시 장소 정보 등록
+    @PostMapping("/{exhibitionId}/map")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<ExhibitionMapCreateResponse>> createExhibitionMap(
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExhibitionMapCreateRequest request) {
+        ExhibitionMapCreateResponse response = exhibitionService.createExhibitionMap(exhibitionId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(response));
+    }
+
+    // 전시 장소 정보 수정
+    @PatchMapping("/{exhibitionId}/map")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<ExhibitionMapUpdateResponse>> updateExhibitionMap(
+            @PathVariable UUID exhibitionId,
+            @RequestBody ExhibitionMapUpdateRequest request) {
+        ExhibitionMapUpdateResponse response = exhibitionService.updateExhibitionMap(exhibitionId, request);
+        return ResponseEntity.ok(SuccessResponse.ok(response, "장소 정보 수정에 성공하였습니다."));
+    }
+
+    // 전시 장소 정보 삭제
+    @DeleteMapping("/{exhibitionId}/map")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public ResponseEntity<SuccessResponse<Void>> deleteExhibitionMap(
+            @PathVariable UUID exhibitionId) {
+        exhibitionService.deleteExhibitionMap(exhibitionId);
+        return ResponseEntity.ok(SuccessResponse.ok(null, "장소 정보 삭제에 성공하였습니다."));
+    }
+
     //전시 작가 삭제
     @DeleteMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
@@ -105,5 +138,13 @@ public class ExhibitionController {
         return SuccessResponse.ok(data);
     }
 
-
+    // 전시 상세정보 등록/수정
+    @PutMapping("/{exhibitionId}/details")
+    public SuccessResponse<ExhibitionDetailUpsertResponse> upsertExhibitionDetail(
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExhibitionDetailUpsertRequest request
+    ) {
+        ExhibitionDetailUpsertResponse data = exhibitionService.upsertExhibitionDetail(exhibitionId, request);
+        return SuccessResponse.ok(data);
+    }
 }

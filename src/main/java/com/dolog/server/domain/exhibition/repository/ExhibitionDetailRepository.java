@@ -13,8 +13,14 @@ import java.util.UUID;
 
 public interface ExhibitionDetailRepository extends JpaRepository<ExhibitionDetail, UUID> {
 
-    // 전시회 엔티티를 넘기면 그 전시의 상세 정보(제목, 날짜 등)를 찾아옵니다.
+    // 1. 엔티티 객체로 상세 정보 찾기 (Service에서 profile.getExhibition() 넘길 때 사용)
     Optional<ExhibitionDetail> findByExhibition(Exhibition exhibition);
+
+    // 2. ID값으로 상세 정보 찾기
+    Optional<ExhibitionDetail> findByExhibitionId(UUID exhibitionId);
+
+    // 3. 여러 개의 ID값으로 한꺼번에 상세 정보 찾기 (목록 조회 최적화용)
+    List<ExhibitionDetail> findByExhibitionIdIn(List<UUID> exhibitionIds);
 
     @Query("SELECT ed FROM ExhibitionDetail ed JOIN FETCH ed.exhibition e " +
             "WHERE (:isPublic IS NULL OR e.isPublic = :isPublic) " +

@@ -1,7 +1,11 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionDetailUpsertRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionDetailUpsertResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.*;
 
 import java.util.List;
@@ -24,4 +28,12 @@ public interface ExhibitionService {
     List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId);
 
     ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId);
+
+    ExhibitionMapCreateResponse createExhibitionMap(UUID exhibitionId, ExhibitionMapCreateRequest request);
+
+    ExhibitionMapUpdateResponse updateExhibitionMap(UUID exhibitionId, ExhibitionMapUpdateRequest request);
+
+    void deleteExhibitionMap(UUID exhibitionId);
+
+    ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request);
 }
