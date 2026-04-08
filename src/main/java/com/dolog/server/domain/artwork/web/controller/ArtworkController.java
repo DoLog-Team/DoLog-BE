@@ -27,6 +27,17 @@ public class ArtworkController {
 
     private final ArtworkService artworkService;
 
+    // 작품 전체 목록 조회
+    @GetMapping("/artworks")
+    public SuccessResponse<Object> getArtworks(
+            @RequestParam(required = false) Boolean main,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String search
+    ) {
+        Object data = artworkService.getArtworks(main, category, search);
+        return SuccessResponse.ok(data);
+    }
+
     /**
      * 작품 기본 정보 등록
      * [요구사항] Developer 권한을 가진 계정만 데이터 입력 가능

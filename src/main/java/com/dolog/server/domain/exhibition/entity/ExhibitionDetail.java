@@ -68,24 +68,23 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(length = 255)
     private String copyright;
 
+    public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate) {
+        this.title = title;
+        this.description = description;
+        this.exhibitionImg = exhibitionImg;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+
     public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
                        String dateInfo, String address, String addressInfo, SortType sortType, ThemeType themeType, String splashImg,
                        String email, String copyright) {
-        if (title != null) {
-            this.title = title;
-        }
-        if (description != null) {
-            this.description = description;
-        }
-        if (exhibitionImg != null) {
-            this.exhibitionImg = exhibitionImg;
-        }
-        if (startDate != null) {
-            this.startDate = startDate;
-        }
-        if (endDate != null) {
-            this.endDate = endDate;
-        }
+        this.title = title;
+        this.description = description;
+        this.exhibitionImg = exhibitionImg;
+        this.startDate = startDate;
+        this.endDate = endDate;
+
         if (dateInfo != null) {
             this.dateInfo = dateInfo;
         }

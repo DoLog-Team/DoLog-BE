@@ -16,6 +16,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -239,5 +241,36 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 artist.getId(),
                 artist.getNameKo()
         );
+    }
+
+    @Override
+    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+        boolean isNew = exhibitionDetailOpt.isEmpty();
+
+        ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() -> ExhibitionDetail.builder()
+                .exhibition(exhibition)
+                .title(request.getTitle())
+                .build());
+
+        exhibitionDetail.updateBasicInfo(
+                request.getTitle(),
+                request.getDescription(),
+                request.getExhibitionImg(),
+                request.getStartDate(),
+                request.getEndDate()
+        );
+
+        exhibitionDetailRepository.save(exhibitionDetail);
+
+        String message = isNew ? "상세 정보가 성공적으로 등록되었습니다." : "상세 정보가 성공적으로 수정되었습니다.";
+
+        return ExhibitionDetailUpsertResponse.builder()
+                .exhibitionId(exhibition.getId())
+                .message(message)
+                .build();
     }
 }
