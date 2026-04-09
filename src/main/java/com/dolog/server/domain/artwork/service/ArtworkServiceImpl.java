@@ -3,12 +3,15 @@ package com.dolog.server.domain.artwork.service;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ArtworkImg;
+import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
+import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkImgRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest; // 이 줄을 추가!
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -133,6 +136,53 @@ public class ArtworkServiceImpl implements ArtworkService {
         List<UUID> imgIds = savedImgs.stream().map(ArtworkImg::getId).collect(Collectors.toList());
 
         return ArtworkImgCreateResponse.from(artworkId, imgIds);
+    }
+
+    /**
+     * 작품 상세 이미지 수정
+     */
+    @Override
+    @Transactional
+    public ArtworkImgUpdateResponse updateArtworkImage(UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request) {
+        // 1. 작품(부모) 존재 여부부터 확인
+        // 요청된 artworkId 자체가 잘못되었다면 여기서 에러 발생
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+
+        // 2. 이미지(자식) 존재 확인
+        ArtworkImg artworkImg = artworkImgRepository.findById(imageId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_IMAGE_NOT_FOUND));
+
+        // 3. 소속 검증
+        // 위에서 조회한 artwork 객체와 artworkImg가 가진 artwork 객체가 같은지 비교합니다.
+        if (!artworkImg.getArtwork().getId().equals(artwork.getId())) {
+            throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
+        }
+
+        // 4. 업데이트 수행
+        artworkImg.update(
+                request.getImageUrl(),
+                request.getDescription(),
+                request.getOrderIndex()
+        );
+
+        return new ArtworkImgUpdateResponse(artworkImg.getId());
+    }
+
+    @Override
+    @Transactional
+    public void deleteArtworkImage(UUID artworkId, UUID imageId) {
+        // 1. 이미지 조회
+        ArtworkImg artworkImg = artworkImgRepository.findById(imageId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_IMAGE_NOT_FOUND));
+
+        // 2. 검증
+        if (!artworkImg.getArtwork().getId().equals(artworkId)) {
+            throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
+        }
+
+        // 3. 삭제
+        artworkImgRepository.delete(artworkImg);
     }
 
     /**
