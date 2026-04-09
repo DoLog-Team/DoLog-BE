@@ -27,4 +27,14 @@ public class Host extends BaseEntity {
     private String name;
 
     private String img;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    // 정보 업데이트를 위한 메서드
+    public void update(String name, String img, String description) {
+        this.name = name;
+        this.img = img;
+        this.description = description;
+    }
 }

@@ -1,0 +1,63 @@
+package com.dolog.server.domain.exhibition.web.controller;
+
+import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
+import com.dolog.server.domain.exhibition.service.ExhibitionService;
+import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistAddResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistRemoveResponse;
+import com.dolog.server.global.response.SuccessResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/exhibitions")
+@RequiredArgsConstructor
+public class ExhibitionArtistController {
+    private final ExhibitionArtistService exhibitionArtistService;
+
+    // 전시 참여 작가 목록 조회
+    @GetMapping("/{exhibitionId}/artists")
+    public SuccessResponse<List<ExhibitionArtistListResponse>> getArtists(
+            @PathVariable UUID exhibitionId
+    ) {
+        List<ExhibitionArtistListResponse> data =
+                exhibitionArtistService.getArtistsByExhibition(exhibitionId);
+
+        return SuccessResponse.ok(
+                data,
+                "전시 작가 목록 조회 성공"
+        );
+    }
+
+    //전시 작가 추가
+    @PostMapping("/{exhibitionId}/artists")
+    public SuccessResponse<ExhibitionArtistAddResponse> addArtist(
+            @PathVariable UUID exhibitionId,
+            @RequestBody AddArtistRequest request
+    ) {
+        ExhibitionArtistAddResponse data =
+                exhibitionArtistService.addArtistToExhibition(exhibitionId, request.getArtistId());
+
+        return SuccessResponse.ok(
+                data,
+                "작가가 전시에 추가되었습니다."
+        );
+    }
+
+    //전시 작가 삭제
+    @DeleteMapping("/{exhibitionId}/artists")
+    public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
+            @PathVariable UUID exhibitionId,
+            @RequestBody RemoveArtistRequest request
+    ) {
+        ExhibitionArtistRemoveResponse data =
+                exhibitionArtistService.removeArtistFromExhibition(exhibitionId, request.getArtistId());
+
+        return SuccessResponse.ok(data);
+    }
+}
