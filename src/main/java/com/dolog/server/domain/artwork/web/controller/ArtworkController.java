@@ -5,9 +5,11 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
@@ -90,5 +92,32 @@ public class ArtworkController {
 
         artworkService.deleteArtwork(exhibitionId, artworkId);
         return SuccessResponse.ok(null, "작품이 성공적으로 삭제되었습니다.");
+    }
+
+    /**
+     * 작품 상세 이미지 수정 (PATCH)
+     */
+    @PatchMapping("/artworks/{artworkId}/images/{imageId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
+            @PathVariable UUID artworkId,
+            @PathVariable UUID imageId,
+            @RequestBody ArtworkImgUpdateRequest request) {
+
+        ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(artworkId, imageId, request);
+        return SuccessResponse.ok(data, "상세 이미지 정보가 성공적으로 수정되었습니다.");
+    }
+
+    /**
+     * 작품 상세 이미지 삭제 (DELETE)
+     */
+    @DeleteMapping("/artworks/{artworkId}/images/{imageId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<Void> deleteArtworkImage(
+            @PathVariable UUID artworkId,
+            @PathVariable UUID imageId) {
+
+        artworkService.deleteArtworkImage(artworkId, imageId);
+        return SuccessResponse.ok(null, "상세 이미지가 성공적으로 삭제되었습니다.");
     }
 }
