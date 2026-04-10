@@ -21,7 +21,9 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     HOST_NOT_FOUND("EXHIBITION_HOST_404", NOT_FOUND, "등록된 호스트 정보가 없습니다."),
 
-    ZONE_NOT_FOUND("EXHIBITION_ZONE_404", NOT_FOUND, "해당 ID의 구역을 찾을 수 없습니다.");
+    ZONE_NOT_FOUND("EXHIBITION_ZONE_404", NOT_FOUND, "해당 ID의 구역을 찾을 수 없습니다."),
+
+    PARTNER_NOT_FOUND("EXHIBITION_PARTNER_404", NOT_FOUND, "존재하지 않는 파트입니다.");
 
     private final String code;
     private final int httpStatus;

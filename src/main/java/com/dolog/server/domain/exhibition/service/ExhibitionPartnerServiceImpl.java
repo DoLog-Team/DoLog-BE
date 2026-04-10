@@ -7,7 +7,9 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.PartnerRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,5 +38,23 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
         partnerRepository.save(partner);
 
         return PartnerPartCreateResponse.from(partner);
+    }
+
+    @Override
+    public PartnerPartUpdateResponse updatePart(UUID partId, PartnerPartUpdateRequest request) {
+        Partner partner = partnerRepository.findById(partId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
+
+        partner.update(request.getPartName(), request.getOrder());
+
+        return PartnerPartUpdateResponse.from(partner);
+    }
+
+    @Override
+    public void deletePart(UUID partId) {
+        Partner partner = partnerRepository.findById(partId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
+
+        partnerRepository.delete(partner);
     }
 }
