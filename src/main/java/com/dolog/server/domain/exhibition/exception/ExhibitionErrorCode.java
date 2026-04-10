@@ -19,10 +19,7 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
     EXHIBITION_ARTIST_ALREADY_EXISTS("EXHIBITION_ARTIST_400", BAD_REQUEST, "이미 전시에 추가된 작가입니다."),
     EXHIBITION_ARTIST_NOT_FOUND("EXHIBITION_ARTIST_404", NOT_FOUND, "해당 전시에 등록된 작가가 아닙니다."),
 
-    HOST_NOT_FOUND("EXHIBITION_HOST_404", NOT_FOUND, "등록된 호스트 정보가 없습니다."),
-
-    CUSTOM_THEME_PLAN_FORBIDDEN("EXHIBITION_CUSTOM_THEME_403", FORBIDDEN, "현재 플랜에서 허용되지 않는 테마/기능입니다."),
-    CUSTOM_THEME_INVALID_MODE("EXHIBITION_CUSTOM_THEME_400", BAD_REQUEST, "잘못된 theme_mode 값입니다.");
+    HOST_NOT_FOUND("EXHIBITION_HOST_404", NOT_FOUND, "등록된 호스트 정보가 없습니다.");
 
     private final String code;
     private final int httpStatus;

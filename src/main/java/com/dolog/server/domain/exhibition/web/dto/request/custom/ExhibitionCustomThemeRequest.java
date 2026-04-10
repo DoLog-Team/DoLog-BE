@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.web.dto.request.custom;
 
 import com.dolog.server.domain.exhibition.entity.enums.ThemeMode;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
