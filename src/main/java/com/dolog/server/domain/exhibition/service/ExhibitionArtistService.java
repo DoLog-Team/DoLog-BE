@@ -1,8 +1,8 @@
 package com.dolog.server.domain.exhibition.service;
 
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistAddResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistListResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistRemoveResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
 
 import java.util.List;
 import java.util.UUID;

@@ -1,17 +1,15 @@
 package com.dolog.server.domain.exhibition.service;
 
-import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
-import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMapCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMapUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.request.map.ExhibitionMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.map.ExhibitionMapUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.map.ExhibitionMapCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.map.ExhibitionMapUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

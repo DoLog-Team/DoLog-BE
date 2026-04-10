@@ -1,6 +1,6 @@
 package com.dolog.server.domain.artist.web.dto.response;
 
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionListItemResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionListItemResponse;
 import lombok.*;
 
 import java.util.List;

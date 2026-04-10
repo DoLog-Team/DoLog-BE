@@ -1,4 +1,4 @@
-package com.dolog.server.domain.exhibition.web.dto.request;
+package com.dolog.server.domain.exhibition.web.dto.request.basic;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

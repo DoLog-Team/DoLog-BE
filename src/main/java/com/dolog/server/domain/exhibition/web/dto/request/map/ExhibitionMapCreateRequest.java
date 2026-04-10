@@ -1,4 +1,4 @@
-package com.dolog.server.domain.exhibition.web.dto.request;
+package com.dolog.server.domain.exhibition.web.dto.request.map;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
