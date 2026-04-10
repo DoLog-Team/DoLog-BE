@@ -17,7 +17,9 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
     EXHIBITION_MAP_NOT_FOUND("EXHIBITION_MAP_404", NOT_FOUND, "등록된 장소 정보가 없습니다."),
 
     EXHIBITION_ARTIST_ALREADY_EXISTS("EXHIBITION_ARTIST_400", BAD_REQUEST, "이미 전시에 추가된 작가입니다."),
-    EXHIBITION_ARTIST_NOT_FOUND("EXHIBITION_ARTIST_404", NOT_FOUND, "해당 전시에 등록된 작가가 아닙니다.");
+    EXHIBITION_ARTIST_NOT_FOUND("EXHIBITION_ARTIST_404", NOT_FOUND, "해당 전시에 등록된 작가가 아닙니다."),
+
+    HOST_NOT_FOUND("EXHIBITION_HOST_404", NOT_FOUND, "등록된 호스트 정보가 없습니다.");
 
     private final String code;
     private final int httpStatus;

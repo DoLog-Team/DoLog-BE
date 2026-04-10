@@ -1,12 +1,11 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
-import com.dolog.server.domain.exhibition.service.ExhibitionService;
-import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistAddResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistListResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionArtistRemoveResponse;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.RemoveArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

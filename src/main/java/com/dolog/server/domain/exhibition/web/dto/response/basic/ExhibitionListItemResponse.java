@@ -1,4 +1,4 @@
-package com.dolog.server.domain.exhibition.web.dto.response;
+package com.dolog.server.domain.exhibition.web.dto.response.basic;
 
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.Exhibition;

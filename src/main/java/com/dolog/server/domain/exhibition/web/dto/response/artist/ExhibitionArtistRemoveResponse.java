@@ -1,4 +1,4 @@
-package com.dolog.server.domain.exhibition.web.dto.response;
+package com.dolog.server.domain.exhibition.web.dto.response.artist;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Getter
 @Builder
-public class ExhibitionArtistAddResponse {
+public class ExhibitionArtistRemoveResponse {
 
     private UUID exhibitionId;
     private String exhibitionName;
@@ -15,17 +15,22 @@ public class ExhibitionArtistAddResponse {
     private UUID artistId;
     private String artistName;
 
-    public static ExhibitionArtistAddResponse of(
+    private String message;
+
+    public static ExhibitionArtistRemoveResponse of(
             UUID exhibitionId,
             String exhibitionName,
             UUID artistId,
             String artistName
     ) {
-        return ExhibitionArtistAddResponse.builder()
+        String message = artistName + " 님이 " + exhibitionName + "에서 삭제되었습니다.";
+
+        return ExhibitionArtistRemoveResponse.builder()
                 .exhibitionId(exhibitionId)
                 .exhibitionName(exhibitionName)
                 .artistId(artistId)
                 .artistName(artistName)
+                .message(message)
                 .build();
     }
 }

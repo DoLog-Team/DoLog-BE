@@ -1,4 +1,4 @@
-package com.dolog.server.domain.exhibition.web.dto.request;
+package com.dolog.server.domain.exhibition.web.dto.request.host;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

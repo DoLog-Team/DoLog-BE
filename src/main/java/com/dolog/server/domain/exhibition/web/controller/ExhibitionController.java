@@ -1,20 +1,15 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
 import com.dolog.server.domain.exhibition.service.ExhibitionService;
-import com.dolog.server.domain.exhibition.web.dto.request.AddArtistRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionCreateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionDetailUpsertRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.RemoveArtistRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.*;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

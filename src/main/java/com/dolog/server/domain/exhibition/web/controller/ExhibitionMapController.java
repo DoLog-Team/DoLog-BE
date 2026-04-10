@@ -1,12 +1,10 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
-import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
 import com.dolog.server.domain.exhibition.service.ExhibitionMapService;
-import com.dolog.server.domain.exhibition.service.ExhibitionService;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapCreateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.ExhibitionMapUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMapCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.ExhibitionMapUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.request.map.ExhibitionMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.map.ExhibitionMapUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.map.ExhibitionMapCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.map.ExhibitionMapUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

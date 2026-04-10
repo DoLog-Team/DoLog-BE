@@ -27,4 +27,9 @@ public class HostSns extends BaseEntity {
     private String platformName;
 
     private String url;
+
+    public void update(String platformName, String url) {
+        this.platformName = platformName;
+        this.url = url;
+    }
 }
