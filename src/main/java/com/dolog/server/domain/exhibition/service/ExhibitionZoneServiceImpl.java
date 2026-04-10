@@ -9,6 +9,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,15 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public ExhibitionZoneListResponse getZones(UUID exhibitionId) {
+        exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        return ExhibitionZoneListResponse.from(exhibitionZoneRepository.findByExhibitionId(exhibitionId));
+    }
 
     @Override
     public ExhibitionZoneCreateResponse createZone(UUID exhibitionId, ExhibitionZoneCreateRequest request) {

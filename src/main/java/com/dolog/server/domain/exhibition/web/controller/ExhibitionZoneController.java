@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.service.ExhibitionZoneService;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.response.code.BaseResponseCode;
@@ -21,6 +22,15 @@ import java.util.UUID;
 public class ExhibitionZoneController {
 
     private final ExhibitionZoneService exhibitionZoneService;
+
+    // 전시 구역 목록 조회
+    @GetMapping("/{exhibitionId}/zones")
+    public SuccessResponse<ExhibitionZoneListResponse> getZones(
+            @PathVariable UUID exhibitionId
+    ) {
+        ExhibitionZoneListResponse data = exhibitionZoneService.getZones(exhibitionId);
+        return SuccessResponse.ok(data, "전시 구역 조회가 완료되었습니다.");
+    }
 
     // 전시 구역 생성
     @PostMapping("/{exhibitionId}/zones")

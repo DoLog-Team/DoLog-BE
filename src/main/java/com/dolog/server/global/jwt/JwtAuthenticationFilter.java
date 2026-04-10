@@ -49,9 +49,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String token = resolveToken(request);
 
-            // 토큰 없으면 인증 필요 없음 → 401 처리
+            // 토큰 없으면 인증 없이 통과 (공개 API 허용)
             if (token == null) {
-                throw new RuntimeException("JWT 토큰이 존재하지 않습니다.");
+                filterChain.doFilter(request, response);
+                return;
             }
 
             // 토큰 유효성 검증
