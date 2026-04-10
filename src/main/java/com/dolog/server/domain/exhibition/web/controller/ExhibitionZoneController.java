@@ -7,11 +7,11 @@ import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCr
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
-import com.dolog.server.global.response.code.BaseResponseCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -33,22 +33,18 @@ public class ExhibitionZoneController {
     }
 
     // 전시 구역 생성
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping("/{exhibitionId}/zones")
     public ResponseEntity<SuccessResponse<ExhibitionZoneCreateResponse>> createZone(
             @PathVariable UUID exhibitionId,
             @Valid @RequestBody ExhibitionZoneCreateRequest request
     ) {
         ExhibitionZoneCreateResponse data = exhibitionZoneService.createZone(exhibitionId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(
-                SuccessResponse.of(data, new BaseResponseCode() {
-                    public String getCode() { return "SUCCESS_201"; }
-                    public int getHttpStatus() { return 201; }
-                    public String getMessage() { return "새로운 전시 구역이 생성되었습니다."; }
-                })
-        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data));
     }
 
     // 전시 구역 수정
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/{exhibitionId}/zones/{zoneId}")
     public SuccessResponse<ExhibitionZoneUpdateResponse> updateZone(
             @PathVariable UUID exhibitionId,
@@ -60,6 +56,7 @@ public class ExhibitionZoneController {
     }
 
     // 전시 구역 삭제
+    @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/{exhibitionId}/zones/{zoneId}")
     public SuccessResponse<Void> deleteZone(
             @PathVariable UUID exhibitionId,
