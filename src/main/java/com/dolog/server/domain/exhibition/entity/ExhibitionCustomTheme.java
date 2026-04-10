@@ -24,7 +24,6 @@ public class ExhibitionCustomTheme extends BaseEntity {
     @JoinColumn(name = "exhibition_id", nullable = false, unique = true)
     private Exhibition exhibition;
 
-    @Enumerated(EnumType.STRING)
     @Column(name = "theme_mode", nullable = false)
     private ThemeMode themeMode;
 

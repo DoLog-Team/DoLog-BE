@@ -37,7 +37,7 @@ public class ExhibitionCustomThemeServiceImpl implements ExhibitionCustomThemeSe
             theme.update(request.getThemeMode(), request.getBtnBg(), request.getBtnText(),
                     request.getCtaBg(), request.getCtaText());
         } else {
-            ThemeMode themeMode = request.getThemeMode() != null ? request.getThemeMode() : ThemeMode.light;
+            ThemeMode themeMode = request.getThemeMode() != null ? request.getThemeMode() : ThemeMode.LIGHT;
             theme = ExhibitionCustomTheme.builder()
                     .exhibition(exhibition)
                     .themeMode(themeMode)
