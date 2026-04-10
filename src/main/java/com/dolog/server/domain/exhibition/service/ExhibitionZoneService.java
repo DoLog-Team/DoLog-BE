@@ -12,4 +12,6 @@ public interface ExhibitionZoneService {
     ExhibitionZoneCreateResponse createZone(UUID exhibitionId, ExhibitionZoneCreateRequest request);
 
     ExhibitionZoneUpdateResponse updateZone(UUID exhibitionId, UUID zoneId, ExhibitionZoneUpdateRequest request);
+
+    void deleteZone(UUID exhibitionId, UUID zoneId);
 }

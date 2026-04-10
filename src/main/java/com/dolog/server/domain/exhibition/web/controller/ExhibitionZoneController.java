@@ -48,4 +48,14 @@ public class ExhibitionZoneController {
         ExhibitionZoneUpdateResponse data = exhibitionZoneService.updateZone(exhibitionId, zoneId, request);
         return SuccessResponse.ok(data, "구역 정보가 성공적으로 수정되었습니다.");
     }
+
+    // 전시 구역 삭제
+    @DeleteMapping("/{exhibitionId}/zones/{zoneId}")
+    public SuccessResponse<Void> deleteZone(
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID zoneId
+    ) {
+        exhibitionZoneService.deleteZone(exhibitionId, zoneId);
+        return SuccessResponse.ok(null, "전시 구역이 삭제되었습니다.");
+    }
 }

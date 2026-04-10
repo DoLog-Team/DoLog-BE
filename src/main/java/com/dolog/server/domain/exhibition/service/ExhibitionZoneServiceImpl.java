@@ -49,4 +49,12 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
 
         return ExhibitionZoneUpdateResponse.from(zone);
     }
+
+    @Override
+    public void deleteZone(UUID exhibitionId, UUID zoneId) {
+        ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+
+        exhibitionZoneRepository.delete(zone);
+    }
 }
