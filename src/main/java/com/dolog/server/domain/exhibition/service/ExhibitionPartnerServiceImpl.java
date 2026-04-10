@@ -91,4 +91,12 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
         return PartnerMemberUpdateResponse.from(member);
     }
+
+    @Override
+    public void deleteMember(UUID memberId) {
+        PartnerMember member = partnerMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND));
+
+        partnerMemberRepository.delete(member);
+    }
 }

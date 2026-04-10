@@ -79,4 +79,14 @@ public class ExhibitionPartnerController {
         PartnerMemberUpdateResponse data = exhibitionPartnerService.updateMember(memberId, request);
         return SuccessResponse.ok(data, "멤버 정보가 성공적으로 수정되었습니다.");
     }
+
+    // 멤버 삭제
+    @PreAuthorize("hasRole('DEVELOPER')")
+    @DeleteMapping("/partners/members/{memberId}")
+    public SuccessResponse<Void> deleteMember(
+            @PathVariable UUID memberId
+    ) {
+        exhibitionPartnerService.deleteMember(memberId);
+        return SuccessResponse.ok(null, "데이터 삭제에 성공하였습니다.");
+    }
 }

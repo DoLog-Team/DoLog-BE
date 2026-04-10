@@ -22,4 +22,6 @@ public interface ExhibitionPartnerService {
     PartnerMemberCreateResponse createMember(UUID partId, PartnerMemberCreateRequest request);
 
     PartnerMemberUpdateResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request);
+
+    void deleteMember(UUID memberId);
 }
