@@ -28,4 +28,7 @@ public class Partner extends BaseEntity {
 
     @Column(length = 255)
     private String description;
+
+    @Column(name = "display_order", nullable = false)
+    private Integer order;
 }
