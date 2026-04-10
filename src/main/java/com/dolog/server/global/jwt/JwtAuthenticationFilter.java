@@ -12,7 +12,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.springframework.util.AntPathMatcher;
+
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -25,11 +29,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUserDetailsService userDetailsService;
     private final AuthenticationEntryPoint authenticationEntryPoint;
 
-    // 인증 제외 경로
+    private static final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+    // 인증 제외 경로 (exact match)
     private static final Set<String> EXCLUDE_URLS = Set.of(
             "/api/auth/login",
             "/api/auth/refresh",
             "/api/signup"
+    );
+
+    // 인증 제외 경로 (패턴 match: method -> patterns)
+    private static final Map<String, List<String>> EXCLUDE_PATTERNS = Map.of(
+            "GET", List.of("/api/exhibitions/*/zones")
     );
 
     @Override
@@ -41,15 +52,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String uri = request.getRequestURI();
 
         try {
-            // 인증 제외 경로는 패스
+            // 인증 제외 경로는 패스 (exact)
             if (EXCLUDE_URLS.contains(uri)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // 인증 제외 경로는 패스 (pattern)
+            String method = request.getMethod();
+            List<String> patterns = EXCLUDE_PATTERNS.getOrDefault(method, List.of());
+            if (patterns.stream().anyMatch(p -> pathMatcher.match(p, uri))) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String token = resolveToken(request);
 
-            // 토큰 없으면 인증 필요 없음 → 401 처리
+            // 토큰 없으면 401 처리
             if (token == null) {
                 throw new RuntimeException("JWT 토큰이 존재하지 않습니다.");
             }
