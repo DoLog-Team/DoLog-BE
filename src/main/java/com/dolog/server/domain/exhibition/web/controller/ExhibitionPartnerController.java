@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.web.controller;
 import com.dolog.server.domain.exhibition.service.ExhibitionPartnerService;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberCreateResponse;
@@ -25,6 +26,15 @@ import java.util.UUID;
 public class ExhibitionPartnerController {
 
     private final ExhibitionPartnerService exhibitionPartnerService;
+
+    // 도움을 주신 분들 목록 조회
+    @GetMapping("/{exhibitionId}/partners")
+    public SuccessResponse<PartnerListResponse> getPartners(
+            @PathVariable UUID exhibitionId
+    ) {
+        PartnerListResponse data = exhibitionPartnerService.getPartners(exhibitionId);
+        return SuccessResponse.ok(data, "도움을 주신 분들 목록 조회가 완료되었습니다.");
+    }
 
     // 파트 생성
     @PreAuthorize("hasRole('DEVELOPER')")

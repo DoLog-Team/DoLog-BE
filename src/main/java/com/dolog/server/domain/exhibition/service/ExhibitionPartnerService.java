@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberCreateResponse;
@@ -12,6 +13,8 @@ import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartUp
 import java.util.UUID;
 
 public interface ExhibitionPartnerService {
+
+    PartnerListResponse getPartners(UUID exhibitionId);
 
     PartnerPartCreateResponse createPart(UUID exhibitionId, PartnerPartCreateRequest request);
 
