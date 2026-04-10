@@ -2,12 +2,18 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.Partner;
+import com.dolog.server.domain.exhibition.entity.PartnerMember;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.repository.PartnerMemberRepository;
 import com.dolog.server.domain.exhibition.repository.PartnerRepository;
+import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberUpdateResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartCreateResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartUpdateResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +29,7 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final PartnerRepository partnerRepository;
+    private final PartnerMemberRepository partnerMemberRepository;
 
     @Override
     public PartnerPartCreateResponse createPart(UUID exhibitionId, PartnerPartCreateRequest request) {
@@ -56,5 +63,32 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
 
         partnerRepository.delete(partner);
+    }
+
+    @Override
+    public PartnerMemberCreateResponse createMember(UUID partId, PartnerMemberCreateRequest request) {
+        Partner partner = partnerRepository.findById(partId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
+
+        PartnerMember member = PartnerMember.builder()
+                .partner(partner)
+                .name(request.getMemberName())
+                .imageUrl(request.getMemberImageUrl())
+                .email(request.getMemberEmail())
+                .build();
+
+        partnerMemberRepository.save(member);
+
+        return PartnerMemberCreateResponse.from(member);
+    }
+
+    @Override
+    public PartnerMemberUpdateResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request) {
+        PartnerMember member = partnerMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND));
+
+        member.update(request.getMemberName(), request.getMemberEmail());
+
+        return PartnerMemberUpdateResponse.from(member);
     }
 }
