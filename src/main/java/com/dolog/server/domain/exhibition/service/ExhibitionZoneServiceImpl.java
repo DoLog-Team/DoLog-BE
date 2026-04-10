@@ -7,7 +7,9 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,5 +38,15 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         exhibitionZoneRepository.save(zone);
 
         return ExhibitionZoneCreateResponse.from(zone);
+    }
+
+    @Override
+    public ExhibitionZoneUpdateResponse updateZone(UUID exhibitionId, UUID zoneId, ExhibitionZoneUpdateRequest request) {
+        ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+
+        zone.update(request.getName(), request.getDescription());
+
+        return ExhibitionZoneUpdateResponse.from(zone);
     }
 }
