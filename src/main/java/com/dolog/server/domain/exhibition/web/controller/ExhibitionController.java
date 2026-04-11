@@ -38,6 +38,13 @@ public class ExhibitionController {
         return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getMainExhibitions()));
     }
 
+    // 전시회 기본+상세+장소 통합 조회
+    @GetMapping("/{exhibitionId}/details")
+    public SuccessResponse<ExhibitionIntegratedResponse> getExhibitionDetails(
+            @PathVariable UUID exhibitionId) {
+        return SuccessResponse.ok(exhibitionService.getExhibitionDetails(exhibitionId));
+    }
+
     // 전시회 기본정보 등록
     @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping
