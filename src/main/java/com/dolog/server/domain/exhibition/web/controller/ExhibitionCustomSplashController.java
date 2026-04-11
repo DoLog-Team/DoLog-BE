@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
 import com.dolog.server.domain.exhibition.service.ExhibitionCustomSplashService;
+import com.dolog.server.domain.exhibition.web.dto.request.custom.ExhibitionCustomSplashRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomSplashResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +22,9 @@ public class ExhibitionCustomSplashController {
     @PutMapping("/{exhibitionId}/custom/splash")
     public SuccessResponse<ExhibitionCustomSplashResponse> upsertCustomSplash(
             @PathVariable UUID exhibitionId,
-            @RequestParam(value = "splash_img", required = false) String splashImg
+            @RequestBody ExhibitionCustomSplashRequest request
     ) {
-        ExhibitionCustomSplashResponse data = exhibitionCustomSplashService.upsertCustomSplash(exhibitionId, splashImg);
+        ExhibitionCustomSplashResponse data = exhibitionCustomSplashService.upsertCustomSplash(exhibitionId, request.getSplashImg());
         return SuccessResponse.ok(data, "스플래시 이미지 설정이 완료되었습니다.");
     }
 }
