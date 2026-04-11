@@ -5,6 +5,7 @@ import com.dolog.server.domain.exhibition.web.dto.request.custom.ExhibitionCusto
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,6 +18,7 @@ public class ExhibitionCustomThemeController {
     private final ExhibitionCustomThemeService exhibitionCustomThemeService;
 
     // 전시회 커스텀 테마 설정
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PutMapping("/{exhibitionId}/custom/theme")
     public SuccessResponse<ExhibitionCustomThemeResponse> upsertCustomTheme(
             @PathVariable UUID exhibitionId,

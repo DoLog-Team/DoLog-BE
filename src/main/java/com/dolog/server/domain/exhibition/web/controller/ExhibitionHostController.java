@@ -7,6 +7,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostRe
 import com.dolog.server.domain.exhibition.web.dto.response.host.HostSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class ExhibitionHostController {
 
     private final ExhibitionHostService exhibitionHostService;
 
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PutMapping("/{exhibitionId}/host")
     public SuccessResponse<ExhibitionHostResponse> upsertHost(
             @PathVariable UUID exhibitionId,
@@ -30,6 +32,7 @@ public class ExhibitionHostController {
 
 //===============[SNS]================
 // SNS 추가
+@PreAuthorize("hasRole('DEVELOPER')")
 @PostMapping("/{exhibitionId}/host/sns")
 public SuccessResponse<HostSnsResponse> addHostSns(
         @PathVariable UUID exhibitionId, // exhibitionId로 받기
@@ -45,6 +48,7 @@ public SuccessResponse<HostSnsResponse> addHostSns(
     }
 
     // SNS 수정
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/host/sns/{snsId}")
     public SuccessResponse<List<HostSnsResponse>> updateHostSns(
             @PathVariable UUID snsId,
@@ -53,6 +57,7 @@ public SuccessResponse<HostSnsResponse> addHostSns(
     }
 
     // SNS 삭제
+    @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/host/sns/{snsId}")
     public SuccessResponse<List<HostSnsResponse>> deleteHostSns(@PathVariable UUID snsId) {
         return SuccessResponse.ok(exhibitionHostService.deleteHostSns(snsId), "주최 기관 SNS 삭제 성공");
