@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,6 +39,7 @@ public class ExhibitionController {
     }
 
     // 전시회 기본정보 등록
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping
     public ResponseEntity<SuccessResponse<ExhibitionCreateResponse>> createExhibition(
             @Valid @RequestBody ExhibitionCreateRequest request) {
@@ -46,6 +48,7 @@ public class ExhibitionController {
     }
 
     // 전시회 기본정보 수정
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/{exhibitionId}")
     public ResponseEntity<SuccessResponse<ExhibitionMessageResponse>> updateExhibition(
             @PathVariable UUID exhibitionId,
@@ -55,6 +58,7 @@ public class ExhibitionController {
     }
 
     // 전시회 삭제
+    @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/{exhibitionId}")
     public ResponseEntity<SuccessResponse<ExhibitionMessageResponse>> deleteExhibition(
             @PathVariable UUID exhibitionId) {
@@ -65,6 +69,7 @@ public class ExhibitionController {
 //   -----------------------------------------------------------------------------
 
     // 전시 상세정보 등록/수정
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PutMapping("/{exhibitionId}/details")
     public SuccessResponse<ExhibitionDetailUpsertResponse> upsertExhibitionDetail(
             @PathVariable UUID exhibitionId,

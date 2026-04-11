@@ -1,5 +1,8 @@
 package com.dolog.server.domain.artwork.service;
 
+import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ArtworkImg;
@@ -9,10 +12,7 @@ import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkImgRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest; // 이 줄을 추가!
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
@@ -41,6 +41,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
     private final ArtworkImgRepository artworkImgRepository;
+    private final ArtistRepository artistRepository;
 
     /**
      * 작품 전체 목록 조회
@@ -238,6 +239,53 @@ public class ArtworkServiceImpl implements ArtworkService {
 
         // 2. 삭제 실행 (Artwork 엔티티에 Cascade 설정이 되어 있어야 상세 이미지도 같이 지워집니다)
         artworkRepository.delete(artwork);
+    }
+
+    // 등록 (POST)
+    @Override
+    @Transactional
+    public ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request) {
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+
+        Artist artist = artistRepository.findById(request.getArtistId())
+                .orElseThrow(() -> new ArtistNotFoundException()); // 기존 예외 활용
+
+        if (artworkArtistMapRepository.existsByArtworkIdAndArtistId(artworkId, artist.getId())) {
+            throw new RuntimeException("이미 등록된 작가입니다.");
+        }
+
+        ArtworkArtistMap map = ArtworkArtistMap.builder()
+                .artwork(artwork)
+                .artist(artist)
+                .artistRole(request.getArtistRole())
+                .build();
+
+        return ArtworkArtistMappingResponse.from(artworkArtistMapRepository.save(map).getId());
+    }
+
+    // 수정 (PATCH) - 역할(Role)만 변경
+    @Override
+    @Transactional
+    public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistId, ArtworkArtistMappingRequest request) {
+        // artworkId와 artistId 조합으로 매핑 데이터를 찾습니다.
+        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistId(artworkId, artistId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND)); // 또는 적절한 매핑 없음 에러
+
+        map.updateRole(request.getArtistRole());
+
+        // 응답 DTO도 기획안 형식(id, role 포함)에 맞춰서 반환하도록 설계해야 합니다.
+        return ArtworkArtistMappingResponse.of(map);
+    }
+
+    // 삭제 (DELETE)
+    @Override
+    @Transactional
+    public void deleteArtistMapping(UUID artworkId, UUID artistId) {
+        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistId(artworkId, artistId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+
+        artworkArtistMapRepository.delete(map);
     }
 
     /**

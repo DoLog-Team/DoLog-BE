@@ -3,10 +3,8 @@ package com.dolog.server.domain.artwork.web.controller;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.service.ArtworkService;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.*;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
@@ -29,7 +27,7 @@ public class ArtworkController {
 
     private final ArtworkService artworkService;
 
-    // 작품 전체 목록 조회
+    // 1. 작품 전체 목록 조회
     @GetMapping("/artworks")
     public SuccessResponse<Object> getArtworks(
             @RequestParam(required = false) Boolean main,
@@ -40,84 +38,101 @@ public class ArtworkController {
         return SuccessResponse.ok(data);
     }
 
-    /**
-     * 작품 기본 정보 등록
-     * [요구사항] Developer 권한을 가진 계정만 데이터 입력 가능
-     */
+    // 2. 작품 기본 정보 등록
     @PostMapping("/exhibitions/{exhibitionId}/artworks")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> createArtwork(
-            @PathVariable UUID exhibitionId, // 경로에서 받은 exhibitionId
+            @PathVariable UUID exhibitionId,
             @Valid @RequestBody ArtworkCreateRequest request) {
-        // 서비스 메서드에 exhibitionId를 넘겨주도록 수정이 필요할 수 있습니다.
         ArtworkCreateResponse data = artworkService.createArtwork(exhibitionId, request);
-
         return SuccessResponse.created(data);
     }
 
-    @PostMapping("/artworks/{artworkId}/images")
-    @PreAuthorize("hasRole('DEVELOPER')") // 권한 설정 확인!
-    public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
-            @PathVariable UUID artworkId,
-            @RequestBody List<ArtworkImgCreateRequest> requests // 리스트 형태로 받습니다
-    ) {
-        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, requests);
-
-        return SuccessResponse.ok(response, "작품 상세 이미지 등록에 성공하였습니다.");
-    }
-
-    /**
-     * 작품 기본 정보 수정 (PATCH)
-     * [요구사항] 변경하고 싶은 데이터만 전송 (Partial Update)
-     */
+    // 3. 작품 기본 정보 수정 (PATCH)
     @PatchMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> updateArtwork(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId,
             @Valid @RequestBody ArtworkUpdateRequest request) {
-
         ArtworkCreateResponse data = artworkService.updateArtwork(exhibitionId, artworkId, request);
         return SuccessResponse.ok(data, "정보가 성공적으로 수정되었습니다.");
     }
 
-    /**
-     * 작품 삭제 (DELETE)
-     */
+    // 4. 작품 삭제 (DELETE)
     @DeleteMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteArtwork(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId) {
-
         artworkService.deleteArtwork(exhibitionId, artworkId);
         return SuccessResponse.ok(null, "작품이 성공적으로 삭제되었습니다.");
     }
 
-    /**
-     * 작품 상세 이미지 수정 (PATCH)
-     */
-    @PatchMapping("/artworks/{artworkId}/images/{imageId}")
+    /* ---------------- [ 상세 이미지 관련 API ] ---------------- */
+
+    // 5. 작품 상세 이미지 리스트 등록 (POST)
+    @PostMapping("/artworks/{artworkId}/images")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
+            @PathVariable UUID artworkId,
+            @RequestBody List<ArtworkImgCreateRequest> requests
+    ) {
+        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, requests);
+        return SuccessResponse.ok(response, "작품 상세 이미지 등록에 성공하였습니다.");
+    }
+
+    // 6. 작품 상세 이미지 개별 수정 (PATCH)
+    @PatchMapping("/artworks/{artworkId}/images/{imageId}") // 주소 확인! images 입니다.
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId,
             @RequestBody ArtworkImgUpdateRequest request) {
-
         ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(artworkId, imageId, request);
         return SuccessResponse.ok(data, "상세 이미지 정보가 성공적으로 수정되었습니다.");
     }
 
-    /**
-     * 작품 상세 이미지 삭제 (DELETE)
-     */
-    @DeleteMapping("/artworks/{artworkId}/images/{imageId}")
+    // 7. 작품 상세 이미지 개별 삭제 (DELETE)
+    @DeleteMapping("/artworks/{artworkId}/images/{imageId}") // 주소 확인! images 입니다.
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteArtworkImage(
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId) {
-
         artworkService.deleteArtworkImage(artworkId, imageId);
         return SuccessResponse.ok(null, "상세 이미지가 성공적으로 삭제되었습니다.");
+    }
+
+    /* ---------------- [ 작가 매핑 관련 API ] ---------------- */
+
+    // 8. 작품 작가 매핑 등록 (POST)
+    @PostMapping("/artworks/{artworkId}/artists")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<ArtworkArtistMappingResponse> createArtistMapping(
+            @PathVariable UUID artworkId,
+            @Valid @RequestBody ArtworkArtistMappingRequest request) {
+        ArtworkArtistMappingResponse data = artworkService.createArtistMapping(artworkId, request);
+        return SuccessResponse.created(data);
+    }
+
+    // 9. 작품 작가 매핑 수정 (PATCH)
+    @PatchMapping("/artworks/{artworkId}/artists/{artistId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<ArtworkArtistMappingResponse> updateArtistMapping(
+            @PathVariable UUID artworkId,
+            @PathVariable UUID artistId,
+            @RequestBody ArtworkArtistMappingRequest request) {
+        ArtworkArtistMappingResponse data = artworkService.updateArtistMapping(artworkId, artistId, request);
+        return SuccessResponse.ok(data, "작가 역할이 성공적으로 수정되었습니다.");
+    }
+
+    // 10. 작품 작가 매핑 삭제 (DELETE)
+    @DeleteMapping("/artworks/{artworkId}/artists/{artistId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<Void> deleteArtistMapping(
+            @PathVariable UUID artworkId,
+            @PathVariable UUID artistId) {
+        artworkService.deleteArtistMapping(artworkId, artistId);
+        return SuccessResponse.ok(null, "작가 연결이 성공적으로 해제되었습니다.");
     }
 }
