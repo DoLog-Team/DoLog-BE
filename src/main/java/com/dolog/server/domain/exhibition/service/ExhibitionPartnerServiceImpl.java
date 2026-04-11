@@ -40,9 +40,8 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         List<Partner> partners = partnerRepository.findByExhibitionIdOrderByOrderAscCreatedAtAsc(exhibitionId);
-        List<PartnerMember> allMembers = partners.stream()
-                .flatMap(p -> partnerMemberRepository.findByPartnerId(p.getId()).stream())
-                .collect(java.util.stream.Collectors.toList());
+        List<UUID> partnerIds = partners.stream().map(Partner::getId).collect(java.util.stream.Collectors.toList());
+        List<PartnerMember> allMembers = partnerMemberRepository.findByPartnerIdIn(partnerIds);
 
         return PartnerListResponse.from(partners, allMembers);
     }
@@ -78,6 +77,8 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
         Partner partner = partnerRepository.findById(partId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
 
+        List<PartnerMember> members = partnerMemberRepository.findByPartnerId(partId);
+        partnerMemberRepository.deleteAll(members);
         partnerRepository.delete(partner);
     }
 
@@ -103,7 +104,7 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
         PartnerMember member = partnerMemberRepository.findById(memberId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND));
 
-        member.update(request.getMemberName(), request.getMemberEmail());
+        member.update(request.getMemberName(), request.getMemberEmail(), request.getMemberImageUrl());
 
         return PartnerMemberUpdateResponse.from(member);
     }

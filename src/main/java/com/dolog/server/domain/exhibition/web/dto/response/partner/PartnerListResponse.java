@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -19,11 +20,13 @@ public class PartnerListResponse {
     private List<PartItem> parts;
 
     public static PartnerListResponse from(List<Partner> partners, List<PartnerMember> allMembers) {
+        Map<UUID, List<PartnerMember>> membersByPartnerId = allMembers.stream()
+                .collect(Collectors.groupingBy(m -> m.getPartner().getId()));
+
         return PartnerListResponse.builder()
                 .parts(partners.stream()
-                        .map(partner -> PartItem.from(partner, allMembers.stream()
-                                .filter(m -> m.getPartner().getId().equals(partner.getId()))
-                                .collect(Collectors.toList())))
+                        .map(partner -> PartItem.from(partner,
+                                membersByPartnerId.getOrDefault(partner.getId(), List.of())))
                         .collect(Collectors.toList()))
                 .build();
     }

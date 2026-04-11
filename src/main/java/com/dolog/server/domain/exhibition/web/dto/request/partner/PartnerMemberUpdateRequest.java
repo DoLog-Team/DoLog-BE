@@ -13,4 +13,7 @@ public class PartnerMemberUpdateRequest {
 
     @JsonProperty("member_email")
     private String memberEmail;
+
+    @JsonProperty("member_image_url")
+    private String memberImageUrl;
 }

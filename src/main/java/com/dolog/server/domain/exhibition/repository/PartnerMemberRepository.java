@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface PartnerMemberRepository extends JpaRepository<PartnerMember, UUID> {
 
     List<PartnerMember> findByPartnerId(UUID partnerId);
+
+    List<PartnerMember> findByPartnerIdIn(List<UUID> partnerIds);
 }
