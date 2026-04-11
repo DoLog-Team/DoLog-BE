@@ -13,16 +13,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ExhibitionCustomSplashServiceImpl implements ExhibitionCustomSplashService {
-
-    private static final Pattern URL_PATTERN =
-            Pattern.compile("^https?://[\\w\\-]+(\\.[\\w\\-]+)+(/[\\w\\-./?%&=]*)?$");
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
@@ -56,7 +53,14 @@ public class ExhibitionCustomSplashServiceImpl implements ExhibitionCustomSplash
     }
 
     private void validateSplashImg(String splashImg) {
-        if (splashImg != null && !URL_PATTERN.matcher(splashImg).matches()) {
+        if (splashImg == null) return;
+        try {
+            URI uri = new URI(splashImg);
+            String scheme = uri.getScheme();
+            if (!"http".equals(scheme) && !"https".equals(scheme) || uri.getHost() == null) {
+                throw new ExhibitionException(ExhibitionErrorCode.SPLASH_INVALID_IMAGE_URL);
+            }
+        } catch (java.net.URISyntaxException e) {
             throw new ExhibitionException(ExhibitionErrorCode.SPLASH_INVALID_IMAGE_URL);
         }
     }
