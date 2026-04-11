@@ -57,12 +57,15 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     @Transactional(readOnly = true)
     public ExhibitionIntegratedResponse getExhibitionDetails(UUID exhibitionId) {
-        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        if (!detail.getExhibition().isPublic()) {
+        if (!exhibition.isPublic()) {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_PUBLIC);
         }
+
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
 
         ExhibitionMap map = exhibitionMapRepository.findByExhibitionId(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
