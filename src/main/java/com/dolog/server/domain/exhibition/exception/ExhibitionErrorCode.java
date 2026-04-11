@@ -23,12 +23,13 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     ZONE_NOT_FOUND("EXHIBITION_ZONE_404", NOT_FOUND, "해당 ID의 구역을 찾을 수 없습니다."),
 
+    SPLASH_PLAN_NOT_SUPPORTED("EXHIBITION_SPLASH_403", FORBIDDEN, "현재 플랜에서 스플래시 기능을 사용할 수 없습니다."),
+    SPLASH_INVALID_IMAGE_URL("EXHIBITION_SPLASH_400", BAD_REQUEST, "잘못된 이미지 형식 또는 URL입니다."),
+    EXHIBITION_DETAIL_NOT_FOUND("EXHIBITION_DETAIL_404", NOT_FOUND, "전시회 상세 정보를 찾을 수 없습니다."),
+
     PARTNER_NOT_FOUND("EXHIBITION_PARTNER_404", NOT_FOUND, "존재하지 않는 파트입니다."),
 
     PARTNER_MEMBER_NOT_FOUND("EXHIBITION_PARTNER_MEMBER_404", NOT_FOUND, "존재하지 않는 멤버입니다.");
-    SPLASH_PLAN_NOT_SUPPORTED("EXHIBITION_SPLASH_403", FORBIDDEN, "현재 플랜에서 스플래시 기능을 사용할 수 없습니다."),
-    SPLASH_INVALID_IMAGE_URL("EXHIBITION_SPLASH_400", BAD_REQUEST, "잘못된 이미지 형식 또는 URL입니다."),
-    EXHIBITION_DETAIL_NOT_FOUND("EXHIBITION_DETAIL_404", NOT_FOUND, "전시회 상세 정보를 찾을 수 없습니다.");
 
     private final String code;
     private final int httpStatus;
