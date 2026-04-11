@@ -5,10 +5,8 @@ import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberU
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberUpdateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartResponse;
 
 import java.util.UUID;
 
@@ -16,15 +14,15 @@ public interface ExhibitionPartnerService {
 
     PartnerListResponse getPartners(UUID exhibitionId);
 
-    PartnerPartCreateResponse createPart(UUID exhibitionId, PartnerPartCreateRequest request);
+    PartnerPartResponse createPart(UUID exhibitionId, PartnerPartCreateRequest request);
 
-    PartnerPartUpdateResponse updatePart(UUID partId, PartnerPartUpdateRequest request);
+    PartnerPartResponse updatePart(UUID partId, PartnerPartUpdateRequest request);
 
     void deletePart(UUID partId);
 
-    PartnerMemberCreateResponse createMember(UUID partId, PartnerMemberCreateRequest request);
+    PartnerMemberResponse createMember(UUID partId, PartnerMemberCreateRequest request);
 
-    PartnerMemberUpdateResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request);
+    PartnerMemberResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request);
 
     void deleteMember(UUID memberId);
 }

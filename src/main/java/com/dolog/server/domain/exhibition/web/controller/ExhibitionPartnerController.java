@@ -6,10 +6,8 @@ import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberU
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberUpdateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,22 +37,22 @@ public class ExhibitionPartnerController {
     // 파트 생성
     @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping("/{exhibitionId}/partners/parts")
-    public ResponseEntity<SuccessResponse<PartnerPartCreateResponse>> createPart(
+    public ResponseEntity<SuccessResponse<PartnerPartResponse>> createPart(
             @PathVariable UUID exhibitionId,
             @Valid @RequestBody PartnerPartCreateRequest request
     ) {
-        PartnerPartCreateResponse data = exhibitionPartnerService.createPart(exhibitionId, request);
+        PartnerPartResponse data = exhibitionPartnerService.createPart(exhibitionId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data));
     }
 
     // 파트 수정
     @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/partners/parts/{partId}")
-    public SuccessResponse<PartnerPartUpdateResponse> updatePart(
+    public SuccessResponse<PartnerPartResponse> updatePart(
             @PathVariable UUID partId,
             @RequestBody PartnerPartUpdateRequest request
     ) {
-        PartnerPartUpdateResponse data = exhibitionPartnerService.updatePart(partId, request);
+        PartnerPartResponse data = exhibitionPartnerService.updatePart(partId, request);
         return SuccessResponse.ok(data, "파트 정보가 수정되었습니다.");
     }
 
@@ -71,22 +69,22 @@ public class ExhibitionPartnerController {
     // 멤버 등록
     @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping("/partners/parts/{partId}/members")
-    public ResponseEntity<SuccessResponse<PartnerMemberCreateResponse>> createMember(
+    public ResponseEntity<SuccessResponse<PartnerMemberResponse>> createMember(
             @PathVariable UUID partId,
             @Valid @RequestBody PartnerMemberCreateRequest request
     ) {
-        PartnerMemberCreateResponse data = exhibitionPartnerService.createMember(partId, request);
+        PartnerMemberResponse data = exhibitionPartnerService.createMember(partId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data));
     }
 
     // 멤버 수정
     @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/partners/members/{memberId}")
-    public SuccessResponse<PartnerMemberUpdateResponse> updateMember(
+    public SuccessResponse<PartnerMemberResponse> updateMember(
             @PathVariable UUID memberId,
             @RequestBody PartnerMemberUpdateRequest request
     ) {
-        PartnerMemberUpdateResponse data = exhibitionPartnerService.updateMember(memberId, request);
+        PartnerMemberResponse data = exhibitionPartnerService.updateMember(memberId, request);
         return SuccessResponse.ok(data, "멤버 정보가 성공적으로 수정되었습니다.");
     }
 

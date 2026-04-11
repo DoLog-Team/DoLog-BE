@@ -11,13 +11,13 @@ import java.util.UUID;
 @Getter
 @Builder
 @AllArgsConstructor
-public class PartnerPartUpdateResponse {
+public class PartnerPartResponse {
 
     @JsonProperty("part_id")
     private UUID partId;
 
-    public static PartnerPartUpdateResponse from(Partner partner) {
-        return PartnerPartUpdateResponse.builder()
+    public static PartnerPartResponse from(Partner partner) {
+        return PartnerPartResponse.builder()
                 .partId(partner.getId())
                 .build();
     }

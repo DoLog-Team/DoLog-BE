@@ -13,10 +13,8 @@ import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberU
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberUpdateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartCreateResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +45,7 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
     }
 
     @Override
-    public PartnerPartCreateResponse createPart(UUID exhibitionId, PartnerPartCreateRequest request) {
+    public PartnerPartResponse createPart(UUID exhibitionId, PartnerPartCreateRequest request) {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
@@ -59,17 +57,17 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
         partnerRepository.save(partner);
 
-        return PartnerPartCreateResponse.from(partner);
+        return PartnerPartResponse.from(partner);
     }
 
     @Override
-    public PartnerPartUpdateResponse updatePart(UUID partId, PartnerPartUpdateRequest request) {
+    public PartnerPartResponse updatePart(UUID partId, PartnerPartUpdateRequest request) {
         Partner partner = partnerRepository.findById(partId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
 
         partner.update(request.getPartName(), request.getOrder());
 
-        return PartnerPartUpdateResponse.from(partner);
+        return PartnerPartResponse.from(partner);
     }
 
     @Override
@@ -77,13 +75,12 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
         Partner partner = partnerRepository.findById(partId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
 
-        List<PartnerMember> members = partnerMemberRepository.findByPartnerId(partId);
-        partnerMemberRepository.deleteAll(members);
+        partnerMemberRepository.deleteByPartnerId(partId);
         partnerRepository.delete(partner);
     }
 
     @Override
-    public PartnerMemberCreateResponse createMember(UUID partId, PartnerMemberCreateRequest request) {
+    public PartnerMemberResponse createMember(UUID partId, PartnerMemberCreateRequest request) {
         Partner partner = partnerRepository.findById(partId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
 
@@ -96,17 +93,17 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
         partnerMemberRepository.save(member);
 
-        return PartnerMemberCreateResponse.from(member);
+        return PartnerMemberResponse.from(member);
     }
 
     @Override
-    public PartnerMemberUpdateResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request) {
+    public PartnerMemberResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request) {
         PartnerMember member = partnerMemberRepository.findById(memberId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND));
 
         member.update(request.getMemberName(), request.getMemberEmail(), request.getMemberImageUrl());
 
-        return PartnerMemberUpdateResponse.from(member);
+        return PartnerMemberResponse.from(member);
     }
 
     @Override
