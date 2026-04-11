@@ -15,31 +15,14 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ExhibitionIntegratedResponse {
 
-    @JsonProperty("exhibitionId")
     private UUID exhibitionId;
-
-    @JsonProperty("univName")
     private String univName;
-
-    @JsonProperty("deptName")
     private String deptName;
-
-    @JsonProperty("title")
     private String title;
-
-    @JsonProperty("exhibitionImg")
     private String exhibitionImg;
-
-    @JsonProperty("startDate")
     private LocalDate startDate;
-
-    @JsonProperty("endDate")
     private LocalDate endDate;
-
-    @JsonProperty("description")
     private String description;
-
-    @JsonProperty("location")
     private ExhibitionLocationResponse location;
 
     @JsonProperty("isPublic")

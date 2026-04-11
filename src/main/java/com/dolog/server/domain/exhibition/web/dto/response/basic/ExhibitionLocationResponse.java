@@ -11,16 +11,12 @@ import lombok.Getter;
 @AllArgsConstructor
 public class ExhibitionLocationResponse {
 
-    @JsonProperty("address")
     private String address;
 
     @JsonProperty("detail_location")
     private String detailLocation;
 
-    @JsonProperty("latitude")
     private String latitude;
-
-    @JsonProperty("longitude")
     private String longitude;
 
     public static ExhibitionLocationResponse from(ExhibitionMap map) {
