@@ -68,6 +68,10 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(length = 255)
     private String copyright;
 
+    public void updateSplashImg(String splashImg) {
+        this.splashImg = splashImg;
+    }
+
     public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate) {
         this.title = title;
         this.description = description;
