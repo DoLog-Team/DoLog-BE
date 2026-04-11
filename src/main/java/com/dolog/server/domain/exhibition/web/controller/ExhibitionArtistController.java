@@ -8,6 +8,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class ExhibitionArtistController {
     }
 
     //전시 작가 추가
+    @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistAddResponse> addArtist(
             @PathVariable UUID exhibitionId,
@@ -49,6 +51,7 @@ public class ExhibitionArtistController {
     }
 
     //전시 작가 삭제
+    @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
             @PathVariable UUID exhibitionId,
