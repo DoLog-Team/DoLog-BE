@@ -40,7 +40,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     // 인증 제외 경로 (패턴 match: method -> patterns)
     private static final Map<String, List<String>> EXCLUDE_PATTERNS = Map.of(
-            "GET", List.of("/api/exhibitions/*/zones")
+            "GET", List.of(
+                    "/api/exhibitions/*/zones",
+                    "/api/exhibitions/*/partners"
+            )
     );
 
     @Override

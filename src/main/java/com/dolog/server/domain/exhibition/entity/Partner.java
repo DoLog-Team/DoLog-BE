@@ -28,4 +28,12 @@ public class Partner extends BaseEntity {
 
     @Column(length = 255)
     private String description;
+
+    @Column(name = "display_order")
+    private Integer order;
+
+    public void update(String name, Integer order) {
+        if (name != null) this.name = name;
+        if (order != null) this.order = order;
+    }
 }
