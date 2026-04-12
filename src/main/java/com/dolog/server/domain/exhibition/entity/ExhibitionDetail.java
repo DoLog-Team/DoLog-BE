@@ -47,8 +47,8 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String address;
 
-    @Column(name = "address_info", columnDefinition = "TEXT")
-    private String addressInfo;
+    @Column(name = "address_detail", columnDefinition = "TEXT")
+    private String addressDetail;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
@@ -81,7 +81,7 @@ public class ExhibitionDetail extends BaseEntity {
     }
 
     public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                       String dateInfo, String address, String addressInfo, SortType sortType, ThemeType themeType, String splashImg,
+                       String dateInfo, String address, String addressDetail, SortType sortType, ThemeType themeType, String splashImg,
                        String email, String copyright) {
         this.title = title;
         this.description = description;
@@ -95,8 +95,8 @@ public class ExhibitionDetail extends BaseEntity {
         if (address != null) {
             this.address = address;
         }
-        if (addressInfo != null) {
-            this.addressInfo = addressInfo;
+        if (addressDetail != null) {
+            this.addressDetail = addressDetail;
         }
         if (sortType != null) {
             this.sortType = sortType;

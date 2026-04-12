@@ -14,6 +14,7 @@ public interface ExhibitionService {
     ExhibitionMainResponse getMainExhibitions();
     List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search);
     ExhibitionIntegratedResponse getExhibitionDetails(UUID exhibitionId);
+    ExhibitionFooterResponse getFooterInfo(UUID exhibitionId);
 
     // 전시 생성, 수정, 삭제
     ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request);

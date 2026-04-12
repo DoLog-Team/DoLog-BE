@@ -74,6 +74,19 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ExhibitionFooterResponse getFooterInfo(UUID exhibitionId) {
+        Optional<ExhibitionDetail> detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+        if (detail.isPresent()) {
+            return ExhibitionFooterResponse.from(detail.get());
+        }
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+        throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND);
+    }
+
+    @Override
     public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
         Exhibition exhibition = Exhibition.builder()
                 .account(null) //TODO: JWT -> v2 에서 연동함
