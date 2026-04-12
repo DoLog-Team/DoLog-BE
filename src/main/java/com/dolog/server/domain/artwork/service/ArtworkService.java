@@ -5,6 +5,7 @@ import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResp
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,4 +30,6 @@ public interface ArtworkService {
     ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistId, ArtworkArtistMappingRequest request);
 
     void deleteArtistMapping(UUID artworkId, UUID artistId);
+
+    ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category);
 }
