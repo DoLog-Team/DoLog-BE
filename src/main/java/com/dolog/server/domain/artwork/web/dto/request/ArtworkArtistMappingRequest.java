@@ -9,7 +9,7 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 public class ArtworkArtistMappingRequest {
-    private UUID artistId;
+    private UUID artistProfileId;
 
     private String artistRole;
 }

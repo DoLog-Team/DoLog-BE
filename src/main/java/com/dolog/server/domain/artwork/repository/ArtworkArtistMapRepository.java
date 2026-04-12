@@ -16,9 +16,9 @@ public interface ArtworkArtistMapRepository extends JpaRepository<ArtworkArtistM
             "WHERE aam.artwork.id IN :artworkIds")
     List<ArtworkArtistMap> findByArtworkIdIn(@Param("artworkIds") List<UUID> artworkIds);
 
-    // 2. 추가: 중복 등록 방지 (작품에 동일 작가가 이미 있는지 확인)
-    boolean existsByArtworkIdAndArtistId(UUID artworkId, UUID artistId);
+    // 작품 ID와 아티스트 프로필 ID 조합으로 찾기
+    Optional<ArtworkArtistMap> findByArtworkIdAndArtistProfileId(UUID artworkId, UUID artistProfileId);
 
-    // 3. 추가: 수정/삭제 시 해당 작품의 매핑이 맞는지 검증하며 조회
-    Optional<ArtworkArtistMap> findByArtworkIdAndArtistId(UUID artworkId, UUID artistId);
+    // 중복 등록 확인
+    boolean existsByArtworkIdAndArtistProfileId(UUID artworkId, UUID artistProfileId);
 }

@@ -3,8 +3,8 @@ package com.dolog.server.domain.artwork.service;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
-import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ArtworkImg;
@@ -43,7 +43,6 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
     private final ArtworkImgRepository artworkImgRepository;
-    private final ArtistRepository artistRepository;
     private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
     private final ArtistProfileRepository artistProfileRepository;
 
@@ -270,44 +269,54 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Override
     @Transactional
     public ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request) {
+        // 1. 작품 조회
         Artwork artwork = artworkRepository.findById(artworkId)
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
-        Artist artist = artistRepository.findById(request.getArtistId())
-                .orElseThrow(() -> new ArtistNotFoundException()); // 기존 예외 활용
+        // 2. 아티스트 프로필 조회
+        ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
+                .orElseThrow(ArtistProfileNotFoundException::new);
 
-        if (artworkArtistMapRepository.existsByArtworkIdAndArtistId(artworkId, artist.getId())) {
-            throw new RuntimeException("이미 등록된 작가입니다.");
+        // 3. 검증: 작품의 전시 ID와 아티스트 프로필의 전시 ID가 일치하는지 확인 (중요!)
+        if (!artwork.getExhibition().getId().equals(profile.getExhibition().getId())) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND); // 같은 전시가 아님
         }
 
+        // 4. 중복 체크 (프로필 ID 기준)
+        if (artworkArtistMapRepository.existsByArtworkIdAndArtistProfileId(artworkId, profile.getId())) {
+            throw new RuntimeException("이미 이 전시에 등록된 작가 프로필입니다.");
+        }
+
+        // 5. 매핑 생성 (Artist와 ArtistProfile 모두 저장)
         ArtworkArtistMap map = ArtworkArtistMap.builder()
                 .artwork(artwork)
-                .artist(artist)
+                .artist(profile.getArtist()) // 프로필 내부의 Artist 참조
+                .artistProfile(profile)      // 새로 추가된 프로필 필드
                 .artistRole(request.getArtistRole())
                 .build();
 
-        return ArtworkArtistMappingResponse.from(artworkArtistMapRepository.save(map).getId());
+        return ArtworkArtistMappingResponse.of(artworkArtistMapRepository.save(map));
     }
 
-    // 수정 (PATCH) - 역할(Role)만 변경
+    // 수정 (PATCH)
     @Override
     @Transactional
-    public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistId, ArtworkArtistMappingRequest request) {
-        // artworkId와 artistId 조합으로 매핑 데이터를 찾습니다.
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistId(artworkId, artistId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND)); // 또는 적절한 매핑 없음 에러
+    public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request) {
+        // profileId를 기반으로 매핑 데이터 조회
+        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
+        // 역할 수정
         map.updateRole(request.getArtistRole());
 
-        // 응답 DTO도 기획안 형식(id, role 포함)에 맞춰서 반환하도록 설계해야 합니다.
         return ArtworkArtistMappingResponse.of(map);
     }
 
     // 삭제 (DELETE)
     @Override
     @Transactional
-    public void deleteArtistMapping(UUID artworkId, UUID artistId) {
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistId(artworkId, artistId)
+    public void deleteArtistMapping(UUID artworkId, UUID artistProfileId) {
+        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
         artworkArtistMapRepository.delete(map);

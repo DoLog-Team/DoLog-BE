@@ -108,23 +108,23 @@ public class ArtworkController {
     }
 
     // 9. 작품 작가 매핑 수정 (PATCH)
-    @PatchMapping("/artworks/{artworkId}/artists/{artistId}")
+    @PatchMapping("/artworks/{artworkId}/artists/{artistProfileId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkArtistMappingResponse> updateArtistMapping(
             @PathVariable UUID artworkId,
-            @PathVariable UUID artistId,
+            @PathVariable UUID artistProfileId,
             @RequestBody ArtworkArtistMappingRequest request) {
-        ArtworkArtistMappingResponse data = artworkService.updateArtistMapping(artworkId, artistId, request);
+        ArtworkArtistMappingResponse data = artworkService.updateArtistMapping(artworkId, artistProfileId, request);
         return SuccessResponse.ok(data, "작가 역할이 성공적으로 수정되었습니다.");
     }
 
     // 10. 작품 작가 매핑 삭제 (DELETE)
-    @DeleteMapping("/artworks/{artworkId}/artists/{artistId}")
+    @DeleteMapping("/artworks/{artworkId}/artists/{artistProfileId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteArtistMapping(
             @PathVariable UUID artworkId,
-            @PathVariable UUID artistId) {
-        artworkService.deleteArtistMapping(artworkId, artistId);
+            @PathVariable UUID artistProfileId) {
+        artworkService.deleteArtistMapping(artworkId, artistProfileId);
         return SuccessResponse.ok(null, "작가 연결이 성공적으로 해제되었습니다.");
     }
 
