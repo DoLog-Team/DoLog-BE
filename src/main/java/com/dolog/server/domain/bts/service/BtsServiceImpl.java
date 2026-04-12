@@ -12,6 +12,8 @@ import com.dolog.server.domain.bts.entity.BtsArtworkMap;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
+import com.dolog.server.domain.bts.exception.BtsErrorCode;
+import com.dolog.server.domain.bts.exception.BtsException;
 import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsMappingUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
@@ -176,21 +178,32 @@ public class BtsServiceImpl implements BtsService {
 
         // 2. BTS 조회 및 해당 전시 소속 검증
         Bts bts = btsRepository.findById(btsId)
-                .orElseThrow(() -> new RuntimeException("BTS content not found"));
+                .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
         if (!bts.getExhibition().getId().equals(exhibitionId)) {
-            throw new RuntimeException("BTS does not belong to the given exhibition");
+            throw new BtsException(BtsErrorCode.BTS_EXHIBITION_MISMATCH);
         }
 
-        // 3. ArtistProfile 조회 → Artist 추출
+        // 3. ArtistProfile 조회 및 해당 전시 소속 검증
         ArtistProfile artistProfile = artistProfileRepository.findById(request.getArtistProfileId())
-                .orElseThrow(() -> new RuntimeException("ArtistProfile not found"));
+                .orElseThrow(ArtistProfileNotFoundException::new);
+        if (!Objects.equals(artistProfile.getExhibition().getId(), exhibitionId)) {
+            throw new BtsException(BtsErrorCode.ARTIST_PROFILE_EXHIBITION_MISMATCH);
+        }
 
         // 4. BTS 기본 정보 업데이트 (title, content, artist)
-        bts.updateBtsInfo(request.getTitle(), request.getContent(), null, artistProfile.getArtist());
+        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), null, artistProfile.getArtist());
 
-        // 5. 작품 매핑 교체
-        bts.getArtworkMaps().clear();
+        // 5. 작품 매핑 교체 - 조회 결과가 요청 개수와 다르면 일부 ID가 잘못된 것
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
+        if (artworks.size() != request.getArtworkIds().size()) {
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND);
+        }
+        boolean hasInvalidArtwork = artworks.stream()
+                .anyMatch(a -> !Objects.equals(a.getExhibition().getId(), exhibitionId));
+        if (hasInvalidArtwork) {
+            throw new BtsException(BtsErrorCode.ARTWORK_EXHIBITION_MISMATCH);
+        }
+        bts.getArtworkMaps().clear();
         for (Artwork artwork : artworks) {
             BtsArtworkMap map = BtsArtworkMap.builder()
                     .bts(bts)

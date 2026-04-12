@@ -1,6 +1,8 @@
 package com.dolog.server.domain.bts.web.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,12 +19,13 @@ public class BtsMappingUpdateRequest {
     @NotBlank
     private String title;
 
+    @JsonProperty("content")
     @NotBlank
-    private String content;
+    private String contentUrl;
 
     @NotNull
     private UUID artistProfileId;
 
-    @NotNull
-    private List<UUID> artworkIds;
+    @NotEmpty
+    private List<@NotNull UUID> artworkIds;
 }

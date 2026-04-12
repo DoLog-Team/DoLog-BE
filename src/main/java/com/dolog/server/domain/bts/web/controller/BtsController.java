@@ -59,13 +59,13 @@ public class BtsController {
     }
 
     // BTS 매핑 등록/수정 (PUT)
-    @PutMapping("/{id}/bts/{btsId}")
+    @PutMapping("/{exhibitionId}/bts/{btsId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsMappingUpdateResponse> syncBtsMapping(
-            @PathVariable UUID id,
+            @PathVariable UUID exhibitionId,
             @PathVariable UUID btsId,
             @Valid @RequestBody BtsMappingUpdateRequest request) {
-        BtsMappingUpdateResponse data = btsService.syncBtsMapping(id, btsId, request);
+        BtsMappingUpdateResponse data = btsService.syncBtsMapping(exhibitionId, btsId, request);
         return SuccessResponse.ok(data, "BTS 정보 및 매핑 데이터가 성공적으로 동기화되었습니다.");
     }
 
