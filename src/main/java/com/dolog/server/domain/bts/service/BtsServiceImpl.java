@@ -10,10 +10,14 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.bts.entity.Bts;
 import com.dolog.server.domain.bts.entity.BtsArtworkMap;
 import com.dolog.server.domain.bts.repository.BtsRepository;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
+import com.dolog.server.domain.bts.web.dto.request.BtsMappingUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.response.BtsCreateResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
+import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
@@ -41,6 +45,7 @@ public class BtsServiceImpl implements BtsService {
     private final BtsRepository btsRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ArtistRepository artistRepository;
+    private final ArtistProfileRepository artistProfileRepository;
     private final ArtworkRepository artworkRepository;
     private final FileService fileService;
 
@@ -160,5 +165,50 @@ public class BtsServiceImpl implements BtsService {
         return btsList.stream()
                 .map(BtsListResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public BtsMappingUpdateResponse syncBtsMapping(UUID exhibitionId, UUID btsId, BtsMappingUpdateRequest request) {
+        // 1. Exhibition 존재 여부 확인
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        // 2. BTS 조회 및 해당 전시 소속 검증
+        Bts bts = btsRepository.findById(btsId)
+                .orElseThrow(() -> new RuntimeException("BTS content not found"));
+        if (!bts.getExhibition().getId().equals(exhibitionId)) {
+            throw new RuntimeException("BTS does not belong to the given exhibition");
+        }
+
+        // 3. ArtistProfile 조회 → Artist 추출
+        ArtistProfile artistProfile = artistProfileRepository.findById(request.getArtistProfileId())
+                .orElseThrow(() -> new RuntimeException("ArtistProfile not found"));
+
+        // 4. BTS 기본 정보 업데이트 (title, content, artist)
+        bts.updateBtsInfo(request.getTitle(), request.getContent(), null, artistProfile.getArtist());
+
+        // 5. 작품 매핑 교체
+        bts.getArtworkMaps().clear();
+        List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
+        for (Artwork artwork : artworks) {
+            BtsArtworkMap map = BtsArtworkMap.builder()
+                    .bts(bts)
+                    .artwork(artwork)
+                    .build();
+            bts.getArtworkMaps().add(map);
+        }
+
+        // 6. 응답 생성
+        List<UUID> updatedArtworkIds = bts.getArtworkMaps().stream()
+                .map(map -> map.getArtwork().getId())
+                .collect(Collectors.toList());
+
+        return BtsMappingUpdateResponse.builder()
+                .btsId(bts.getId())
+                .title(bts.getTitle())
+                .artistProfileId(artistProfile.getId())
+                .updatedArtworkIds(updatedArtworkIds)
+                .build();
     }
 }
