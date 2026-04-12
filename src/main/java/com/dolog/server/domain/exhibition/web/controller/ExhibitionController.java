@@ -45,6 +45,13 @@ public class ExhibitionController {
         return SuccessResponse.ok(exhibitionService.getExhibitionDetails(exhibitionId));
     }
 
+    // 전시회 푸터 정보 조회
+    @GetMapping("/{exhibitionId}/footerInfo")
+    public SuccessResponse<ExhibitionFooterResponse> getFooterInfo(
+            @PathVariable UUID exhibitionId) {
+        return SuccessResponse.ok(exhibitionService.getFooterInfo(exhibitionId), "전시회 푸터 정보 조회가 완료되었습니다.");
+    }
+
     // 전시회 기본정보 등록
     @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping
