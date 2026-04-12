@@ -1,19 +1,13 @@
 package com.dolog.server.domain.artwork.web.controller;
 
-import com.dolog.server.domain.artwork.entity.Artwork;
-import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
-import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
-import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
-import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import com.dolog.server.global.response.SuccessResponse;
-import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -40,33 +34,30 @@ public class ArtworkController {
     }
 
     // 2. 작품 기본 정보 등록
-    @PostMapping("/exhibitions/{exhibitionId}/artworks")
+    @PostMapping("/exhibitions/artworks")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> createArtwork(
-            @PathVariable UUID exhibitionId,
             @Valid @RequestBody ArtworkCreateRequest request) {
-        ArtworkCreateResponse data = artworkService.createArtwork(exhibitionId, request);
+        ArtworkCreateResponse data = artworkService.createArtwork(request);
         return SuccessResponse.created(data);
     }
 
     // 3. 작품 기본 정보 수정 (PATCH)
-    @PatchMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    @PatchMapping("/exhibitions/artworks/{artworkId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> updateArtwork(
-            @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId,
             @Valid @RequestBody ArtworkUpdateRequest request) {
-        ArtworkCreateResponse data = artworkService.updateArtwork(exhibitionId, artworkId, request);
+        ArtworkCreateResponse data = artworkService.updateArtwork(artworkId, request);
         return SuccessResponse.ok(data, "정보가 성공적으로 수정되었습니다.");
     }
 
     // 4. 작품 삭제 (DELETE)
-    @DeleteMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    @DeleteMapping("/exhibitions/artworks/{artworkId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteArtwork(
-            @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId) {
-        artworkService.deleteArtwork(exhibitionId, artworkId);
+        artworkService.deleteArtwork(artworkId);
         return SuccessResponse.ok(null, "작품이 성공적으로 삭제되었습니다.");
     }
 

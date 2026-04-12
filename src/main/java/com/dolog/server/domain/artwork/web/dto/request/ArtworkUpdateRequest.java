@@ -8,6 +8,7 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 public class ArtworkUpdateRequest {
+    private UUID artistProfileId;
     private String title;
     private String category;
     private String material;
@@ -17,4 +18,5 @@ public class ArtworkUpdateRequest {
     private String purchaseUrl;
     private Integer orderIndex;
     private UUID zoneId; // 구역 이동이 있을 수 있으니 포함
+    private String artistRole;
 }

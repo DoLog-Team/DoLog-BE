@@ -13,13 +13,13 @@ import java.util.UUID;
 public interface ArtworkService {
     Object getArtworks(Boolean main, String category, String search);
 
-    ArtworkCreateResponse createArtwork(UUID exhibitionId, ArtworkCreateRequest request);
+    ArtworkCreateResponse createArtwork(ArtworkCreateRequest request);
 
     ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests);
 
-    ArtworkCreateResponse updateArtwork(UUID exhibitionId, UUID artworkId, ArtworkUpdateRequest request);
+    ArtworkCreateResponse updateArtwork(UUID artworkId, ArtworkUpdateRequest request);
 
-    void deleteArtwork(UUID exhibitionId, UUID artworkId);
+    void deleteArtwork(UUID artworkId);
 
     ArtworkImgUpdateResponse updateArtworkImage(UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request);
 
