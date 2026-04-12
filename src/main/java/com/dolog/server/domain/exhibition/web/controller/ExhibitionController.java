@@ -46,7 +46,7 @@ public class ExhibitionController {
     }
 
     // 전시회 푸터 정보 조회
-    @GetMapping("/{exhibitionId}/footerInfo")
+    @GetMapping("/{exhibitionId}/footer-info")
     public SuccessResponse<ExhibitionFooterResponse> getFooterInfo(
             @PathVariable UUID exhibitionId) {
         return SuccessResponse.ok(exhibitionService.getFooterInfo(exhibitionId), "전시회 푸터 정보 조회가 완료되었습니다.");
