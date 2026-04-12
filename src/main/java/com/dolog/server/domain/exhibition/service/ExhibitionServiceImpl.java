@@ -76,13 +76,14 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     @Transactional(readOnly = true)
     public ExhibitionFooterResponse getFooterInfo(UUID exhibitionId) {
-        exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
-
-        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
-
-        return ExhibitionFooterResponse.from(detail);
+        Optional<ExhibitionDetail> detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+        if (detail.isPresent()) {
+            return ExhibitionFooterResponse.from(detail.get());
+        }
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+        throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND);
     }
 
     @Override
