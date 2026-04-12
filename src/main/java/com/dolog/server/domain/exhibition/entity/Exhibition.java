@@ -38,6 +38,9 @@ public class Exhibition extends BaseEntity {
     @OneToOne(mappedBy = "exhibition", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private ExhibitionMap exhibitionMap;
 
+    @OneToOne(mappedBy = "exhibition", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private ExhibitionDetail exhibitionDetail;
+
     public void updateBasicInfo(String univName, String deptName, Boolean isPublic) {
         if (univName != null) {
             this.univName = univName;
