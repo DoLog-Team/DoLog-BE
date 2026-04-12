@@ -2,8 +2,11 @@ package com.dolog.server.domain.bts.web.controller;
 
 import com.dolog.server.domain.bts.service.BtsService;
 import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
+import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.response.BtsCreateResponse;
+import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.global.response.SuccessResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -12,6 +15,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -21,6 +27,7 @@ public class BtsController {
 
     private final BtsService btsService;
 
+    // 등록 (POST)
     @PostMapping("/bts")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsCreateResponse> createBts(
@@ -28,5 +35,37 @@ public class BtsController {
     ) throws IOException {
         BtsCreateResponse response = btsService.createBts(request);
         return SuccessResponse.ok(response, "BTS 콘텐츠 등록 성공");
+    }
+
+    // 수정 (PATCH)
+    @PatchMapping("/bts/{btsId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<BtsCreateResponse> updateBts(
+            @PathVariable UUID btsId,
+            @Valid @RequestBody BtsUpdateRequest request) {
+
+        BtsCreateResponse data = btsService.updateBts(btsId, request);
+        return SuccessResponse.ok(data, "BTS 정보가 성공적으로 수정되었습니다.");
+    }
+
+    // 삭제 (DELETE)
+    @DeleteMapping("/bts/{btsId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<Void> deleteBts(@PathVariable UUID btsId) {
+        btsService.deleteBts(btsId);
+        return SuccessResponse.ok(null, "BTS 콘텐츠가 성공적으로 삭제되었습니다.");
+    }
+
+    // 조회 (GET)
+    @GetMapping("/{exhibitionId}/bts")
+    public SuccessResponse<Map<String, Object>> getBtsList(@PathVariable UUID exhibitionId) {
+        List<BtsListResponse> btsList = btsService.getExhibitionBtsList(exhibitionId);
+
+        // 요청하신 JSON 형식대로 "content" 키에 담아 반환
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", btsList);
+        response.put("totalElements", btsList.size());
+
+        return SuccessResponse.ok(response, "BTS 목록을 조회했습니다.");
     }
 }
