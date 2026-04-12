@@ -2,9 +2,11 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.guideMap.ExhibitionGuideMapCreateRequest;
 import lombok.RequiredArgsConstructor;
@@ -21,23 +23,28 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
 
     private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
     private final ExhibitionRepository exhibitionRepository;
+    private final ExhibitionZoneRepository exhibitionZoneRepository;
 
     @Override
     public void createGuideMaps(UUID exhibitionId, List<ExhibitionGuideMapCreateRequest> requests) {
-        // 1. 전시회 존재 여부 확인
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        // 2. DTO 리스트를 엔티티 리스트로 변환
         List<ExhibitionGuideMap> guideMaps = requests.stream()
-                .map(req -> ExhibitionGuideMap.builder()
-                        .exhibition(exhibition)
-                        .imageUrl(req.getImageUrl())
-                        .description(req.getDescription())
-                        .build())
+                .map(req -> {
+                    // zoneId를 사용해 해당 구역이 존재하는지 바로 확인
+                    ExhibitionZone zone = exhibitionZoneRepository.findById(req.getZoneId())
+                            .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+
+                    return ExhibitionGuideMap.builder()
+                            .exhibition(exhibition)
+                            .zone(zone) // ⭐️ 찾은 zone 객체를 넣어줌
+                            .imageUrl(req.getImageUrl())
+                            .description(req.getDescription())
+                            .build();
+                })
                 .toList();
 
-        // 3. 일괄 저장
         exhibitionGuideMapRepository.saveAll(guideMaps);
     }
 }

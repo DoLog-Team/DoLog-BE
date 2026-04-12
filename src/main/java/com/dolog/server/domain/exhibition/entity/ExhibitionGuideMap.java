@@ -23,6 +23,10 @@ public class ExhibitionGuideMap extends BaseEntity {
     @JoinColumn(name = "exhibition_id", nullable = false)
     private Exhibition exhibition;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "zone_id") // ⭐️ 추가: 이 지도가 어떤 구역(Zone)의 지도인지!
+    private ExhibitionZone zone;
+
     @Column(name = "image_url", nullable = false)
     private String imageUrl;
 
