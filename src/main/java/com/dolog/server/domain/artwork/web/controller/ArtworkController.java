@@ -11,6 +11,7 @@ import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -134,5 +135,15 @@ public class ArtworkController {
             @PathVariable UUID artistId) {
         artworkService.deleteArtistMapping(artworkId, artistId);
         return SuccessResponse.ok(null, "작가 연결이 성공적으로 해제되었습니다.");
+    }
+
+    @GetMapping("/exhibitions/{exhibitionId}/artworks")
+    public SuccessResponse<ExhibitionArtworkListResponse> getExhibitionArtworks(
+            @PathVariable UUID exhibitionId,
+            @RequestParam(required = false) String zone,
+            @RequestParam(required = false) String category
+    ) {
+        ExhibitionArtworkListResponse data = artworkService.getExhibitionArtworkList(exhibitionId, zone, category);
+        return SuccessResponse.ok(data, "작품 목록 및 관람 안내 조회에 성공하였습니다.");
     }
 }

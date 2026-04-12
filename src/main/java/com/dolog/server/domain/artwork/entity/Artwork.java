@@ -62,6 +62,9 @@ public class Artwork extends BaseEntity {
     @Column(name = "order_index")
     private Integer orderIndex;
 
+    @OneToMany(mappedBy = "artwork")
+    private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
+
 
     public void updateBasicInfo(String title, String description, String purchaseUrl) {
         if (title != null) this.title = title;

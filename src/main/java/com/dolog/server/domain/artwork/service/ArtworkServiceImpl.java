@@ -14,14 +14,15 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
-import com.dolog.server.domain.exhibition.entity.Exhibition;
-import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
-import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
+import com.dolog.server.domain.exhibition.entity.*;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
+import com.dolog.server.domain.exhibition.web.dto.request.guideMap.ExhibitionGuideMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ExhibitionZoneRepository exhibitionZoneRepository;
     private final ArtworkImgRepository artworkImgRepository;
     private final ArtistRepository artistRepository;
+    private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
 
     /**
      * 작품 전체 목록 조회
@@ -365,6 +367,49 @@ public class ArtworkServiceImpl implements ArtworkService {
 
         return MainCategoryResponse.builder()
                 .categories(categoryResponses)
+                .build();
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category) {
+        // 1. 전시회 존재 여부 확인
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new RuntimeException("해당 전시회를 찾을 수 없습니다.");
+        }
+
+        // 2. 안내 지도 리스트 조회
+        List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionId(exhibitionId);
+
+        // 3. 작품 및 작가 상세 정보 조회 (아까 Repository에 추가한 fetch join 메서드 사용)
+        List<Artwork> artworks = artworkRepository.findArtworksForList(exhibitionId, zone, category);
+
+        // 4. DTO 변환 및 반환
+        return ExhibitionArtworkListResponse.builder()
+                .exhibitionId(exhibitionId)
+                .maps(guideMaps.stream()
+                        .map(m -> ExhibitionArtworkListResponse.MapInfo.builder()
+                                .id(m.getId())
+                                .imageUrl(m.getImageUrl())
+                                .description(m.getDescription())
+                                .build())
+                        .toList())
+                .artworks(artworks.stream()
+                        .map(a -> ExhibitionArtworkListResponse.ArtworkInfo.builder()
+                                .artworkId(a.getId())
+                                .title(a.getTitle())
+                                .category(a.getCategory())
+                                .zone(a.getExhibitionZone() != null ? a.getExhibitionZone().getName() : null)
+                                .mainImage(a.getMainImg())
+                                .artists(a.getArtworkArtistMaps().stream()
+                                        .map(map -> ExhibitionArtworkListResponse.ArtistInfo.builder()
+                                                .id(map.getArtist().getId())
+                                                .name(map.getArtist().getNameKo())
+                                                .build())
+                                        .toList())
+                                .build())
+                        .toList())
                 .build();
     }
 }
