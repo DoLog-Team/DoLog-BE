@@ -62,7 +62,8 @@ public class Artwork extends BaseEntity {
     @Column(name = "order_index")
     private Integer orderIndex;
 
-    @OneToMany(mappedBy = "artwork")
+    @Builder.Default
+    @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 
 

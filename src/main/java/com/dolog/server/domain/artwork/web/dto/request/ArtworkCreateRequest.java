@@ -12,6 +12,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ArtworkCreateRequest {
+    @NotNull(message = "작가 프로필 ID는 필수입니다.")
+    private UUID artistProfileId;
+
     @NotBlank(message = "작품 제목은 필수입니다.")
     private String title;
 
@@ -20,14 +23,12 @@ public class ArtworkCreateRequest {
     private String size;
     private String description;
 
-    @NotNull(message = "전시회 ID는 필수입니다.")
-    private UUID exhibitionId; // exhibition_id 제거
-
     private UUID zoneId;       // zone_id 제거
 
     private String mainImage;   // main_image 제거
 
     private String purchaseUrl; // purchase_url 제거
-
     private Integer orderIndex; // order_index 제거
+
+    private String artistRole;
 }
