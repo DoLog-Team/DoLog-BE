@@ -5,6 +5,7 @@ import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ArtworkImg;
@@ -45,6 +46,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ArtworkImgRepository artworkImgRepository;
     private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
     private final ArtistProfileRepository artistProfileRepository;
+    private final ArtistRepository artistRepository;
 
     /**
      * 작품 전체 목록 조회
@@ -460,5 +462,100 @@ public class ArtworkServiceImpl implements ArtworkService {
                                 .build())
                         .toList())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public ArtworkUpdateFullResponse updateArtworkFull(UUID exhibitionId, UUID artworkId, ArtworkUpdateFullRequest request) {
+        // 1. 작품 조회
+        Artwork artwork = artworkRepository.findById(artworkId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+
+        // 2. 전시 구역(Zone) 조회
+        ExhibitionZone exhibitionZone = exhibitionZoneRepository.findByIdAndExhibitionId(request.getZoneId(), exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+
+        // 3. 기획안의 6개 필드 기반 업데이트
+        // material, size, mainImg, purchaseUrl은 기존 값을 유지하도록 호출
+
+        artwork.updateAllInfo(
+                request.getTitle(),       // 수정됨
+                request.getDescription(), // 수정됨
+                request.getCategory(),    // 수정됨
+                exhibitionZone,           // 수정됨(zone_id로 찾은 객체)
+                artwork.getMaterial(),    // 기존 유지
+                artwork.getSize(),        // 기존 유지
+                artwork.getMainImg(),     // 기존 유지
+                artwork.getPurchaseUrl()  // 기존 유지
+        );
+
+        // 4. 작가 매핑 동기화
+        artwork.getArtworkArtistMaps().clear();
+        List<Artist> artists = artistRepository.findAllById(request.getArtistIds());
+        artists.forEach(artist -> {
+            artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                    .artwork(artwork).artist(artist).artistRole("Artist").build());
+
+        });
+
+        // 5. 상세 이미지 동기화 로직 보완
+
+        List<UUID> existingImgIds = artwork.getArtworkImg().stream()
+                .map(ArtworkImg::getId)
+                .toList();// [검증] 요청 바디에 담긴 ID들이 실제로 이 작품의 이미지들인지 체크
+
+        request.getImages().stream()
+                .map(ArtworkUpdateFullRequest.ImageUpdateDto::getId)
+                .filter(Objects::nonNull)
+                .forEach(id -> {
+                    if (!existingImgIds.contains(id)) {
+                        // 남의 이미지 ID이거나 존재하지 않는 ID면 예외 발생!
+                        throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
+                    }
+                });
+
+        // 요청으로 들어온 ID들을 String 세트로 변환 (비교의 정확성을 위해)
+        Set<String> requestIds = request.getImages().stream()
+                .map(img -> img.getId() != null ? img.getId().toString() : null)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // 1) 삭제: 요청 ID 목록에 없는 기존 이미지들만 제거
+
+        artwork.getArtworkImg().removeIf(img -> !requestIds.contains(img.getId().toString()));
+
+        // 2) 수정 및 추가
+
+        request.getImages().forEach(imgDto -> {
+            if (imgDto.getId() != null) {
+                // 수정: 리스트에 남아있는 녀석을 찾아서 업데이트
+                artwork.getArtworkImg().stream()
+                        .filter(img -> img.getId().toString().equals(imgDto.getId().toString()))
+                        .findFirst()
+                        .ifPresent(img -> img.update(imgDto.getImageUrl(), imgDto.getDescription(), imgDto.getOrderIndex()));
+            } else {
+
+                // 추가
+                artwork.getArtworkImg().add(ArtworkImg.builder()
+                        .artwork(artwork)
+                        .imageUrl(imgDto.getImageUrl())
+                        .description(imgDto.getDescription())
+                        .orderIndex(imgDto.getOrderIndex())
+                        .build());
+            }
+
+        });
+
+        artworkRepository.saveAndFlush(artwork);
+        System.out.println("기존 이미지 개수: " + artwork.getArtworkImg().size());
+
+        // 6. 결과 반환 시점에도 최신화된 리스트 사용
+        return ArtworkUpdateFullResponse.of(
+                artwork.getId(),
+                artwork.getTitle(),
+                artwork.getArtworkArtistMaps().stream().map(map -> map.getArtist().getId()).toList(),
+                artwork.getArtworkImg().stream().map(ArtworkImg::getId).toList()
+        );
+
     }
 }

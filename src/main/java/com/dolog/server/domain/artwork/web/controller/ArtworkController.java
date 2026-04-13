@@ -2,10 +2,7 @@ package com.dolog.server.domain.artwork.web.controller;
 
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
+import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
@@ -136,5 +133,18 @@ public class ArtworkController {
     ) {
         ExhibitionArtworkListResponse data = artworkService.getExhibitionArtworkList(exhibitionId, zone, category);
         return SuccessResponse.ok(data, "작품 목록 및 관람 안내 조회에 성공하였습니다.");
+    }
+
+    // 11. 작품 전체 정보 수정 (PUT)
+    @PutMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<ArtworkUpdateFullResponse> updateArtworkFull(
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID artworkId,
+            @Valid @RequestBody ArtworkUpdateFullRequest request
+    ) {
+        // 서비스 호출 시 exhibitionId를 같이 넘겨서 zone 검증에 활용합니다.
+        ArtworkUpdateFullResponse data = artworkService.updateArtworkFull(exhibitionId, artworkId, request);
+        return SuccessResponse.ok(data, "작품 정보 및 연관 데이터가 성공적으로 동기화되었습니다.");
     }
 }

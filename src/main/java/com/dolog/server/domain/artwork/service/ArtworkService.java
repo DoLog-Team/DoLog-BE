@@ -1,10 +1,7 @@
 package com.dolog.server.domain.artwork.service;
 
 import com.dolog.server.domain.artwork.web.dto.request.*;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
+import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 
 import java.util.List;
@@ -32,4 +29,10 @@ public interface ArtworkService {
     void deleteArtistMapping(UUID artworkId, UUID artistId);
 
     ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category);
+
+    /**
+     * 작품 전체 정보 수정 (PUT)
+     * 작품 기본 정보, 작가 매핑, 상세 이미지 리스트를 한꺼번에 동기화합니다.
+     */
+    ArtworkUpdateFullResponse updateArtworkFull(UUID exhibitionId, UUID artworkId, ArtworkUpdateFullRequest request);
 }
