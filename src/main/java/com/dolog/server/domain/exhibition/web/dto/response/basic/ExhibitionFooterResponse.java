@@ -6,11 +6,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.UUID;
+
 @Getter
 @Builder
 @AllArgsConstructor
 public class ExhibitionFooterResponse {
 
+    @JsonProperty("exhibition_id")
+    private UUID exhibitionId;
     private String title;
     private String department;
     private String address;
@@ -23,6 +27,7 @@ public class ExhibitionFooterResponse {
 
     public static ExhibitionFooterResponse from(ExhibitionDetail detail) {
         return ExhibitionFooterResponse.builder()
+                .exhibitionId(detail.getExhibition().getId())
                 .title(detail.getTitle())
                 .department(detail.getExhibition().getDeptName())
                 .address(detail.getAddress())

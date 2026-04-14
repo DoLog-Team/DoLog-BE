@@ -42,9 +42,9 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     @Transactional(readOnly = true)
     public ExhibitionMainResponse getMainExhibitions() {
-        List<ExhibitionDetail> details = exhibitionDetailRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
-        List<ExhibitionListItemResponse> items = details.stream()
-                .map(ExhibitionListItemResponse::from)
+        List<Exhibition> exhibitions = exhibitionRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
+        List<ExhibitionListItemResponse> items = exhibitions.stream()
+                .map(e -> ExhibitionListItemResponse.of(e, e.getExhibitionDetail()))
                 .collect(Collectors.toList());
         return ExhibitionMainResponse.builder().mainExhibitions(items).build();
     }
@@ -52,9 +52,9 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     @Transactional(readOnly = true)
     public List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search) {
-        List<ExhibitionDetail> details = exhibitionDetailRepository.findExhibitions(isPublic, univName, search);
-        return details.stream()
-                .map(ExhibitionListItemResponse::from)
+        List<Exhibition> exhibitions = exhibitionRepository.findExhibitions(isPublic, univName, search);
+        return exhibitions.stream()
+                .map(e -> ExhibitionListItemResponse.of(e, e.getExhibitionDetail()))
                 .collect(Collectors.toList());
     }
 

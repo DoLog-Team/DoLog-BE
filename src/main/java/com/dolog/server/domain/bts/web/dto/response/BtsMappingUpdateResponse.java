@@ -13,6 +13,9 @@ import java.util.UUID;
 @AllArgsConstructor
 public class BtsMappingUpdateResponse {
 
+    @JsonProperty("exhibition_id")
+    private UUID exhibitionId;
+
     @JsonProperty("bts_id")
     private UUID btsId;
 
