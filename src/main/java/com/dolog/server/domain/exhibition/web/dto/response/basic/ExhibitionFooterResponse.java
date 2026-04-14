@@ -3,9 +3,10 @@ package com.dolog.server.domain.exhibition.web.dto.response.basic;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
-import java.util.UUID;
 import lombok.Builder;
 import lombok.Getter;
+
+import java.util.UUID;
 
 @Getter
 @Builder
