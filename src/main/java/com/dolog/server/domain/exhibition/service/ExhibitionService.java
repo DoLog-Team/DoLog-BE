@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreate
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
+import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +16,7 @@ public interface ExhibitionService {
     List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search);
     ExhibitionIntegratedResponse getExhibitionDetails(UUID exhibitionId);
     ExhibitionFooterResponse getFooterInfo(UUID exhibitionId);
+    ExhibitionCustomThemeResponse getCustomTheme(UUID exhibitionId);
 
     // 전시 생성, 수정, 삭제
     ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request);

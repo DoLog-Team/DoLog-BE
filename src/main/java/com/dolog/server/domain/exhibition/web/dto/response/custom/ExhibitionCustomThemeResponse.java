@@ -17,6 +17,9 @@ public class ExhibitionCustomThemeResponse {
     @JsonProperty("exhibition_id")
     private UUID exhibitionId;
 
+    @JsonProperty("splash_img")
+    private String splashImg;
+
     @JsonProperty("theme_mode")
     private ThemeMode themeMode;
 
@@ -35,6 +38,19 @@ public class ExhibitionCustomThemeResponse {
     public static ExhibitionCustomThemeResponse from(ExhibitionCustomTheme theme) {
         return ExhibitionCustomThemeResponse.builder()
                 .exhibitionId(theme.getExhibition().getId())
+                .themeMode(theme.getThemeMode())
+                .btnBg(theme.getBtnBg())
+                .btnText(theme.getBtnText())
+                .ctaBg(theme.getCtaBg())
+                .ctaText(theme.getCtaText())
+                .build();
+    }
+
+    // exhibitionId를 직접 받아 LAZY 로딩 방지
+    public static ExhibitionCustomThemeResponse of(ExhibitionCustomTheme theme, UUID exhibitionId, String splashImg) {
+        return ExhibitionCustomThemeResponse.builder()
+                .exhibitionId(exhibitionId)
+                .splashImg(splashImg)
                 .themeMode(theme.getThemeMode())
                 .btnBg(theme.getBtnBg())
                 .btnText(theme.getBtnText())
