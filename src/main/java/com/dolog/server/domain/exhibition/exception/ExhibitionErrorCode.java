@@ -30,7 +30,9 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     PARTNER_NOT_FOUND("EXHIBITION_PARTNER_404", NOT_FOUND, "존재하지 않는 파트입니다."),
 
-    PARTNER_MEMBER_NOT_FOUND("EXHIBITION_PARTNER_MEMBER_404", NOT_FOUND, "존재하지 않는 멤버입니다.");
+    PARTNER_MEMBER_NOT_FOUND("EXHIBITION_PARTNER_MEMBER_404", NOT_FOUND, "존재하지 않는 멤버입니다."),
+
+    CUSTOM_THEME_NOT_FOUND("EXHIBITION_CUSTOM_THEME_404", NOT_FOUND, "커스텀 설정이 등록되지 않은 전시회입니다.");
 
     private final String code;
     private final int httpStatus;

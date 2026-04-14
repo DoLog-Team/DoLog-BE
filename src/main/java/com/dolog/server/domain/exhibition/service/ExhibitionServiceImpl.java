@@ -2,10 +2,12 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionCustomTheme;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionCustomThemeRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
@@ -32,6 +34,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final ExhibitionMapRepository exhibitionMapRepository;
+    private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
@@ -84,6 +87,23 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
         }
         throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ExhibitionCustomThemeResponse getCustomTheme(UUID exhibitionId) {
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+
+        ExhibitionCustomTheme theme = exhibitionCustomThemeRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.CUSTOM_THEME_NOT_FOUND));
+
+        String splashImg = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+                .map(ExhibitionDetail::getSplashImg)
+                .orElse(null);
+
+        return ExhibitionCustomThemeResponse.of(theme, splashImg);
     }
 
     @Override

@@ -42,7 +42,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final Map<String, List<String>> EXCLUDE_PATTERNS = Map.of(
             "GET", List.of(
                     "/api/exhibitions/*/zones",
-                    "/api/exhibitions/*/partners"
+                    "/api/exhibitions/*/partners",
+                    "/api/exhibition/*/custom"
             )
     );
 
