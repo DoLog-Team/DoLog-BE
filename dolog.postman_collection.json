@@ -1,0 +1,449 @@
+{
+  "info": {
+    "name": "DoLog API",
+    "_postman_id": "dolog-collection-001",
+    "description": "DoLog 백엔드 API 컬렉션",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "exhibitionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "zoneId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "partId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "memberId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Exhibition",
+      "item": [
+        {
+          "name": "전시회 전체 목록 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions"]
+            }
+          }
+        },
+        {
+          "name": "메인 전시회 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/main",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "main"]
+            }
+          }
+        },
+        {
+          "name": "전시회 기본+상세+장소 통합 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/details",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "details"]
+            }
+          }
+        },
+        {
+          "name": "전시회 푸터 정보 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/footer-info",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "footer-info"]
+            }
+          }
+        },
+        {
+          "name": "전시회 기본정보 등록",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"univ_name\": \"동국대학교\",\n  \"dept_name\": \"컴퓨터공학과\",\n  \"is_public\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions"]
+            }
+          }
+        },
+        {
+          "name": "전시회 기본정보 수정",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"univ_name\": \"동국대학교\",\n  \"dept_name\": \"컴퓨터공학과\",\n  \"is_public\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}"]
+            }
+          }
+        },
+        {
+          "name": "전시회 삭제",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}"]
+            }
+          }
+        },
+        {
+          "name": "전시 상세정보 등록/수정",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"전시 제목\",\n  \"description\": \"전시 설명\",\n  \"exhibition_img\": \"\",\n  \"start_date\": \"2026-04-01\",\n  \"end_date\": \"2026-04-30\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/details",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "details"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exhibition - Custom Theme",
+      "item": [
+        {
+          "name": "전시회 커스텀 설정 통합 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/custom",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "custom"]
+            }
+          }
+        },
+        {
+          "name": "전시회 커스텀 테마 설정",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme_mode\": \"dark\",\n  \"btn_bg\": \"#000000\",\n  \"btn_text\": \"#ffffff\",\n  \"cta_bg\": \"#000000\",\n  \"cta_text\": \"#ffffff\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/custom/theme",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "custom", "theme"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exhibition - Zone",
+      "item": [
+        {
+          "name": "전시 구역 목록 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/zones",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "zones"]
+            }
+          }
+        },
+        {
+          "name": "전시 구역 생성",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"A구역\",\n  \"desc\": \"구역 설명\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/zones",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "zones"]
+            }
+          }
+        },
+        {
+          "name": "전시 구역 수정",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"B구역\",\n  \"desc\": \"수정된 설명\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/zones/{{zoneId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "zones", "{{zoneId}}"]
+            }
+          }
+        },
+        {
+          "name": "전시 구역 삭제",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/zones/{{zoneId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "zones", "{{zoneId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exhibition - Map",
+      "item": [
+        {
+          "name": "전시회 장소 정보 등록",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": \"서울 중구 필동로1길 30\",\n  \"detail_location\": \"문화관 한국갤러리 지하 1층\",\n  \"latitude\": \"37.5585\",\n  \"longitude\": \"126.9984\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/map",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "map"]
+            }
+          }
+        },
+        {
+          "name": "전시회 장소 정보 수정",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": \"서울 중구 필동로1길 30\",\n  \"detail_location\": \"문화관 한국갤러리 지하 1층\",\n  \"latitude\": \"37.5585\",\n  \"longitude\": \"126.9984\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/map",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "map"]
+            }
+          }
+        },
+        {
+          "name": "전시회 장소 정보 삭제",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/map",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "map"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exhibition - Partner",
+      "item": [
+        {
+          "name": "도움을 주신 분들 목록 조회",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/partners",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "partners"]
+            }
+          }
+        },
+        {
+          "name": "파트 생성",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"part_name\": \"지도 교수님\",\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/exhibitions/{{exhibitionId}}/partners/parts",
+              "host": ["{{baseUrl}}"],
+              "path": ["exhibitions", "{{exhibitionId}}", "partners", "parts"]
+            }
+          }
+        },
+        {
+          "name": "파트 수정",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"part_name\": \"지도 교수님\",\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/partners/parts/{{partId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "parts", "{{partId}}"]
+            }
+          }
+        },
+        {
+          "name": "파트 삭제",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/partners/parts/{{partId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "parts", "{{partId}}"]
+            }
+          }
+        },
+        {
+          "name": "멤버 등록",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"member_name\": \"홍길동\",\n  \"member_email\": \"hong@example.com\",\n  \"member_image_url\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/partners/parts/{{partId}}/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "parts", "{{partId}}", "members"]
+            }
+          }
+        },
+        {
+          "name": "멤버 수정",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"member_name\": \"홍길동\",\n  \"member_email\": \"hong@example.com\",\n  \"member_image_url\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/partners/members/{{memberId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "members", "{{memberId}}"]
+            }
+          }
+        },
+        {
+          "name": "멤버 삭제",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/partners/members/{{memberId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["partners", "members", "{{memberId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

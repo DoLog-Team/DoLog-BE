@@ -42,6 +42,17 @@ public class SuccessResponse<T> extends BaseResponse{
         return new SuccessResponse<>(data, GlobalSuccessCode.SUCCESS_CREATED);
     }
 
+    public static <T> SuccessResponse<T> created(T data, String message) {
+        return new SuccessResponse<>(
+                data,
+                new BaseResponseCode() {
+                    public String getCode() { return "SUCCESS_201"; }
+                    public int getHttpStatus() { return 201; }
+                    public String getMessage() { return message; }
+                }
+        );
+    }
+
     public static <T> SuccessResponse<T> empty() {
         return new SuccessResponse<>(null, GlobalSuccessCode.SUCCESS_OK);
     }
