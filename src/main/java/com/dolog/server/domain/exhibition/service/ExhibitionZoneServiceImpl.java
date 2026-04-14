@@ -51,8 +51,8 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
     }
 
     @Override
-    public ExhibitionZoneUpdateResponse updateZone(UUID exhibitionId, UUID zoneId, ExhibitionZoneUpdateRequest request) {
-        ExhibitionZone zone = exhibitionZoneRepository.findByIdAndExhibitionId(zoneId, exhibitionId)
+    public ExhibitionZoneUpdateResponse updateZone(UUID zoneId, ExhibitionZoneUpdateRequest request) {
+        ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
 
         zone.update(request.getName(), request.getDescription());
@@ -61,8 +61,8 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
     }
 
     @Override
-    public void deleteZone(UUID exhibitionId, UUID zoneId) {
-        ExhibitionZone zone = exhibitionZoneRepository.findByIdAndExhibitionId(zoneId, exhibitionId)
+    public void deleteZone(UUID zoneId) {
+        ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
 
         exhibitionZoneRepository.delete(zone);
