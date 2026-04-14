@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("artists-profiles")
+@RequestMapping("artist-profiles")
 @RequiredArgsConstructor
 public class ArtistProfileController {
 
@@ -30,7 +30,7 @@ public class ArtistProfileController {
      * GET exhibitions/artists-profiles?exhibitionId={uuid}
      * * GET exhibitions/artists-profiles?artistProfileId={uuid}
      */
-    @GetMapping()
+    @GetMapping
     public SuccessResponse<ArtistProfileListResponse> getArtistProfileList(
             @RequestParam(value = "exhibitionId", required = false) String exhibitionIdStr
     ) {
@@ -71,7 +71,7 @@ public class ArtistProfileController {
 
 
     // 프로필 생성
-    @PostMapping()
+    @PostMapping
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> createArtistProfile(
             @ModelAttribute ArtistProfileCreateRequest request
