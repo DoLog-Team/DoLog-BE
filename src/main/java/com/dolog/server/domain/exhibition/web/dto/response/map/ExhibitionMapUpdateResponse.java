@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.UUID;
+
 @Getter
 @Builder
 public class ExhibitionMapUpdateResponse {
 
     @JsonProperty("map_id")
-    private String mapId;
+    private UUID mapId;
 }
