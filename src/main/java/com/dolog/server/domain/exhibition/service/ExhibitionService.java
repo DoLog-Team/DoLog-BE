@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreate
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
+import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 
 import java.util.List;
 import java.util.UUID;

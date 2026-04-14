@@ -43,7 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             "GET", List.of(
                     "/api/exhibitions/*/zones",
                     "/api/exhibitions/*/partners",
-                    "/api/exhibition/*/custom"
+                    "/api/exhibitions/*/custom"
             )
     );
 

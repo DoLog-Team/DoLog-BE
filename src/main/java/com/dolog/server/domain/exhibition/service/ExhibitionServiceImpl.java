@@ -16,6 +16,7 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreate
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
+import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -92,18 +93,20 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     @Transactional(readOnly = true)
     public ExhibitionCustomThemeResponse getCustomTheme(UUID exhibitionId) {
-        if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
-        }
-
         ExhibitionCustomTheme theme = exhibitionCustomThemeRepository.findByExhibitionId(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.CUSTOM_THEME_NOT_FOUND));
+                .orElseThrow(() -> {
+                    // 테마 미존재 시 전시회 존재 여부로 에러 구분
+                    if (!exhibitionRepository.existsById(exhibitionId)) {
+                        return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+                    }
+                    return new ExhibitionException(ExhibitionErrorCode.CUSTOM_THEME_NOT_FOUND);
+                });
 
         String splashImg = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
                 .map(ExhibitionDetail::getSplashImg)
                 .orElse(null);
 
-        return ExhibitionCustomThemeResponse.of(theme, splashImg);
+        return ExhibitionCustomThemeResponse.of(theme, exhibitionId, splashImg);
     }
 
     @Override
