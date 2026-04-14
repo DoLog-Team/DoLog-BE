@@ -3,26 +3,75 @@ package com.dolog.server.domain.artist.web.controller;
 import com.dolog.server.domain.artist.service.ArtistProfileService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("artist-profiles")
+@RequestMapping("artists-profiles")
 @RequiredArgsConstructor
 public class ArtistProfileController {
 
     private final ArtistProfileService artistProfileService;
 
-    @PostMapping
+    /**
+     * 작가 프로필 목록 조회 (전체 조회 및 전시회별 필터링)
+     * GET exhibitions/artists-profiles
+     * GET exhibitions/artists-profiles?exhibitionId={uuid}
+     * * GET exhibitions/artists-profiles?artistProfileId={uuid}
+     */
+    @GetMapping()
+    public SuccessResponse<ArtistProfileListResponse> getArtistProfileList(
+            @RequestParam(value = "exhibitionId", required = false) String exhibitionIdStr
+    ) {
+        UUID exhibitionId = null;
+
+        // "null" 문자열이 들어오거나 비어있는 경우를 방어
+        if (exhibitionIdStr != null && !exhibitionIdStr.isBlank() && !exhibitionIdStr.equals("null")) {
+            exhibitionId = UUID.fromString(exhibitionIdStr);
+        }
+
+        // 서비스 호출 (서비스는 UUID를 받도록 유지)
+        List<ArtistProfileResponse> responses = artistProfileService.getArtistProfileList(exhibitionId);
+
+        // 데이터 포장
+        ArtistProfileListResponse data = ArtistProfileListResponse.builder()
+                .total(responses.size())
+                .artistProfiles(responses)
+                .build();
+
+        return SuccessResponse.ok(data, "작가 프로필 목록 조회 성공");
+    }
+
+    // 프로필 상세 조회
+    @GetMapping("/{profileId}")
+    public SuccessResponse<ArtistProfileDetailResponse> getArtistProfileDetail(
+            @PathVariable(value = "profileId") String profileIdStr
+    ) {
+        // PathVariable도 "null" 문자열이 들어올 경우를 대비해 안전하게 처리
+        if (profileIdStr == null || profileIdStr.isBlank() || profileIdStr.equals("null")) {
+            throw new IllegalArgumentException("유효하지 않은 프로필 ID입니다.");
+        }
+
+        UUID profileId = UUID.fromString(profileIdStr);
+        ArtistProfileDetailResponse response = artistProfileService.getArtistProfileDetail(profileId);
+
+        return SuccessResponse.ok(response, "작가 프로필 상세 조회 성공");
+    }
+
+
+    // 프로필 생성
+    @PostMapping()
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> createArtistProfile(
             @ModelAttribute ArtistProfileCreateRequest request

@@ -6,6 +6,7 @@ import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfile
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -13,6 +14,7 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
+import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
@@ -38,6 +40,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final FileService fileService;
     private final ArtistSnsRepository artistSnsRepository;
+    private final ArtistProfileRepository artistProfileRepository;
+    private final BtsRepository btsRepository;
 
     // 프로필 생성
     @Transactional
@@ -111,6 +115,79 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         return convertToResponse(profile);
     }
 
+    @Override // 인터페이스의 UUID 파라미터와 일치해야 에러가 사라집니다.
+    @Transactional(readOnly = true)
+    public List<ArtistProfileResponse> getArtistProfileList(UUID exhibitionId) {
+        List<ArtistProfile> profiles;
+
+        if (exhibitionId != null) {
+            profiles = profileRepository.findAllByExhibitionId(exhibitionId);
+        } else {
+            profiles = profileRepository.findAll();
+        }
+
+        return profiles.stream()
+                .map(this::convertToResponse)
+                .toList();
+    }
+
+    // 프로필 상세 조회 (기존에 중첩 클래스로 되어있던 부분을 메서드로 수정)
+    @Override
+    @Transactional(readOnly = true)
+    public ArtistProfileDetailResponse getArtistProfileDetail(UUID profileId) {
+        // 1. 프로필 조회
+        ArtistProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(ArtistProfileNotFoundException::new);
+
+        // 2. SNS 리스트 변환 (ContactInfo 계층 구조 반영)
+        List<ArtistProfileDetailResponse.SnsInfo> snsList = profile.getSnsList().stream()
+                .map(sns -> ArtistProfileDetailResponse.SnsInfo.builder()
+                        .snsId(sns.getId())
+                        .platformName(sns.getPlatformName())
+                        .url(sns.getUrl())
+                        .build())
+                .toList();
+
+        // 3. BTS 리스트 변환 (Artist + Exhibition 기준 조회)
+        List<ArtistProfileDetailResponse.BtsSummary> btsResponses = btsRepository
+                .findAllByArtistIdAndExhibitionId(profile.getArtist().getId(), profile.getExhibition().getId())
+                .stream()
+                .map(bts -> ArtistProfileDetailResponse.BtsSummary.builder()
+                        .btsId(bts.getId())
+                        .title(bts.getTitle())
+                        .mainImg(bts.getMainImg())
+                        .build())
+                .toList();
+
+        // 4. 작품 리스트 변환 (ArtworkArtistMap 활용)
+        List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses = profile.getArtworkArtistMaps().stream()
+                .map(map -> map.getArtwork())
+                .map(artwork -> ArtistProfileDetailResponse.ArtworkSummary.builder()
+                        .artworkId(artwork.getId())
+                        .title(artwork.getTitle())
+                        .image(artwork.getMainImg())
+                        .build())
+                .toList();
+
+        // 5. 최종 DTO 조립
+        return ArtistProfileDetailResponse.builder()
+                .profileId(profile.getId())
+                .artistId(profile.getArtist().getId())
+                .nameKo(profile.getNameKo())
+                .nameEn(profile.getNameEn())
+                .profileImage(profile.getProfileImg())
+                .isPublic(profile.isPublic())
+                .bio(profile.getBio())
+                .contact(ArtistProfileDetailResponse.ContactInfo.builder()
+                        .email(profile.getEmail())
+                        .snsList(snsList)
+                        .build())
+                .behindTheScenes(btsResponses)
+                .artworks(artworkResponses)
+                .build();
+    }
+
+
 //----------------[ SNS ] ----------------------
 
     // SNS 추가
@@ -182,9 +259,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         var exhibitionDetail = exhibitionDetailRepository.findByExhibition(exhibition)
                 .orElse(null);
 
-        // SNS 목록 가져오기
-        List<ArtistSnsResponse> snsList = artistSnsRepository.findByArtistProfileId(profile.getId())
-                .stream()
+        // 엔티티 내부 리스트 사용
+        List<ArtistSnsResponse> snsList = profile.getSnsList().stream()
                 .map(ArtistSnsResponse::from)
                 .toList();
 

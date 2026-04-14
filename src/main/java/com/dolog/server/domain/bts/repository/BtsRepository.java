@@ -18,4 +18,7 @@ public interface BtsRepository extends JpaRepository<Bts, UUID> {
             "LEFT JOIN FETCH m.artwork " +
             "WHERE b.exhibition.id = :exhibitionId")
     List<Bts> findAllByExhibitionId(@Param("exhibitionId") UUID exhibitionId);
+
+    // 특정 전시회에서 특정 작가가 작성한 BTS 목록 조회
+    List<Bts> findAllByArtistIdAndExhibitionId(UUID artistId, UUID exhibitionId);
 }

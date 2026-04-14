@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artist.entity;
 
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -51,6 +52,14 @@ public class ArtistProfile extends BaseEntity {
 
     @Column(name = "profile_img")
     private String profileImg;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "artistProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ArtistSns> snsList = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "artistProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 
     public void updateProfile(String nameKo, String nameEn, String bio, String email, String profileImg) {
         // 값이 존재할 때만 업데이트 (기존 값 유지)
