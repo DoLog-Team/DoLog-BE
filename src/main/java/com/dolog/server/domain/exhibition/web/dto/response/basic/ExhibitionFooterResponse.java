@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.web.dto.response.basic;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
+import java.util.UUID;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -11,6 +12,8 @@ import lombok.Getter;
 @AllArgsConstructor
 public class ExhibitionFooterResponse {
 
+    @JsonProperty("exhibition_id")
+    private UUID exhibitionId;
     private String title;
     private String department;
     private String address;
@@ -23,6 +26,7 @@ public class ExhibitionFooterResponse {
 
     public static ExhibitionFooterResponse from(ExhibitionDetail detail) {
         return ExhibitionFooterResponse.builder()
+                .exhibitionId(detail.getExhibition().getId())
                 .title(detail.getTitle())
                 .department(detail.getExhibition().getDeptName())
                 .address(detail.getAddress())

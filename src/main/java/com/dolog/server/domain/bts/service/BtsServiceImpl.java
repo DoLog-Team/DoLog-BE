@@ -218,6 +218,7 @@ public class BtsServiceImpl implements BtsService {
                 .collect(Collectors.toList());
 
         return BtsMappingUpdateResponse.builder()
+                .exhibitionId(exhibitionId)
                 .btsId(bts.getId())
                 .title(bts.getTitle())
                 .artistProfileId(artistProfile.getId())

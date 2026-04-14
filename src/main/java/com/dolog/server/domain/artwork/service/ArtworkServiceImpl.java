@@ -378,6 +378,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                             .title(a.getTitle())
                             .category(a.getCategory())
                             .imageUrl(a.getMainImg())
+                            .exhibitionId(exId)
                             .exhibitionTitle(exTitle)
                             .artistName(artistMap.getOrDefault(a.getId(), "Unknown Artist"))
                             .build();
