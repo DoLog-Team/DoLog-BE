@@ -7,4 +7,6 @@ import java.util.UUID;
 
 public interface ExhibitionGuideMapRepository extends JpaRepository<ExhibitionGuideMap, UUID> {
     List<ExhibitionGuideMap> findByExhibitionId(UUID exhibitionId);
+
+    List<ExhibitionGuideMap> findByZoneId(UUID zoneId);
 }

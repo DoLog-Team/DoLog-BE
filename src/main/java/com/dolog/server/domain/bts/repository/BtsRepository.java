@@ -30,4 +30,7 @@ public interface BtsRepository extends JpaRepository<Bts, UUID> {
             UUID exhibitionId, UUID artistProfileId, UUID btsId);
 
     List<Bts> findTop3ByExhibitionIdAndIdNotOrderByCreatedAtDesc(UUID exhibitionId, UUID btsId);
+
+    @Query("SELECT b FROM Bts b JOIN b.artworkMaps m WHERE m.artwork.id = :artworkId")
+    List<Bts> findAllByArtworkId(@Param("artworkId") UUID artworkId);
 }
