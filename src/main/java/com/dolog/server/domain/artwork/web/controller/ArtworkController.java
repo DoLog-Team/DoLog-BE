@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.web.controller;
 
+import com.dolog.server.domain.artwork.service.ArtworkDetailService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class ArtworkController {
 
     private final ArtworkService artworkService;
+    private final ArtworkDetailService artworkDetailService;
 
     // 1. 작품 전체 목록 조회
     @GetMapping("/artworks")
@@ -146,5 +148,13 @@ public class ArtworkController {
         // 서비스 호출 시 exhibitionId를 같이 넘겨서 zone 검증에 활용합니다.
         ArtworkUpdateFullResponse data = artworkService.updateArtworkFull(exhibitionId, artworkId, request);
         return SuccessResponse.ok(data, "작품 정보 및 연관 데이터가 성공적으로 동기화되었습니다.");
+    }
+
+    // 상세 조회 API만 신규 서비스를 타게 합니다.
+    @GetMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    public SuccessResponse<ArtworkDetailResponse> getArtworkDetail(
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID artworkId) {
+        return SuccessResponse.ok(artworkDetailService.getArtworkDetail(exhibitionId, artworkId), "작품 상세 조회 성공");
     }
 }

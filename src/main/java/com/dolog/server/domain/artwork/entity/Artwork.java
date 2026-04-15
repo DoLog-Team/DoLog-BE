@@ -5,6 +5,8 @@ import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +34,7 @@ public class Artwork extends BaseEntity {
     private ExhibitionZone exhibitionZone;
 
     @Builder.Default // Builder 사용 시 기본값으로 초기화되도록 설정
+    @BatchSize(size = 100) // ⭐️ 추가
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkImg> artworkImg = new ArrayList<>();
 
@@ -63,6 +66,7 @@ public class Artwork extends BaseEntity {
     private Integer orderIndex;
 
     @Builder.Default
+    @BatchSize(size = 100) // ⭐️ 추가
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 

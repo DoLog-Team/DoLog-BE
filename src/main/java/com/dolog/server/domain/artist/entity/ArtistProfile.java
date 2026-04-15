@@ -5,6 +5,7 @@ import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +55,7 @@ public class ArtistProfile extends BaseEntity {
     private String profileImg;
 
     @Builder.Default
+    @BatchSize(size = 100) // ⭐️ 추가
     @OneToMany(mappedBy = "artistProfile", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtistSns> snsList = new ArrayList<>();
 

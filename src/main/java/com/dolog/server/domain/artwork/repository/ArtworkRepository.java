@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
@@ -21,4 +22,11 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     List<Artwork> findArtworksForList(@Param("exhibitionId") UUID exhibitionId,
                                       @Param("zone") String zone,
                                       @Param("category") String category);
+
+
+
+    @Query("SELECT DISTINCT a FROM Artwork a " +
+            "LEFT JOIN FETCH a.exhibitionZone " + // 단일 객체 조인은 OK
+            "WHERE a.id = :artworkId AND a.exhibition.id = :exhibitionId")
+    Optional<Artwork> findDetailById(@Param("exhibitionId") UUID exhibitionId, @Param("artworkId") UUID artworkId);
 }
