@@ -1,6 +1,7 @@
 package com.dolog.server.domain.bts.entity;
 
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -28,8 +29,8 @@ public class Bts extends BaseEntity {
     private Exhibition exhibition;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "artist_id")
-    private Artist artist;
+    @JoinColumn(name = "artist_profile_id")
+    private ArtistProfile artistProfile;
 
     @Column(length = 255)
     private String title;
@@ -44,7 +45,7 @@ public class Bts extends BaseEntity {
     @OneToMany(mappedBy = "bts", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BtsArtworkMap> artworkMaps = new ArrayList<>();
 
-    public void updateBtsInfo(String title, String contentUrl, String mainImg, Artist artist) {
+    public void updateBtsInfo(String title, String contentUrl, String mainImg, ArtistProfile artistProfile) {
         if (title != null) {
             this.title = title;
         }
@@ -54,8 +55,8 @@ public class Bts extends BaseEntity {
         if (mainImg != null) {
             this.mainImg = mainImg;
         }
-        if (artist != null) {
-            this.artist = artist;
+        if (artistProfile != null) {
+            this.artistProfile = artistProfile;
         }
     }
 }

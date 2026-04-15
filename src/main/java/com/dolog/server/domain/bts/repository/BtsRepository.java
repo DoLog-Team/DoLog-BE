@@ -9,16 +9,25 @@ import java.util.List;
 import java.util.UUID;
 
 public interface BtsRepository extends JpaRepository<Bts, UUID> {
-    // 특정 전시의 BTS 목록을 최신순으로 가져올 때 유용합니다.
+
+    // 1. 최신순 목록 조회
     List<Bts> findByExhibitionIdOrderByCreatedAtDesc(UUID exhibitionId);
 
+    // 2. 패치 조인 쿼리 (b.artist -> b.artistProfile로 수정)
     @Query("SELECT DISTINCT b FROM Bts b " +
-            "LEFT JOIN FETCH b.artist " +
+            "LEFT JOIN FETCH b.artistProfile " + // 필드명 수정됨
             "LEFT JOIN FETCH b.artworkMaps m " +
             "LEFT JOIN FETCH m.artwork " +
             "WHERE b.exhibition.id = :exhibitionId")
     List<Bts> findAllByExhibitionId(@Param("exhibitionId") UUID exhibitionId);
 
-    // 특정 전시회에서 특정 작가가 작성한 BTS 목록 조회
-    List<Bts> findAllByArtistIdAndExhibitionId(UUID artistId, UUID exhibitionId);
+    // 3. 특정 작가의 BTS 목록 조회
+    List<Bts> findAllByArtistProfileIdAndExhibitionId(UUID artistProfileId, UUID exhibitionId);
+
+    // 4. 추천
+    // 1순위: 같은 전시회 내 특정 작가의 최신 BTS (현재 본인 제외)
+    List<Bts> findTop3ByExhibitionIdAndArtistProfileIdAndIdNotOrderByCreatedAtDesc(
+            UUID exhibitionId, UUID artistProfileId, UUID btsId);
+
+    List<Bts> findTop3ByExhibitionIdAndIdNotOrderByCreatedAtDesc(UUID exhibitionId, UUID btsId);
 }

@@ -14,6 +14,7 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
@@ -150,7 +151,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
         // 3. BTS 리스트 변환 (Artist + Exhibition 기준 조회)
         List<ArtistProfileDetailResponse.BtsSummary> btsResponses = btsRepository
-                .findAllByArtistIdAndExhibitionId(profile.getArtist().getId(), profile.getExhibition().getId())
+                .findAllByArtistProfileIdAndExhibitionId(profile.getArtist().getId(), profile.getExhibition().getId())
                 .stream()
                 .map(bts -> ArtistProfileDetailResponse.BtsSummary.builder()
                         .btsId(bts.getId())
@@ -161,7 +162,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
         // 4. 작품 리스트 변환 (ArtworkArtistMap 활용)
         List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses = profile.getArtworkArtistMaps().stream()
-                .map(map -> map.getArtwork())
+                .map(ArtworkArtistMap::getArtwork)
                 .map(artwork -> ArtistProfileDetailResponse.ArtworkSummary.builder()
                         .artworkId(artwork.getId())
                         .title(artwork.getTitle())

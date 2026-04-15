@@ -25,4 +25,8 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
 
     // 전시 ID로 프로필 목록 찾기
     List<ArtistProfile> findAllByExhibitionId(UUID exhibitionId);
+
+    // 이 메서드를 추가해야 합니다.
+    Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
+
 }

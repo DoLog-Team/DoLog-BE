@@ -2,6 +2,7 @@ package com.dolog.server.domain.bts.service;
 
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
@@ -18,6 +19,7 @@ import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsMappingUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.response.BtsCreateResponse;
+import com.dolog.server.domain.bts.web.dto.response.BtsDetailResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -25,6 +27,7 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.global.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +41,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 @Service
 @RequiredArgsConstructor
@@ -51,50 +56,37 @@ public class BtsServiceImpl implements BtsService {
     private final ArtworkRepository artworkRepository;
     private final FileService fileService;
 
+//    1. 생성
     @Transactional
     @Override
     public BtsCreateResponse createBts(BtsCreateRequest request) throws IOException {
-        // 1. 디버깅 로그: 실제로 뭐가 들어오는지 콘솔에 찍어보기
-        System.out.println(">>> Request ArtworkIds: " + request.getArtworkIds());
+        // 1. 작품들 조회
+        List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
+        if (artworks.isEmpty()) throw new RuntimeException("작품을 찾을 수 없습니다.");
 
-        // 2. null 체크 방어 로직 (이걸 안 하면 findAllById에서 터짐)
-        if (request.getArtworkIds() == null || request.getArtworkIds().isEmpty()) {
-            throw new IllegalArgumentException("작품 ID가 전달되지 않았습니다. Postman의 Key 이름을 확인하세요 (예: artworkIds[0])");
-        }
-
-        // 3. 리스트 안에 null이 섞여 들어오는 경우 필터링
-        List<UUID> safeIds = request.getArtworkIds().stream()
-                .filter(Objects::nonNull)
-                .toList();
-
-        if (safeIds.isEmpty()) {
-            throw new IllegalArgumentException("유효한 UUID가 없습니다.");
-        }
-
-        // 4. 이제 안전하게 조회
-        List<Artwork> artworks = artworkRepository.findAllById(safeIds);
-
-        // 2. 기준 정보 추출 (첫 번째 작품 기준)
         Artwork representativeArtwork = artworks.get(0);
         Exhibition exhibition = representativeArtwork.getExhibition();
 
-        // 첫 번째 작품에 연결된 첫 번째 작가를 대표 작가로 설정
+        // 2. 작품의 작가(Artist) 찾기
         Artist artist = representativeArtwork.getArtworkArtistMaps().stream()
                 .findFirst()
                 .map(ArtworkArtistMap::getArtist)
-                .orElseThrow(ArtistProfileNotFoundException::new);
+                .orElseThrow(() -> new RuntimeException("작가를 찾을 수 없습니다."));
 
-        // 3. 파일 업로드 (FileService 사용)
+        // 3. 해당 전시의 작가 프로필(ArtistProfile) 찾기 (중요!)
+        ArtistProfile artistProfile = artistProfileRepository.findByArtistAndExhibition(artist, exhibition)
+                .orElseThrow(() -> new RuntimeException("해당 전시의 작가 프로필이 존재하지 않습니다."));
+
+        // 4. 파일 업로드
         String dbImageUrl = fileService.uploadFile(request.getMainImg(), "bts");
 
-        // 4. BTS 엔티티 생성
+        // 5. BTS 엔티티 생성 (ArtistProfile 저장)
         Bts bts = Bts.builder()
                 .exhibition(exhibition)
-                .artist(artist)
+                .artistProfile(artistProfile) // 프로필 직접 매핑
                 .title(request.getTitle())
                 .mainImg(dbImageUrl)
                 .contentUrl(request.getContentUrl())
-                .artworkMaps(new ArrayList<>()) // 리스트 초기화 확인
                 .build();
 
         // 5. 모든 작품을 BTS와 매핑 (N:M 처리)
@@ -110,29 +102,28 @@ public class BtsServiceImpl implements BtsService {
         return BtsCreateResponse.of(savedBts);
     }
 
+//    2. 수정
     @Override
     @Transactional
     public BtsCreateResponse updateBts(UUID btsId, BtsUpdateRequest request) {
-        // 1. BTS 조회
         Bts bts = btsRepository.findById(btsId)
                 .orElseThrow(() -> new RuntimeException("BTS content not found"));
 
-        // 2. 작가 정보 업데이트 (전달된 ID가 있으면 조회, 없으면 기존 유지)
-        Artist artist = bts.getArtist();
-        if (request.getArtistId() != null) {
-            artist = artistRepository.findById(request.getArtistId())
-                    .orElseThrow(() -> new RuntimeException("Artist not found"));
+        // 2. 작가 프로필 업데이트 로직
+        ArtistProfile artistProfile = bts.getArtistProfile();
+
+        // DTO 필드명을 바꿨으므로 getArtistProfileId() 호출 가능!
+        if (request.getArtistProfileId() != null) {
+            artistProfile = artistProfileRepository.findById(request.getArtistProfileId())
+                    .orElseThrow(() -> new RuntimeException("Artist Profile not found"));
         }
 
-        // 3. BTS 기본 정보 업데이트
-        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), request.getMainImg(), artist);
+        // 3. 업데이트 수행
+        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), request.getMainImg(), artistProfile);
 
-        // 4. 연결된 작품 목록(ArtworkMaps) 업데이트
+        // 4. 연결된 작품 목록 업데이트 (기존 로직 동일)
         if (request.getArtworkIds() != null) {
-            // 기존 매핑 제거 (orphanRemoval = true 설정 덕분에 리스트 비우면 DB에서도 삭제됨)
             bts.getArtworkMaps().clear();
-
-            // 새로운 작품들 조회 및 매핑 추가
             List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
             for (Artwork artwork : artworks) {
                 BtsArtworkMap map = BtsArtworkMap.builder()
@@ -143,7 +134,6 @@ public class BtsServiceImpl implements BtsService {
             }
         }
 
-        // 5. 변경된 전체 정보 응답
         return BtsCreateResponse.of(bts);
     }
 
@@ -169,6 +159,104 @@ public class BtsServiceImpl implements BtsService {
                 .collect(Collectors.toList());
     }
 
+
+//    3. BTS 상세 조회
+    /**
+     * BTS 상세 조회
+     * 로직: 본체 조회 -> 작가 정보 매핑 -> 연관 작품 매핑 -> 추천 목록(작가 우선) 생성
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public BtsDetailResponse getBtsDetail(UUID btsId) {
+        // 1. BTS 본체 조회 (정의하신 BtsException 사용)
+        Bts bts = btsRepository.findById(btsId)
+                .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
+
+        // 2. 작가 프로필 정보 매핑 (Bts -> ArtistProfile)
+        ArtistProfile profile = bts.getArtistProfile();
+        List<BtsDetailResponse.BtsArtistProfileInfo> artists = new ArrayList<>();
+
+        if (profile != null) {
+            artists.add(BtsDetailResponse.BtsArtistProfileInfo.builder()
+                    .participantId(profile.getId())
+                    .nameKo(profile.getNameKo())
+                    .nameEn(profile.getNameEn())
+                    .profileImage(profile.getProfileImg())
+                    .bio(profile.getBio())
+                    .contact(BtsDetailResponse.ContactInfo.builder()
+                            .email(profile.getEmail())
+                            .sns(profile.getSnsList().stream()
+                                    .map(ArtistSnsResponse::from)
+                                    .toList())
+                            .build())
+                    .build());
+        }
+
+        // 3. 연관 작품 매핑 (BtsArtworkMap을 거쳐서 Artwork 추출)
+        List<BtsDetailResponse.RelatedArtworkInfo> relatedArtworks = bts.getArtworkMaps().stream()
+                .map(BtsArtworkMap::getArtwork)
+                .map(artwork -> BtsDetailResponse.RelatedArtworkInfo.builder()
+                        .artworkId(artwork.getId())
+                        .title(artwork.getTitle())
+                        .image(artwork.getMainImg())
+                        .build())
+                .toList();
+
+        // 4. 추천 BTS 리스트 생성 (우선순위: 동일 작가 -> 동일 전시 최신순)
+        List<BtsDetailResponse.RecommendedBtsInfo> recommendedBts = getRecommendedBtsList(bts);
+
+        // 5. 최종 Response 반환
+        return BtsDetailResponse.builder()
+                .btsId(bts.getId())
+                .title(bts.getTitle())
+                .contentUrl(bts.getContentUrl())
+                .mainImg(bts.getMainImg())
+                .artists(artists)
+                .relatedArtworks(relatedArtworks)
+                .recommendedBts(recommendedBts)
+                .build();
+    }
+
+    /**
+     * 추천 로직 분리 (Private Method)
+     */
+    private List<BtsDetailResponse.RecommendedBtsInfo> getRecommendedBtsList(Bts bts) {
+        Set<Bts> recommendedSet = new LinkedHashSet<>();
+        UUID exId = bts.getExhibition().getId();
+        UUID currentBtsId = bts.getId();
+
+        // 1. 작가 프로필 존재 여부 체크 (NPE 방지 핵심)
+        if (bts.getArtistProfile() != null) {
+            UUID artistProfileId = bts.getArtistProfile().getId();
+
+            // [우선순위 1] 같은 전시 내 동일 작가의 다른 글 추가
+            List<Bts> sameArtistBts = btsRepository.findTop3ByExhibitionIdAndArtistProfileIdAndIdNotOrderByCreatedAtDesc(
+                    exId, artistProfileId, currentBtsId);
+            recommendedSet.addAll(sameArtistBts);
+        }
+
+        // 2. 3개가 채워지지 않았다면 (또는 작가가 없다면) 전시회 내 다른 글 추가
+        if (recommendedSet.size() < 3) {
+            List<Bts> exhibitionBts = btsRepository.findTop3ByExhibitionIdAndIdNotOrderByCreatedAtDesc(
+                    exId, currentBtsId);
+
+            for (Bts rb : exhibitionBts) {
+                recommendedSet.add(rb); // LinkedHashSet이라 순서 유지 + 중복 자동 제거
+                if (recommendedSet.size() >= 3) break;
+            }
+        }
+
+        return recommendedSet.stream()
+                .map(rb -> BtsDetailResponse.RecommendedBtsInfo.builder()
+                        .btsId(rb.getId())
+                        .title(rb.getTitle())
+                        .mainImg(rb.getMainImg())
+                        .build())
+                .toList();
+    }
+
+//    =========================
+
     @Override
     @Transactional
     public BtsMappingUpdateResponse syncBtsMapping(UUID exhibitionId, UUID btsId, BtsMappingUpdateRequest request) {
@@ -191,7 +279,7 @@ public class BtsServiceImpl implements BtsService {
         }
 
         // 4. BTS 기본 정보 업데이트 (title, content, artist)
-        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), null, artistProfile.getArtist());
+        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), null, artistProfile);
 
         // 5. 작품 매핑 교체 - 조회 결과가 요청 개수와 다르면 일부 ID가 잘못된 것
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
@@ -225,4 +313,7 @@ public class BtsServiceImpl implements BtsService {
                 .updatedArtworkIds(updatedArtworkIds)
                 .build();
     }
+
+
+
 }
