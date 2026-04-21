@@ -1,16 +1,20 @@
 name: CD
 
 on:
-  push:
-    branches: ["main", "dev"]
+  workflow_run:
+    workflows: ["CI"] # 아까 작성하신 CI 파일의 name
+    types:
+      - completed # CI 워크플로우가 끝났을 때 트리거
 
 env:
   IMAGE: ${{ secrets.DOCKER_USERNAME }}/be
 
 jobs:
   deploy:
-    # PR이 아닌 실제 push/merge일 때만 실행
-    if: github.event_name == 'push'
+    # 핵심: CI가 '성공'했을 때 + 그리고 'main'이나 'dev' 브랜치일 때만 실행
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.head_branch == 'main' || github.event.workflow_run.head_branch == 'dev')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -35,3 +35,10 @@ jobs:
         with:
           name: gradle-test-report
           path: build/reports/tests/test/
+
+      # 3. 테스트 결과를 PR에 요약해서 보여주기 (가독성 UP)
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: build/test-results/test/*.xml
