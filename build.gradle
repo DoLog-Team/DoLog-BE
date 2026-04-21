@@ -50,6 +50,7 @@ dependencies {
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	//http
 	implementation 'org.apache.httpcomponents.client5:httpclient5:5.3'
@@ -71,4 +72,9 @@ dependencyManagement {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 빌드 시 테스트 결과 보고서를 명확히 생성하도록 보장합니다.
+	reports {
+		junitXml.required = true
+		html.required = true
+	}
 }

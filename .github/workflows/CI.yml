@@ -9,6 +9,13 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # 1. 403 Forbidden 에러 방지를 위해 권한 추가 (필수)
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      checks: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,12 +30,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 1. 빌드 및 테스트 실행
-      # --info 옵션을 주면 테스트 실패 시 로그를 더 자세히 볼 수 있습니다.
       - name: Build and Test with Gradle
         run: ./gradlew build --info
 
-      # 2. 테스트 결과 리포트 업로드 (성공/실패 상관없이 항상 실행)
       - name: Upload Test Report
         if: always()
         uses: actions/upload-artifact@v4
@@ -36,9 +40,9 @@ jobs:
           name: gradle-test-report
           path: build/reports/tests/test/
 
-      # 3. 테스트 결과를 PR에 요약해서 보여주기 (가독성 UP)
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          files: build/test-results/test/*.xml
+          # 2. 멀티 모듈이나 경로 유연성을 위해 **/ 추가 (권장)
+          files: "**/build/test-results/test/*.xml"
