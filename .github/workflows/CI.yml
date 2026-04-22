@@ -2,47 +2,101 @@ name: CI
 
 on:
   pull_request:
-    branches: ["main", "dev"]
+    branches: ["dev", "main"]
   push:
-    branches: ["main", "dev"]
+    branches: ["dev", "main"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  checks: write
+
+env:
+  JAVA_VERSION: '17'
+  IMAGE: ${{ secrets.DOCKER_USERNAME }}/be
 
 jobs:
   build-and-test:
+    name: Build, Test & Docker Push
     runs-on: ubuntu-latest
-    # 1. 403 Forbidden 에러 방지를 위해 권한 추가 (필수)
-    permissions:
-      contents: read
-      issues: write
-      pull-requests: write
-      checks: write
+
+    # 테스트를 위한 MySQL 컨테이너 띄우기
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: dolog_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up Temurin JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'gradle'
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # 1) 테스트 및 빌드 수행 (환경변수 주입)
       - name: Build and Test with Gradle
         run: ./gradlew build --info
+        env:
+          DATABASE_URL: jdbc:mysql://localhost:3306/dolog_db?serverTimezone=Asia/Seoul
+          DATABASE_USERNAME: root
+          DATABASE_PASSWORD: password
+          # S3 및 기타 필수 변수 (테스트 통과용 가짜 값)
+          ACCESS_KEY: ${{ secrets.ACCESS_KEY || 'dummy' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY || 'dummy' }}
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME || 'dummy' }}
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: testpassword
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY || 'AymkFsUli6txMdsB2QvIAJAY+gcoQNDYQGEkPcWlj+o=' }}
 
-      - name: Upload Test Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-test-report
-          path: build/reports/tests/test/
-
+      # 2) 테스트 결과 리포트 게시 (성공/실패 상관없이 실행)
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          # 2. 멀티 모듈이나 경로 유연성을 위해 **/ 추가 (권장)
           files: "**/build/test-results/test/*.xml"
+
+      # 3) 도커 허브 로그인 및 푸시 (PR이 아니고 메인/데브 브랜치일 때만 실행)
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build & Push image
+        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+      # 테스트 실패 시 리포트 저장
+      - name: Upload Test Report Artifact
+        if: failure()
+        uses: actions/artifact@v4
+        with:
+          name: gradle-test-report
+          path: build/reports/tests/test/
