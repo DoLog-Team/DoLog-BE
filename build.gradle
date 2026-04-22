@@ -50,6 +50,7 @@ dependencies {
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	//http
 	implementation 'org.apache.httpcomponents.client5:httpclient5:5.3'
@@ -61,6 +62,11 @@ dependencies {
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+
+	//S3
+	implementation 'software.amazon.awssdk:s3:2.20.0'
+	implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
+	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 }
 
 dependencyManagement {
@@ -71,4 +77,9 @@ dependencyManagement {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 빌드 시 테스트 결과 보고서를 명확히 생성하도록 보장합니다.
+	reports {
+		junitXml.required = true
+		html.required = true
+	}
 }
