@@ -96,7 +96,7 @@ jobs:
       # 테스트 실패 시 리포트 저장
       - name: Upload Test Report Artifact
         if: failure()
-        uses: actions/artifact@v4
+        uses: actions/upload-artifact@v4
         with:
           name: gradle-test-report
           path: build/reports/tests/test/
