@@ -167,6 +167,10 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
         boolean isNew = exhibitionDetailOpt.isEmpty();
 
+        if (!isNew) {
+            fileService.deleteFile(exhibitionDetailOpt.get().getExhibitionImg());
+        }
+
         ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() -> ExhibitionDetail.builder()
                 .exhibition(exhibition)
                 .title(request.getTitle())
