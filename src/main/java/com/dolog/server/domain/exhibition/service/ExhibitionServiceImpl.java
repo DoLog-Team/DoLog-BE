@@ -160,6 +160,9 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         String imageUrl = fileService.uploadFile(request.getExhibitionImg(), "exhibitions");
+        if (imageUrl == null) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
+        }
 
         Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
         boolean isNew = exhibitionDetailOpt.isEmpty();
