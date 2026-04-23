@@ -17,11 +17,13 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetail
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
+import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,6 +40,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+    private final FileService fileService;
 
     @Override
     @Transactional(readOnly = true)
@@ -152,12 +155,21 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
 
     @Override
-    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) {
+    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) throws IOException {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
+        String imageUrl = fileService.uploadFile(request.getExhibitionImg(), "exhibitions");
+        if (imageUrl == null) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
+        }
+
         Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
         boolean isNew = exhibitionDetailOpt.isEmpty();
+
+        if (!isNew) {
+            fileService.deleteFile(exhibitionDetailOpt.get().getExhibitionImg());
+        }
 
         ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() -> ExhibitionDetail.builder()
                 .exhibition(exhibition)
@@ -167,7 +179,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         exhibitionDetail.updateBasicInfo(
                 request.getTitle(),
                 request.getDescription(),
-                request.getExhibitionImg(),
+                imageUrl,
                 request.getStartDate(),
                 request.getEndDate()
         );
