@@ -85,11 +85,11 @@ public class ExhibitionController {
 
     // 전시 상세정보 등록/수정
     @PreAuthorize("hasRole('DEVELOPER')")
-    @PutMapping("/{exhibitionId}/details")
+    @PutMapping(value = "/{exhibitionId}/details", consumes = "multipart/form-data")
     public SuccessResponse<ExhibitionDetailUpsertResponse> upsertExhibitionDetail(
             @PathVariable UUID exhibitionId,
-            @Valid @RequestBody ExhibitionDetailUpsertRequest request
-    ) {
+            @Valid @ModelAttribute ExhibitionDetailUpsertRequest request
+    ) throws java.io.IOException {
         ExhibitionDetailUpsertResponse data = exhibitionService.upsertExhibitionDetail(exhibitionId, request);
         return SuccessResponse.ok(data);
     }

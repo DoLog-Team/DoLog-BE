@@ -6,6 +6,7 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdate
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,5 +24,5 @@ public interface ExhibitionService {
     ExhibitionMessageResponse updateExhibition(UUID exhibitionId, ExhibitionUpdateRequest request);
     ExhibitionMessageResponse deleteExhibition(UUID exhibitionId);
 
-    ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request);
+    ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) throws IOException;
 }
