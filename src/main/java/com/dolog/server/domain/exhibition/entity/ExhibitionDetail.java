@@ -62,7 +62,7 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "splash_img")
     private String splashImg;
 
-    @Column(length = 255)
+    @Column(nullable = false, length = 255)
     private String email;
 
     @Column(name = "location_description", columnDefinition = "TEXT")
@@ -82,13 +82,9 @@ public class ExhibitionDetail extends BaseEntity {
         this.exhibitionImg = exhibitionImg;
         this.startDate = startDate;
         this.endDate = endDate;
-        if (dateInfo != null) {
-            this.dateInfo = dateInfo;
-        }
+        this.dateInfo = dateInfo;
         this.email = email;
-        if (locationDescription != null) {
-            this.locationDescription = locationDescription;
-        }
+        this.locationDescription = locationDescription;
     }
 
     public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
