@@ -183,7 +183,8 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 request.getStartDate(),
                 request.getEndDate(),
                 request.getDateInfo(),
-                request.getEmail()
+                request.getEmail(),
+                request.getLocationDescription()
         );
 
         exhibitionDetailRepository.save(exhibitionDetail);
