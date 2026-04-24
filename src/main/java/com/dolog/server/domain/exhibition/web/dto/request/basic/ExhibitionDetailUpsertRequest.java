@@ -26,6 +26,11 @@ public class ExhibitionDetailUpsertRequest {
     @NotNull(message = "종료일은 필수 입력 항목입니다.")
     private LocalDate endDate;
 
+    private String dateInfo;
+
+    @NotBlank(message = "주최 기관 이메일은 필수 입력 항목입니다.")
+    private String email;
+
     @NotBlank(message = "전시회 설명은 필수 입력 항목입니다.")
     private String description;
 }

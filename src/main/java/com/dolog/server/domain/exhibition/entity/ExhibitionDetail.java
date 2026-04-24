@@ -72,12 +72,17 @@ public class ExhibitionDetail extends BaseEntity {
         this.splashImg = splashImg;
     }
 
-    public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate) {
+    public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
+                                String dateInfo, String email) {
         this.title = title;
         this.description = description;
         this.exhibitionImg = exhibitionImg;
         this.startDate = startDate;
         this.endDate = endDate;
+        if (dateInfo != null) {
+            this.dateInfo = dateInfo;
+        }
+        this.email = email;
     }
 
     public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
