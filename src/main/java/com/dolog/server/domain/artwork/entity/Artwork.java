@@ -68,14 +68,18 @@ public class Artwork extends BaseEntity {
     @Column(name = "order_index")
     private Integer orderIndex;
 
+    @Column(length = 255)
+    private String intro;
+
     @Builder.Default
     @BatchSize(size = 100) // ⭐️ 추가
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 
 
-    public void updateBasicInfo(String title, String description, String purchaseUrl) {
+    public void updateBasicInfo(String title, String intro, String description, String purchaseUrl) {
         if (title != null) this.title = title;
+        if (intro != null) this.intro = intro;
         if (description != null) this.description = description;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
