@@ -116,6 +116,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                 .exhibition(profile.getExhibition())
                 //.exhibitionZone(exhibitionZone)
                 .title(request.getTitle())
+                .intro(request.getIntro())
                 .category(request.getCategory())
                 .material(request.getMaterial())
                 .size(request.getSize())

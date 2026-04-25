@@ -14,6 +14,7 @@ import java.util.UUID;
 public class ArtworkCreateResponse {
     private UUID id;
     private String title;
+    private String intro;
     private String category;
     private String material;
     private String size;
@@ -30,6 +31,7 @@ public class ArtworkCreateResponse {
         return ArtworkCreateResponse.builder()
                 .id(artwork.getId())
                 .title(artwork.getTitle())
+                .intro(artwork.getIntro())
                 .category(artwork.getCategory())
                 .material(artwork.getMaterial())
                 .size(artwork.getSize())
