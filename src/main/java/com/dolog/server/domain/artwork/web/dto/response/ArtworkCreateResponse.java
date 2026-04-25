@@ -23,6 +23,7 @@ public class ArtworkCreateResponse {
     private Integer orderIndex;
     private UUID exhibitionId;
     private String artistName; // 등록된 작가 이름
+    private String locationMap;
 
     // Static Factory Method
     public static ArtworkCreateResponse of(Artwork artwork, String artistName) {
@@ -38,6 +39,7 @@ public class ArtworkCreateResponse {
                 .orderIndex(artwork.getOrderIndex())
                 .exhibitionId(artwork.getExhibition().getId())
                 .artistName(artistName)
+                .locationMap(artwork.getLocationMap())
                 .build();
     }
 }

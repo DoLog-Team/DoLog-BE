@@ -25,11 +25,13 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepositor
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
+import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -47,6 +49,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtistRepository artistRepository;
+    private final FileService fileService;
 
     /**
      * 작품 전체 목록 조회
@@ -98,6 +101,16 @@ public class ArtworkServiceImpl implements ArtworkService {
         ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
                 .orElseThrow(() -> new RuntimeException("Artist Profile not found"));
 
+        // ✨ S3 업로드 로직 적용
+        String mainImgUrl = null;
+        String locationMapUrl = null;
+        try {
+            mainImgUrl = fileService.uploadFile(request.getMainImageFile(), "artworks/main");
+            locationMapUrl = fileService.uploadFile(request.getLocationMapFile(), "artworks/maps");
+        } catch (IOException e) {
+            throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
+        }
+
         // ArtworkServiceImpl.java
         Artwork artwork = Artwork.builder()
                 .exhibition(profile.getExhibition())
@@ -107,7 +120,8 @@ public class ArtworkServiceImpl implements ArtworkService {
                 .material(request.getMaterial())
                 .size(request.getSize())
                 .description(request.getDescription())
-                .mainImg(request.getMainImage())
+                .mainImg(mainImgUrl)
+                .locationMap(locationMapUrl)
                 .purchaseUrl(request.getPurchaseUrl())
                 .orderIndex(request.getOrderIndex())
                 .build();
@@ -212,6 +226,22 @@ public class ArtworkServiceImpl implements ArtworkService {
         Artwork artwork = artworkRepository.findById(artworkId)
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
+        // ✨ 수정 시 이미지 변경 사항 처리 (새 파일이 왔을 때만 업로드)
+        String mainImgUrl = artwork.getMainImg();
+        String locationMapUrl = artwork.getLocationMap();
+
+        try {
+            if (request.getMainImageFile() != null && !request.getMainImageFile().isEmpty()) {
+                fileService.deleteFile(artwork.getMainImg()); // 기존 파일 삭제
+                mainImgUrl = fileService.uploadFile(request.getMainImageFile(), "artworks/main");
+            }
+            if (request.getLocationMapFile() != null && !request.getLocationMapFile().isEmpty()) {
+                fileService.deleteFile(artwork.getLocationMap()); // 기존 파일 삭제
+                locationMapUrl = fileService.uploadFile(request.getLocationMapFile(), "artworks/maps");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("파일 수정 중 오류 발생");
+        }
         // 2. 작가 정보 처리 (새 프로필 ID가 오면 업데이트, 아니면 기존 유지)
         String currentArtistName;
         if (request.getArtistProfileId() != null) {
@@ -236,7 +266,7 @@ public class ArtworkServiceImpl implements ArtworkService {
             zone = exhibitionZoneRepository.findById(request.getZoneId()).orElse(null);
         }
 
-        // 4. 정보 업데이트 (순서: title, description, category, zone, material, size, mainImg, purchaseUrl)
+        // 4. 정보 업데이트 (순서: title, description, category, zone, material, size, mainImgUrl, purchaseUrl)
         artwork.updateAllInfo(
                 request.getTitle(),
                 request.getDescription(),
@@ -244,7 +274,8 @@ public class ArtworkServiceImpl implements ArtworkService {
                 zone,
                 request.getMaterial(),
                 request.getSize(),
-                request.getMainImage(),
+                mainImgUrl,
+                locationMapUrl,
                 request.getPurchaseUrl()
         );
 
@@ -487,6 +518,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                 artwork.getMaterial(),    // 기존 유지
                 artwork.getSize(),        // 기존 유지
                 artwork.getMainImg(),     // 기존 유지
+                artwork.getLocationMap(),
                 artwork.getPurchaseUrl()  // 기존 유지
         );
 

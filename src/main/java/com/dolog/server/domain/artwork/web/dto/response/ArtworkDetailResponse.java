@@ -18,6 +18,7 @@ public class ArtworkDetailResponse {
     private String description;
     private String purchaseUrl;
     private String mainImage;
+    private String locationMap; // ✨ 추가: 작품별 개별 위치 지도 URL
     private ZoneInfo zone;
     private List<DetailImageInfo> detailImages;
     private List<ParticipantInfo> participants;
