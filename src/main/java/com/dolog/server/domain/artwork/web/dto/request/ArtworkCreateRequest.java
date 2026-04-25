@@ -20,6 +20,7 @@ public class ArtworkCreateRequest {
 
     @NotBlank(message = "작품 제목은 필수입니다.")
     private String title;
+    @NotBlank(message = "작품 소개 설명은 필수입니다.")
     private String intro;
 
     @NotBlank(message = "작품 카테고리는 필수입니다.")
