@@ -53,8 +53,11 @@ public class Artwork extends BaseEntity {
     private String description;
 
     @Lob
-    @Column(name = "main_img")
+    @Column(name = "main_img", length = 700)
     private String mainImg;
+
+    @Column(name = "location_map", length = 700)
+    private String locationMap;
 
     @Column(name = "purchase_url")
     private String purchaseUrl;
@@ -77,7 +80,7 @@ public class Artwork extends BaseEntity {
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
 
-    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone, String material, String size, String mainImg, String purchaseUrl) {
+    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone, String material, String size, String mainImg, String locationMap,String purchaseUrl) {
         if (title != null) this.title = title;
         if (description != null) this.description = description;
         if (category != null) this.category = category;
@@ -85,6 +88,7 @@ public class Artwork extends BaseEntity {
         if (material != null) this.material = material;
         if (size != null) this.size = size;
         if (mainImg != null) this.mainImg = mainImg;
+        if (locationMap != null) this.locationMap = locationMap;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
 }

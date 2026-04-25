@@ -33,20 +33,20 @@ public class ArtworkController {
     }
 
     // 2. 작품 기본 정보 등록
-    @PostMapping("/exhibitions/artworks")
+    @PostMapping(value = "/exhibitions/artworks", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> createArtwork(
-            @Valid @RequestBody ArtworkCreateRequest request) {
+            @Valid @ModelAttribute ArtworkCreateRequest request) {
         ArtworkCreateResponse data = artworkService.createArtwork(request);
         return SuccessResponse.created(data);
     }
 
     // 3. 작품 기본 정보 수정 (PATCH)
-    @PatchMapping("/exhibitions/artworks/{artworkId}")
+    @PatchMapping(value = "/exhibitions/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> updateArtwork(
             @PathVariable UUID artworkId,
-            @Valid @RequestBody ArtworkUpdateRequest request) {
+            @Valid @ModelAttribute ArtworkUpdateRequest request) {
         ArtworkCreateResponse data = artworkService.updateArtwork(artworkId, request);
         return SuccessResponse.ok(data, "정보가 성공적으로 수정되었습니다.");
     }

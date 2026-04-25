@@ -62,6 +62,7 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                 .description(artwork.getDescription())
                 .purchaseUrl(artwork.getPurchaseUrl())
                 .mainImage(artwork.getMainImg())
+                .locationMap(artwork.getLocationMap())
                 .zone(artwork.getExhibitionZone() != null ? ArtworkDetailResponse.ZoneInfo.builder()
                         .id(artwork.getExhibitionZone().getId())
                         .name(artwork.getExhibitionZone().getName())
