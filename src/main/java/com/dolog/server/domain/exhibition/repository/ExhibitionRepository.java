@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,9 +22,18 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
             @Param("univName") String univName,
             @Param("search") String search);
 
-    @Query("SELECT e FROM Exhibition e LEFT JOIN FETCH e.exhibitionDetail d " +
-            "WHERE e.isPublic = true " +
-            "ORDER BY e.createdAt DESC")
-    List<Exhibition> findTop3PublicExhibitions(Pageable pageable);
+    // 최신순 메인 전시
+    @Query("""
+            SELECT e FROM Exhibition e
+            JOIN e.exhibitionDetail d
+            WHERE e.isPublic = true
+              AND d.startDate <= :today
+              AND d.endDate >= :today
+            ORDER BY d.startDate DESC
+        """)
+    List<Exhibition> findOngoingExhibitions(
+            @Param("today") LocalDate today,
+            Pageable pageable
+    );
 
 }

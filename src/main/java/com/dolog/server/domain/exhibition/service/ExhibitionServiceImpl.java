@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,12 +46,33 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     @Override
     @Transactional(readOnly = true)
-    public ExhibitionMainResponse getMainExhibitions() {
-        List<Exhibition> exhibitions = exhibitionRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
+    public ExhibitionMainResponse getMainExhibitions(String sort) {
+
+        LocalDate today = LocalDate.now();
+        List<Exhibition> exhibitions;
+
+        if ("RANDOM".equalsIgnoreCase(sort)) {
+
+            List<Exhibition> list =
+                    exhibitionRepository.findOngoingExhibitions(today, PageRequest.of(0, 20));
+
+            Collections.shuffle(list);
+
+            exhibitions = list.stream().limit(3).toList();
+
+        } else {
+
+            exhibitions =
+                    exhibitionRepository.findOngoingExhibitions(today, PageRequest.of(0, 3));
+        }
+
         List<ExhibitionListItemResponse> items = exhibitions.stream()
                 .map(e -> ExhibitionListItemResponse.of(e, e.getExhibitionDetail()))
-                .collect(Collectors.toList());
-        return ExhibitionMainResponse.builder().mainExhibitions(items).build();
+                .toList();
+
+        return ExhibitionMainResponse.builder()
+                .mainExhibitions(items)
+                .build();
     }
 
     @Override
@@ -167,41 +190,72 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
 
     @Override
-    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) throws IOException {
+    @Transactional
+    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(
+            UUID exhibitionId,
+            ExhibitionDetailUpsertRequest request
+    ) throws IOException {
+
+        // 1. 전시 조회
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        String imageUrl = fileService.uploadFile(request.getExhibitionImg(), "exhibitions");
-        if (imageUrl == null) {
+        // 2. 기존 상세 조회
+        Optional<ExhibitionDetail> exhibitionDetailOpt =
+                exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+
+        boolean isNew = exhibitionDetailOpt.isEmpty();
+
+        ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() ->
+                ExhibitionDetail.builder()
+                        .exhibition(exhibition)
+                        .build()
+        );
+
+        // 3. 이미지 처리
+        String imageUrl = exhibitionDetail.getExhibitionImg(); // 기본: 기존 이미지 유지
+
+        if (request.getExhibitionImg() != null && !request.getExhibitionImg().isEmpty()) {
+
+            // 새 이미지 업로드
+            String newImageUrl = fileService.uploadFile(request.getExhibitionImg(), "exhibitions");
+
+            if (newImageUrl == null) {
+                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
+            }
+
+            // 기존 이미지 삭제 (기존 데이터 있을 때만)
+            if (!isNew && exhibitionDetail.getExhibitionImg() != null) {
+                fileService.deleteFile(exhibitionDetail.getExhibitionImg());
+            }
+
+            imageUrl = newImageUrl;
+        }
+
+        // 4. 신규 생성 시 필수값 체크
+        if (isNew && imageUrl == null) {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
         }
 
-        Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
-        boolean isNew = exhibitionDetailOpt.isEmpty();
-
-        if (!isNew) {
-            fileService.deleteFile(exhibitionDetailOpt.get().getExhibitionImg());
-        }
-
-        ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() -> ExhibitionDetail.builder()
-                .exhibition(exhibition)
-                .title(request.getTitle())
-                .build());
-
+        // 5. 업데이트
         exhibitionDetail.updateBasicInfo(
-                request.getTitle(),
-                request.getDescription(),
+                request.getTitle() != null ? request.getTitle() : exhibitionDetail.getTitle(),
+                request.getDescription() != null ? request.getDescription() : exhibitionDetail.getDescription(),
                 imageUrl,
-                request.getStartDate(),
-                request.getEndDate(),
-                request.getDateInfo(),
-                request.getEmail(),
-                request.getLocationDescription()
+                request.getStartDate() != null ? request.getStartDate() : exhibitionDetail.getStartDate(),
+                request.getEndDate() != null ? request.getEndDate() : exhibitionDetail.getEndDate(),
+                request.getDateInfo() != null ? request.getDateInfo() : exhibitionDetail.getDateInfo(),
+                request.getEmail() != null ? request.getEmail() : exhibitionDetail.getEmail(),
+                request.getLocationDescription() != null ? request.getLocationDescription() : exhibitionDetail.getLocationDescription()
         );
 
+        // 6. 저장
         exhibitionDetailRepository.save(exhibitionDetail);
 
-        String message = isNew ? "상세 정보가 성공적으로 등록되었습니다." : "상세 정보가 성공적으로 수정되었습니다.";
+        // 7. 응답
+        String message = isNew
+                ? "상세 정보가 성공적으로 등록되었습니다."
+                : "상세 정보가 성공적으로 수정되었습니다.";
 
         return ExhibitionDetailUpsertResponse.builder()
                 .exhibitionId(exhibition.getId())

@@ -34,8 +34,13 @@ public class ExhibitionController {
 
     // 메인 전시회 조회
     @GetMapping("/main")
-    public ResponseEntity<SuccessResponse<ExhibitionMainResponse>> getMainExhibitions() {
-        return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getMainExhibitions()));
+    public SuccessResponse<ExhibitionMainResponse> getMainExhibitions(
+            @RequestParam(defaultValue = "LATEST") String sort
+    ) {
+        return SuccessResponse.ok(
+                exhibitionService.getMainExhibitions(sort),
+                "메인 전시 조회 성공"
+        );
     }
 
     // 전시회 기본+상세+장소 통합 조회
