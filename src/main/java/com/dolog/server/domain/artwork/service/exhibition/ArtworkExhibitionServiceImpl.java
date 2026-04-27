@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artwork.service;
+package com.dolog.server.domain.artwork.service.exhibition;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;

@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artwork.service;
+package com.dolog.server.domain.artwork.service.artwork;
 
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -9,9 +9,12 @@ import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
+import com.dolog.server.domain.artwork.service.artist.ArtworkArtistService;
+import com.dolog.server.domain.artwork.service.artworkUpdate.ArtworkUpdateService;
+import com.dolog.server.domain.artwork.service.exhibition.ArtworkExhibitionService;
+import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
-import com.dolog.server.domain.exhibition.entity.*;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import com.dolog.server.global.util.FileService;

@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artwork.service;
+package com.dolog.server.domain.artwork.service.artworkUpdate;
 
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;

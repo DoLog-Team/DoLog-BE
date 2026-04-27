@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artwork.service;
+package com.dolog.server.domain.artwork.service.artist;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistMappingRequest;

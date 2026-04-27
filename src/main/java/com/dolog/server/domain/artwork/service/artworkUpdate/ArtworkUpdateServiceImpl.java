@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artwork.service;
+package com.dolog.server.domain.artwork.service.artworkUpdate;
 
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -7,6 +7,8 @@ import com.dolog.server.domain.artwork.entity.ArtworkImg;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
+import com.dolog.server.domain.artwork.service.artist.ArtworkArtistService;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
@@ -26,7 +28,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ArtworkUpdateServiceImpl implements ArtworkUpdateService{
+public class ArtworkUpdateServiceImpl implements ArtworkUpdateService {
     private final ArtworkRepository artworkRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
     private final ArtistProfileRepository artistProfileRepository;
