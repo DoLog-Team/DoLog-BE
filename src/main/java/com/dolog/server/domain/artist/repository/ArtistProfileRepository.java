@@ -3,6 +3,7 @@ package com.dolog.server.domain.artist.repository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,7 +27,5 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
     // 전시 ID로 프로필 목록 찾기
     List<ArtistProfile> findAllByExhibitionId(UUID exhibitionId);
 
-    // 이 메서드를 추가해야 합니다.
     Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
-
 }
