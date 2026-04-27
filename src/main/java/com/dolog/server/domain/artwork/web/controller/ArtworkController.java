@@ -1,7 +1,7 @@
 package com.dolog.server.domain.artwork.web.controller;
 
-import com.dolog.server.domain.artwork.service.ArtworkDetailService;
-import com.dolog.server.domain.artwork.service.ArtworkService;
+import com.dolog.server.domain.artwork.service.artwork.ArtworkDetailService;
+import com.dolog.server.domain.artwork.service.artwork.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
