@@ -31,10 +31,13 @@ public class Host extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    // 정보 업데이트를 위한 메서드
-    public void update(String name, String img, String description) {
+    @Column(length = 255)
+    private String email;
+
+    public void update(String name, String img, String description, String email) {
         this.name = name;
         this.img = img;
         this.description = description;
+        this.email = email;
     }
 }

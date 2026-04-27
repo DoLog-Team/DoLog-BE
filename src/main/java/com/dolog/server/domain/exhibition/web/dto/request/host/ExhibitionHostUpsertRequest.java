@@ -11,4 +11,5 @@ public class ExhibitionHostUpsertRequest {
     private String host_name;
     private String host_image_url;
     private String description;
+    private String email;
 }
