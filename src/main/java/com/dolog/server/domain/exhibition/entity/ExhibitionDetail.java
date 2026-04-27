@@ -26,7 +26,7 @@ public class ExhibitionDetail extends BaseEntity {
     @JoinColumn(name = "exhibition_id", nullable = false, unique = true)
     private Exhibition exhibition;
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String title;
 
     @Column(columnDefinition = "TEXT")
@@ -62,7 +62,7 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "splash_img")
     private String splashImg;
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String email;
 
     @Column(name = "location_description", columnDefinition = "TEXT")
