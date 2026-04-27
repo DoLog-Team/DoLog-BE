@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,12 +46,33 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     @Override
     @Transactional(readOnly = true)
-    public ExhibitionMainResponse getMainExhibitions() {
-        List<Exhibition> exhibitions = exhibitionRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
+    public ExhibitionMainResponse getMainExhibitions(String sort) {
+
+        LocalDate today = LocalDate.now();
+        List<Exhibition> exhibitions;
+
+        if ("RANDOM".equalsIgnoreCase(sort)) {
+
+            List<Exhibition> list =
+                    exhibitionRepository.findOngoingExhibitions(today, PageRequest.of(0, 20));
+
+            Collections.shuffle(list);
+
+            exhibitions = list.stream().limit(3).toList();
+
+        } else {
+
+            exhibitions =
+                    exhibitionRepository.findOngoingExhibitions(today, PageRequest.of(0, 3));
+        }
+
         List<ExhibitionListItemResponse> items = exhibitions.stream()
                 .map(e -> ExhibitionListItemResponse.of(e, e.getExhibitionDetail()))
-                .collect(Collectors.toList());
-        return ExhibitionMainResponse.builder().mainExhibitions(items).build();
+                .toList();
+
+        return ExhibitionMainResponse.builder()
+                .mainExhibitions(items)
+                .build();
     }
 
     @Override

@@ -13,7 +13,7 @@ import java.util.UUID;
 public interface ExhibitionService {
 
     // 전시 조회
-    ExhibitionMainResponse getMainExhibitions();
+    ExhibitionMainResponse getMainExhibitions(String sort);
     List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search);
     ExhibitionIntegratedResponse getExhibitionDetails(UUID exhibitionId);
     ExhibitionFooterResponse getFooterInfo(UUID exhibitionId);
