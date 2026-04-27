@@ -35,7 +35,7 @@ public class ExhibitionController {
     // 메인 전시회 조회
     @GetMapping("/main")
     public SuccessResponse<ExhibitionMainResponse> getMainExhibitions(
-            @RequestParam(defaultValue = "LATEST") String sort
+            @RequestParam(required = false) String sort
     ) {
         return SuccessResponse.ok(
                 exhibitionService.getMainExhibitions(sort),

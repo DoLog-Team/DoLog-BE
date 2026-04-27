@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.text.Collator;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -313,7 +314,11 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .email(profile.getEmail())
                 .profileImg(profile.getProfileImg())
                 .snsList(snsList)
-                .exhibition(ExhibitionListItemResponse.of(exhibition, exhibitionDetail))
+                .exhibition(ExhibitionListItemResponse.of(
+                        exhibition,
+                        exhibitionDetail,
+                        LocalDate.now()
+                ))
                 .build();
     }
 

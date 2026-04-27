@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -54,20 +55,69 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         if ("RANDOM".equalsIgnoreCase(sort)) {
 
             List<Exhibition> list =
-                    exhibitionRepository.findOngoingExhibitions(today, PageRequest.of(0, 20));
+                    exhibitionRepository.findLatestExhibitions(today);
 
             Collections.shuffle(list);
 
-            exhibitions = list.stream().limit(3).toList();
+            exhibitions = list.stream()
+                    .limit(3)
+                    .toList();
 
-        } else {
+        }
+        else if ("LATEST".equalsIgnoreCase(sort)) {
 
             exhibitions =
-                    exhibitionRepository.findOngoingExhibitions(today, PageRequest.of(0, 3));
+                    exhibitionRepository.findLatestExhibitions(today)
+                            .stream()
+                            .limit(3)
+                            .toList();
+        }
+        // ✅ DEFAULT (핵심 로직)
+        else {
+
+            List<Exhibition> list =
+                    exhibitionRepository.findDefaultExhibitions(today);
+
+            exhibitions = list.stream()
+                    .sorted((e1, e2) -> {
+                        LocalDate s1 = e1.getExhibitionDetail().getStartDate();
+                        LocalDate s2 = e2.getExhibitionDetail().getStartDate();
+
+                        boolean ongoing1 = !s1.isAfter(today);
+                        boolean ongoing2 = !s2.isAfter(today);
+
+                        // 1️⃣ 진행중 먼저
+                        if (ongoing1 != ongoing2) {
+                            return ongoing1 ? -1 : 1;
+                        }
+
+                        // 2️⃣ 둘 다 진행중 → startDate DESC (-2 먼저)
+                        if (ongoing1) {
+                            return s2.compareTo(s1);
+                        }
+
+                        // 3️⃣ 둘 다 예정 → startDate ASC (1 먼저)
+                        return s1.compareTo(s2);
+                    })
+                    .limit(3)
+                    .toList();
         }
 
+        // ✅ DTO 변환 + D-day
         List<ExhibitionListItemResponse> items = exhibitions.stream()
-                .map(e -> ExhibitionListItemResponse.of(e, e.getExhibitionDetail()))
+                .map(e -> {
+                    ExhibitionDetail d = e.getExhibitionDetail();
+
+                    Long dDay = null;
+                    if (d.getStartDate() != null) {
+                        dDay = ChronoUnit.DAYS.between(today, d.getStartDate());
+                    }
+
+                    return ExhibitionListItemResponse.of(e, d, today)
+                            .toBuilder()
+                            .dDay(dDay)
+                            .build();
+                })
                 .toList();
 
         return ExhibitionMainResponse.builder()
@@ -77,11 +127,23 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search) {
-        List<Exhibition> exhibitions = exhibitionRepository.findExhibitions(isPublic, univName, search);
+    public List<ExhibitionListItemResponse> getExhibitions(
+            Boolean isPublic,
+            String univName,
+            String search
+    ) {
+        LocalDate today = LocalDate.now();
+
+        List<Exhibition> exhibitions =
+                exhibitionRepository.findExhibitions(isPublic, univName, search);
+
         return exhibitions.stream()
-                .map(e -> ExhibitionListItemResponse.of(e, e.getExhibitionDetail()))
-                .collect(Collectors.toList());
+                .map(e -> ExhibitionListItemResponse.of(
+                        e,
+                        e.getExhibitionDetail(),
+                        today
+                ))
+                .toList();
     }
 
     @Override
