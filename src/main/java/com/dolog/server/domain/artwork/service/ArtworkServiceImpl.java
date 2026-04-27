@@ -50,6 +50,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtistRepository artistRepository;
     private final FileService fileService;
+    private final ArtworkImageService artworkImageService;
 
     /**
      * 작품 전체 목록 조회
@@ -151,74 +152,24 @@ public class ArtworkServiceImpl implements ArtworkService {
      */
     @Override
     public ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests) {
-        // 작품 존재 여부 확인
-        Artwork artwork = artworkRepository.findById(artworkId)
-                .orElseThrow(() -> new RuntimeException("Artwork not found")); // 적절한 예외 처리 필요
-
-        List<ArtworkImg> imgs = requests.stream()
-                .map(req -> ArtworkImg.builder()
-                        .artwork(artwork)
-                        .imageUrl(req.getImageUrl())
-                        .description(req.getDescription())
-                        .orderIndex(req.getOrderIndex())
-                        .build())
-                .collect(Collectors.toList());
-
-        List<ArtworkImg> savedImgs = artworkImgRepository.saveAll(imgs);
-        List<UUID> imgIds = savedImgs.stream().map(ArtworkImg::getId).collect(Collectors.toList());
-
-        return ArtworkImgCreateResponse.from(artworkId, imgIds);
+        return artworkImageService.createArtworkImages(artworkId, requests);
     }
 
     /**
      * 작품 상세 이미지 수정
      */
     @Override
-    @Transactional
     public ArtworkImgUpdateResponse updateArtworkImage(UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request) {
-        // 1. 작품(부모) 존재 여부부터 확인
-        // 요청된 artworkId 자체가 잘못되었다면 여기서 에러 발생
-        Artwork artwork = artworkRepository.findById(artworkId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
-
-        // 2. 이미지(자식) 존재 확인
-        ArtworkImg artworkImg = artworkImgRepository.findById(imageId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_IMAGE_NOT_FOUND));
-
-        // 3. 소속 검증
-        // 위에서 조회한 artwork 객체와 artworkImg가 가진 artwork 객체가 같은지 비교합니다.
-        if (!artworkImg.getArtwork().getId().equals(artwork.getId())) {
-            throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
-        }
-
-        // 4. 업데이트 수행
-        artworkImg.update(
-                request.getImageUrl(),
-                request.getDescription(),
-                request.getOrderIndex()
-        );
-
-        return new ArtworkImgUpdateResponse(artworkImg.getId());
+        return artworkImageService.updateArtworkImage(artworkId, imageId, request);
     }
 
     @Override
-    @Transactional
     public void deleteArtworkImage(UUID artworkId, UUID imageId) {
-        // 1. 이미지 조회
-        ArtworkImg artworkImg = artworkImgRepository.findById(imageId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_IMAGE_NOT_FOUND));
-
-        // 2. 검증
-        if (!artworkImg.getArtwork().getId().equals(artworkId)) {
-            throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
-        }
-
-        // 3. 삭제
-        artworkImgRepository.delete(artworkImg);
+        artworkImageService.deleteArtworkImage(artworkId, imageId);
     }
 
     /**
-     * 작품 기본 정보 수정 (추가)
+     * 작품 기본 정보 수정
      */
     @Override
     @Transactional
