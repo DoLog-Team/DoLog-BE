@@ -22,18 +22,26 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
             @Param("univName") String univName,
             @Param("search") String search);
 
-    // 최신순 메인 전시
+    // 진행 + 진행 예정
     @Query("""
             SELECT e FROM Exhibition e
-            JOIN e.exhibitionDetail d
+            JOIN FETCH e.exhibitionDetail d
+            WHERE e.isPublic = true
+              AND d.endDate >= :today
+        """)
+    List<Exhibition> findDefaultExhibitions(
+            @Param("today") LocalDate today
+    );
+
+    // 진행 중 전시 (최신순)
+    @Query("""
+            SELECT e FROM Exhibition e
+            JOIN FETCH e.exhibitionDetail d
             WHERE e.isPublic = true
               AND d.startDate <= :today
               AND d.endDate >= :today
             ORDER BY d.startDate DESC
         """)
-    List<Exhibition> findOngoingExhibitions(
-            @Param("today") LocalDate today,
-            Pageable pageable
-    );
+    List<Exhibition> findLatestExhibitions(@Param("today") LocalDate today);
 
 }
