@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.service;
 
 
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistMappingRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -8,6 +9,7 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
@@ -30,6 +32,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     private final ArtworkRepository artworkRepository;
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtworkArtistMapRepository artworkArtistMapRepository;
+    private final ArtistRepository artistRepository;
 
     @Override
     public ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request) {
@@ -92,5 +95,21 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
         artworkArtistMapRepository.delete(map);
+    }
+
+    @Override
+    public void updateArtworkArtists(Artwork artwork, List<UUID> artistIds) {
+        // 기존 매핑 싹 비우기
+        artwork.getArtworkArtistMaps().clear();
+
+        // 새로 받은 ID들로 매핑 다시 만들기
+        List<Artist> artists = artistRepository.findAllById(artistIds);
+        artists.forEach(artist -> {
+            artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                    .artwork(artwork)
+                    .artist(artist)
+                    .artistRole("Artist")
+                    .build());
+        });
     }
 }

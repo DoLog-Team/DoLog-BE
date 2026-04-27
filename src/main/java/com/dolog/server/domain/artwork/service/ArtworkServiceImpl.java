@@ -1,28 +1,17 @@
 package com.dolog.server.domain.artwork.service;
 
-import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
-import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
-import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
-import com.dolog.server.domain.artwork.entity.ArtworkImg;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
-import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
-import com.dolog.server.domain.artwork.repository.ArtworkImgRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.entity.*;
-import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
-import com.dolog.server.domain.exhibition.exception.ExhibitionException;
-import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
-import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
-import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import com.dolog.server.global.util.FileService;
@@ -41,17 +30,14 @@ import java.util.stream.Collectors;
 public class ArtworkServiceImpl implements ArtworkService {
 
     private final ArtworkRepository artworkRepository;
-    private final ArtworkArtistMapRepository artworkArtistMapRepository;
-    private final ExhibitionDetailRepository exhibitionDetailRepository;
-    private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
-    private final ArtworkImgRepository artworkImgRepository;
-    private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtistRepository artistRepository;
     private final FileService fileService;
     private final ArtworkImageService artworkImageService;
     private final ArtworkArtistService artworkArtistService;
+    private final ArtworkExhibitionService artworkExhibitionService;
+    private final ArtworkUpdateService artworkUpdateService;
 
     /**
      * 작품 전체 목록 조회
@@ -83,7 +69,7 @@ public class ArtworkServiceImpl implements ArtworkService {
 
         // 4. 작품별 작가명, 전시회별 전시 제목 일괄 조회 (N+1 방지)
         Map<UUID, String> artistMap = artworkArtistService.fetchArtistMap(artworkIds);
-        Map<UUID, String> exhibitionDetailMap = fetchExhibitionDetailMap(exhibitionIds);
+        Map<UUID, String> exhibitionDetailMap = artworkExhibitionService.fetchExhibitionDetailMap(exhibitionIds);
 
         // 5. main 여부에 따라 응답 형태 분기
         if (Boolean.TRUE.equals(main)) {
@@ -93,13 +79,10 @@ public class ArtworkServiceImpl implements ArtworkService {
         }
     }
 
-    /**
-     * 작품 기본 정보 등록
-     */
+    // 작품 기본 정보 등록
     @Override
     public ArtworkCreateResponse createArtwork(ArtworkCreateRequest request) {
         // 1. ArtistProfile 조회 (여기서 Artist와 Exhibition 정보를 한 번에 가져옴)
-        // fetch join을 사용하면 성능상 더 이득입니다.
         ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
                 .orElseThrow(() -> new RuntimeException("Artist Profile not found"));
 
@@ -167,17 +150,13 @@ public class ArtworkServiceImpl implements ArtworkService {
         artworkArtistService.deleteArtistMapping(artworkId, artistProfileId);
     }
 
-    /**
-     * 작품 상세 이미지 등록
-     */
+    // 작품 상세 이미지 등록
     @Override
     public ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests) {
         return artworkImageService.createArtworkImages(artworkId, requests);
     }
 
-    /**
-     * 작품 상세 이미지 수정
-     */
+    // 작품 상세 이미지 수정
     @Override
     public ArtworkImgUpdateResponse updateArtworkImage(UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request) {
         return artworkImageService.updateArtworkImage(artworkId, imageId, request);
@@ -188,76 +167,14 @@ public class ArtworkServiceImpl implements ArtworkService {
         artworkImageService.deleteArtworkImage(artworkId, imageId);
     }
 
-    /**
-     * 작품 기본 정보 수정
-     */
+    // 작품 기본 정보 수정
     @Override
     @Transactional
     public ArtworkCreateResponse updateArtwork(UUID artworkId, ArtworkUpdateRequest request) {
-        // 1. 작품 조회 (작품을 가져오면 그 안에 이미 Exhibition 정보가 들어있음)
-        Artwork artwork = artworkRepository.findById(artworkId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
-
-        // ✨ 수정 시 이미지 변경 사항 처리 (새 파일이 왔을 때만 업로드)
-        String mainImgUrl = artwork.getMainImg();
-        String locationMapUrl = artwork.getLocationMap();
-
-        try {
-            if (request.getMainImageFile() != null && !request.getMainImageFile().isEmpty()) {
-                fileService.deleteFile(artwork.getMainImg()); // 기존 파일 삭제
-                mainImgUrl = fileService.uploadFile(request.getMainImageFile(), "artworks/main");
-            }
-            if (request.getLocationMapFile() != null && !request.getLocationMapFile().isEmpty()) {
-                fileService.deleteFile(artwork.getLocationMap()); // 기존 파일 삭제
-                locationMapUrl = fileService.uploadFile(request.getLocationMapFile(), "artworks/maps");
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("파일 수정 중 오류 발생");
-        }
-        // 2. 작가 정보 처리 (새 프로필 ID가 오면 업데이트, 아니면 기존 유지)
-        String currentArtistName;
-        if (request.getArtistProfileId() != null) {
-            ArtistProfile newProfile = artistProfileRepository.findById(request.getArtistProfileId())
-                    .orElseThrow(() -> new RuntimeException("Artist Profile not found"));
-
-            if (!artwork.getArtworkArtistMaps().isEmpty()) {
-                ArtworkArtistMap map = artwork.getArtworkArtistMaps().get(0);
-                map.updateArtistProfile(newProfile.getArtist(), newProfile, request.getArtistRole());
-            }
-            currentArtistName = newProfile.getNameKo();
-        } else {
-            currentArtistName = artwork.getArtworkArtistMaps().stream()
-                    .findFirst()
-                    .map(m -> m.getArtistProfile() != null ? m.getArtistProfile().getNameKo() : m.getArtist().getNameKo())
-                    .orElse("Unknown Artist");
-        }
-
-        // 3. 전시 구역(Zone) 처리
-        ExhibitionZone zone = null;
-        if (request.getZoneId() != null) {
-            zone = exhibitionZoneRepository.findById(request.getZoneId()).orElse(null);
-        }
-
-        // 4. 정보 업데이트 (순서: title, description, category, zone, material, size, mainImgUrl, purchaseUrl)
-        artwork.updateAllInfo(
-                request.getTitle(),
-                request.getDescription(),
-                request.getCategory(),
-                zone,
-                request.getMaterial(),
-                request.getSize(),
-                mainImgUrl,
-                locationMapUrl,
-                request.getPurchaseUrl()
-        );
-
-        // 5. 결과 반환
-        return ArtworkCreateResponse.of(artwork, currentArtistName);
+        return artworkUpdateService.updateArtwork(artworkId, request);
     }
 
-    /**
-     * 작품 삭제 (추가)
-     */
+    // 작품 삭제 (추가)
     @Override
     @Transactional
     public void deleteArtwork(UUID artworkId) {
@@ -268,20 +185,6 @@ public class ArtworkServiceImpl implements ArtworkService {
         // 2. 삭제 실행
         // (Artwork 엔티티에 설정된 cascade에 의해 ArtworkImg, ArtworkArtistMap 등도 함께 삭제됨)
         artworkRepository.delete(artwork);
-    }
-
-    /**
-     * 전시회 ID 목록으로 전시회별 전시 제목을 Map으로 반환
-     * - key: exhibitionId, value: 전시 제목
-     */
-    private Map<UUID, String> fetchExhibitionDetailMap(List<UUID> exhibitionIds) {
-        List<ExhibitionDetail> details = exhibitionDetailRepository.findByExhibitionIdIn(exhibitionIds);
-        return details.stream()
-                .collect(Collectors.toMap(
-                        ed -> ed.getExhibition().getId(), // Key: Exhibition의 UUID
-                        ExhibitionDetail::getTitle,
-                        (existing, replacement) -> existing  // 동일 전시회 중복 시 첫 번째 값 유지
-                ));
     }
 
     /**
@@ -350,138 +253,12 @@ public class ArtworkServiceImpl implements ArtworkService {
     @Override
     @Transactional(readOnly = true)
     public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category) {
-        // 1. 전시회 존재 여부 확인
-        if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new RuntimeException("해당 전시회를 찾을 수 없습니다.");
-        }
-
-        // 2. 안내 지도 리스트 조회
-        List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionId(exhibitionId);
-
-        // 3. 작품 및 작가 상세 정보 조회 (아까 Repository에 추가한 fetch join 메서드 사용)
-        List<Artwork> artworks = artworkRepository.findArtworksForList(exhibitionId, zone, category);
-
-        // 4. DTO 변환 및 반환
-        return ExhibitionArtworkListResponse.builder()
-                .exhibitionId(exhibitionId)
-                .maps(guideMaps.stream()
-                        .map(m -> ExhibitionArtworkListResponse.MapInfo.builder()
-                                .id(m.getId())
-                                .imageUrl(m.getImageUrl())
-                                .description(m.getDescription())
-                                .build())
-                        .toList())
-                .artworks(artworks.stream()
-                        .map(a -> ExhibitionArtworkListResponse.ArtworkInfo.builder()
-                                .artworkId(a.getId())
-                                .title(a.getTitle())
-                                .category(a.getCategory())
-                                .zone(a.getExhibitionZone() != null ? a.getExhibitionZone().getName() : null)
-                                .mainImage(a.getMainImg())
-                                .artists(a.getArtworkArtistMaps().stream()
-                                        .map(map -> ExhibitionArtworkListResponse.ArtistInfo.builder()
-                                                .id(map.getArtist().getId())
-                                                .name(map.getArtist().getNameKo())
-                                                .build())
-                                        .toList())
-                                .build())
-                        .toList())
-                .build();
+        return artworkExhibitionService.getExhibitionArtworkList(exhibitionId, zone, category);
     }
 
     @Override
     @Transactional
     public ArtworkUpdateFullResponse updateArtworkFull(UUID exhibitionId, UUID artworkId, ArtworkUpdateFullRequest request) {
-        // 1. 작품 조회
-        Artwork artwork = artworkRepository.findById(artworkId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
-
-        // 2. 전시 구역(Zone) 조회
-        ExhibitionZone exhibitionZone = exhibitionZoneRepository.findByIdAndExhibitionId(request.getZoneId(), exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
-
-        // 3. 기획안의 6개 필드 기반 업데이트
-        // material, size, mainImg, purchaseUrl은 기존 값을 유지하도록 호출
-
-        artwork.updateAllInfo(
-                request.getTitle(),       // 수정됨
-                request.getDescription(), // 수정됨
-                request.getCategory(),    // 수정됨
-                exhibitionZone,           // 수정됨(zone_id로 찾은 객체)
-                artwork.getMaterial(),    // 기존 유지
-                artwork.getSize(),        // 기존 유지
-                artwork.getMainImg(),     // 기존 유지
-                artwork.getLocationMap(),
-                artwork.getPurchaseUrl()  // 기존 유지
-        );
-
-        // 4. 작가 매핑 동기화
-        artwork.getArtworkArtistMaps().clear();
-        List<Artist> artists = artistRepository.findAllById(request.getArtistIds());
-        artists.forEach(artist -> {
-            artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
-                    .artwork(artwork).artist(artist).artistRole("Artist").build());
-
-        });
-
-        // 5. 상세 이미지 동기화 로직 보완
-
-        List<UUID> existingImgIds = artwork.getArtworkImg().stream()
-                .map(ArtworkImg::getId)
-                .toList();// [검증] 요청 바디에 담긴 ID들이 실제로 이 작품의 이미지들인지 체크
-
-        request.getImages().stream()
-                .map(ArtworkUpdateFullRequest.ImageUpdateDto::getId)
-                .filter(Objects::nonNull)
-                .forEach(id -> {
-                    if (!existingImgIds.contains(id)) {
-                        // 남의 이미지 ID이거나 존재하지 않는 ID면 예외 발생!
-                        throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
-                    }
-                });
-
-        // 요청으로 들어온 ID들을 String 세트로 변환 (비교의 정확성을 위해)
-        Set<String> requestIds = request.getImages().stream()
-                .map(img -> img.getId() != null ? img.getId().toString() : null)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        // 1) 삭제: 요청 ID 목록에 없는 기존 이미지들만 제거
-
-        artwork.getArtworkImg().removeIf(img -> !requestIds.contains(img.getId().toString()));
-
-        // 2) 수정 및 추가
-
-        request.getImages().forEach(imgDto -> {
-            if (imgDto.getId() != null) {
-                // 수정: 리스트에 남아있는 녀석을 찾아서 업데이트
-                artwork.getArtworkImg().stream()
-                        .filter(img -> img.getId().toString().equals(imgDto.getId().toString()))
-                        .findFirst()
-                        .ifPresent(img -> img.update(imgDto.getImageUrl(), imgDto.getDescription(), imgDto.getOrderIndex()));
-            } else {
-
-                // 추가
-                artwork.getArtworkImg().add(ArtworkImg.builder()
-                        .artwork(artwork)
-                        .imageUrl(imgDto.getImageUrl())
-                        .description(imgDto.getDescription())
-                        .orderIndex(imgDto.getOrderIndex())
-                        .build());
-            }
-
-        });
-
-        artworkRepository.saveAndFlush(artwork);
-        System.out.println("기존 이미지 개수: " + artwork.getArtworkImg().size());
-
-        // 6. 결과 반환 시점에도 최신화된 리스트 사용
-        return ArtworkUpdateFullResponse.of(
-                artwork.getId(),
-                artwork.getTitle(),
-                artwork.getArtworkArtistMaps().stream().map(map -> map.getArtist().getId()).toList(),
-                artwork.getArtworkImg().stream().map(ArtworkImg::getId).toList()
-        );
-
+        return artworkUpdateService.updateArtworkFull(exhibitionId, artworkId, request);
     }
 }

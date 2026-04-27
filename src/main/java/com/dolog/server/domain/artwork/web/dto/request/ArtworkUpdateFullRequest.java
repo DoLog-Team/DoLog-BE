@@ -12,6 +12,7 @@ public class ArtworkUpdateFullRequest {
     private String description;
     private String category;
     private UUID zoneId;
+    private String purchaseUrl;
     private List<UUID> artistIds;
     private List<ImageUpdateDto> images;
 

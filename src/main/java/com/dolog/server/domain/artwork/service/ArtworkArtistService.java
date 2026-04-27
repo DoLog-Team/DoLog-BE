@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.service;
 
+import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistMappingRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 
@@ -11,6 +12,7 @@ public interface ArtworkArtistService {
     ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request);
     ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request);
     void deleteArtistMapping(UUID artworkId, UUID artistProfileId);
+    void updateArtworkArtists(Artwork artwork, List<UUID> artistIds);
 
     // N+1 방지를 위한 작가명 일괄 조회 (Map 반환)
     Map<UUID, String> fetchArtistMap(List<UUID> artworkIds);
