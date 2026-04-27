@@ -113,6 +113,18 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ExhibitionMetaResponse getExhibitionMeta(UUID exhibitionId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
+
+        return ExhibitionMetaResponse.of(exhibition, detail);
+    }
+
+    @Override
     public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
         Exhibition exhibition = Exhibition.builder()
                 .account(null) //TODO: JWT -> v2 에서 연동함
