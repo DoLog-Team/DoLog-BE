@@ -51,6 +51,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ArtistRepository artistRepository;
     private final FileService fileService;
     private final ArtworkImageService artworkImageService;
+    private final ArtworkArtistService artworkArtistService;
 
     /**
      * 작품 전체 목록 조회
@@ -81,7 +82,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         List<UUID> exhibitionIds = artworks.stream().map(a -> a.getExhibition().getId()).distinct().collect(Collectors.toList());
 
         // 4. 작품별 작가명, 전시회별 전시 제목 일괄 조회 (N+1 방지)
-        Map<UUID, String> artistMap = fetchArtistMap(artworkIds);
+        Map<UUID, String> artistMap = artworkArtistService.fetchArtistMap(artworkIds);
         Map<UUID, String> exhibitionDetailMap = fetchExhibitionDetailMap(exhibitionIds);
 
         // 5. main 여부에 따라 응답 형태 분기
@@ -145,6 +146,25 @@ public class ArtworkServiceImpl implements ArtworkService {
         // 6. 확장된 Response 반환
         // profile.getNameKo()를 통해 등록된 작가 이름도 함께 전달합니다.
         return ArtworkCreateResponse.of(saved, profile.getNameKo());
+    }
+
+    @Override
+    @Transactional
+    public ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request) {
+        return artworkArtistService.createArtistMapping(artworkId, request);
+    }
+
+    @Override
+    @Transactional
+    public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request) {
+        // 직접 로직을 수행하지 않고, 새로 만든 전문가(artistService)에게 일을 시킵니다.
+        return artworkArtistService.updateArtistMapping(artworkId, artistProfileId, request);
+    }
+
+    @Override
+    @Transactional
+    public void deleteArtistMapping(UUID artworkId, UUID artistProfileId) {
+        artworkArtistService.deleteArtistMapping(artworkId, artistProfileId);
     }
 
     /**
@@ -248,85 +268,6 @@ public class ArtworkServiceImpl implements ArtworkService {
         // 2. 삭제 실행
         // (Artwork 엔티티에 설정된 cascade에 의해 ArtworkImg, ArtworkArtistMap 등도 함께 삭제됨)
         artworkRepository.delete(artwork);
-    }
-
-    // 등록 (POST)
-    @Override
-    @Transactional
-    public ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request) {
-        // 1. 작품 조회
-        Artwork artwork = artworkRepository.findById(artworkId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
-
-        // 2. 아티스트 프로필 조회
-        ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
-                .orElseThrow(ArtistProfileNotFoundException::new);
-
-        // 3. 검증: 작품의 전시 ID와 아티스트 프로필의 전시 ID가 일치하는지 확인 (중요!)
-        if (!artwork.getExhibition().getId().equals(profile.getExhibition().getId())) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND); // 같은 전시가 아님
-        }
-
-        // 4. 중복 체크 (프로필 ID 기준)
-        if (artworkArtistMapRepository.existsByArtworkIdAndArtistProfileId(artworkId, profile.getId())) {
-            throw new RuntimeException("이미 이 전시에 등록된 작가 프로필입니다.");
-        }
-
-        // 5. 매핑 생성 (Artist와 ArtistProfile 모두 저장)
-        ArtworkArtistMap map = ArtworkArtistMap.builder()
-                .artwork(artwork)
-                .artist(profile.getArtist()) // 프로필 내부의 Artist 참조
-                .artistProfile(profile)      // 새로 추가된 프로필 필드
-                .artistRole(request.getArtistRole())
-                .build();
-
-        return ArtworkArtistMappingResponse.of(artworkArtistMapRepository.save(map));
-    }
-
-    // 수정 (PATCH)
-    @Override
-    @Transactional
-    public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request) {
-        // profileId를 기반으로 매핑 데이터 조회
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
-
-        // 역할 수정
-        map.updateRole(request.getArtistRole());
-
-        return ArtworkArtistMappingResponse.of(map);
-    }
-
-    // 삭제 (DELETE)
-    @Override
-    @Transactional
-    public void deleteArtistMapping(UUID artworkId, UUID artistProfileId) {
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
-
-        artworkArtistMapRepository.delete(map);
-    }
-
-    /**
-     * 작품 ID 목록으로 작품별 작가명을 Map으로 반환
-     * - 작가가 여러 명이면 ", "로 합쳐서 반환 (ex. "홍길동, 김철수")
-     * - key: artworkId, value: 작가명
-     */
-    private Map<UUID, String> fetchArtistMap(List<UUID> artworkIds) {
-        // ArtworkArtistMap 조회 시 ArtistProfile도 같이 fetch join 하도록 Repository를 구성하는 것이 좋습니다.
-        List<ArtworkArtistMap> artistMaps = artworkArtistMapRepository.findByArtworkIdIn(artworkIds);
-
-        return artistMaps.stream()
-                .collect(Collectors.groupingBy(
-                        aam -> aam.getArtwork().getId(),
-                        Collectors.mapping(aam -> {
-                            // 1순위: ArtistProfile의 이름, 2순위: Artist 엔티티의 기본 이름
-                            if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null) {
-                                return aam.getArtistProfile().getNameKo();
-                            }
-                            return aam.getArtist().getNameKo();
-                        }, Collectors.joining(", "))
-                ));
     }
 
     /**
