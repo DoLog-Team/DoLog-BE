@@ -53,10 +53,10 @@ public class ExhibitionController {
     }
 
     // 전시회 메타데이터 조회 (OG tag)
-    @GetMapping("/{schoolId}/meta")
+    @GetMapping("/{exhibitionId}/meta")
     public SuccessResponse<ExhibitionMetaResponse> getExhibitionMeta(
-            @PathVariable String schoolId) {
-        return SuccessResponse.ok(exhibitionService.getExhibitionMeta(schoolId));
+            @PathVariable UUID exhibitionId) {
+        return SuccessResponse.ok(exhibitionService.getExhibitionMeta(exhibitionId));
     }
 
 

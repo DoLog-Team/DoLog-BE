@@ -18,7 +18,7 @@ public class ExhibitionMetaResponse {
 
     public static ExhibitionMetaResponse of(Exhibition exhibition, ExhibitionDetail detail) {
         return ExhibitionMetaResponse.builder()
-                .id(exhibition.getSchoolId())
+                .id(exhibition.getId().toString())
                 .title(detail.getTitle())
                 .description(detail.getDescription())
                 .image(detail.getExhibitionImg())

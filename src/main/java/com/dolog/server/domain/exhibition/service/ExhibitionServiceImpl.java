@@ -114,8 +114,8 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     @Override
     @Transactional(readOnly = true)
-    public ExhibitionMetaResponse getExhibitionMeta(String schoolId) {
-        Exhibition exhibition = exhibitionRepository.findBySchoolId(schoolId)
+    public ExhibitionMetaResponse getExhibitionMeta(UUID exhibitionId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibition.getId())

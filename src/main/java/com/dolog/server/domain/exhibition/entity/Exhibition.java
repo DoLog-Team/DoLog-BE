@@ -26,9 +26,6 @@ public class Exhibition extends BaseEntity {
     @JoinColumn(name = "account_id", nullable = true)
     private Account account;
 
-    @Column(name = "school_id", length = 50, unique = true)
-    private String schoolId;
-
     @Column(name = "univ_name", length = 100)
     private String univName;
 

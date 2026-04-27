@@ -26,5 +26,4 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
             "ORDER BY e.createdAt DESC")
     List<Exhibition> findTop3PublicExhibitions(Pageable pageable);
 
-    Optional<Exhibition> findBySchoolId(String schoolId);
 }

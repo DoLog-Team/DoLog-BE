@@ -18,7 +18,7 @@ public interface ExhibitionService {
     ExhibitionIntegratedResponse getExhibitionDetails(UUID exhibitionId);
     ExhibitionFooterResponse getFooterInfo(UUID exhibitionId);
     ExhibitionCustomThemeResponse getCustomTheme(UUID exhibitionId);
-    ExhibitionMetaResponse getExhibitionMeta(String schoolId);
+    ExhibitionMetaResponse getExhibitionMeta(UUID exhibitionId);
 
     // 전시 생성, 수정, 삭제
     ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request);
