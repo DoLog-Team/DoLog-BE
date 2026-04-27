@@ -34,7 +34,7 @@ public class Artwork extends BaseEntity {
     private ExhibitionZone exhibitionZone;
 
     @Builder.Default // Builder 사용 시 기본값으로 초기화되도록 설정
-    @BatchSize(size = 100) // ⭐️ 추가
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkImg> artworkImg = new ArrayList<>();
 
@@ -72,7 +72,7 @@ public class Artwork extends BaseEntity {
     private String intro;
 
     @Builder.Default
-    @BatchSize(size = 100) // ⭐️ 추가
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 

@@ -55,7 +55,7 @@ public class ArtistProfile extends BaseEntity {
     private String profileImg;
 
     @Builder.Default
-    @BatchSize(size = 100) // ⭐️ 추가
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "artistProfile", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtistSns> snsList = new ArrayList<>();
 
