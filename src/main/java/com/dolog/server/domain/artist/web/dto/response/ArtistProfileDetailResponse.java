@@ -27,6 +27,8 @@ public class ArtistProfileDetailResponse {
     private ContactInfo contact;
     private List<BtsSummary> behindTheScenes;
     private List<ArtworkSummary> artworks;
+    private NeighborArtist prevArtist;
+    private NeighborArtist nextArtist;
 
     @Getter
     @Builder
@@ -57,5 +59,12 @@ public class ArtistProfileDetailResponse {
         private UUID artworkId;
         private String title;
         private String image;
+    }
+
+    @Getter
+    @Builder
+    public static class NeighborArtist {
+        private UUID id;
+        private String name;
     }
 }

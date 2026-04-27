@@ -27,7 +27,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.text.Collator;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -102,8 +105,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
             newImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles"); // 새 파일 저장
         }
 
-        // 2. 엔티티 업데이트 (이미지 경로까지 한 번에 전달!)
-        // 이미지가 없으면 null이 넘어가고, 엔티티 내부의 if문에서 null 체크를 하니까 안전합니다.
+        // 2. 엔티티 업데이트
         profile.updateProfile(
                 request.getNameKo(),
                 request.getNameEn(),
@@ -116,7 +118,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         return convertToResponse(profile);
     }
 
-    @Override // 인터페이스의 UUID 파라미터와 일치해야 에러가 사라집니다.
+    // 프로필 목록 조회 (DB 조회용)
+    @Override
     @Transactional(readOnly = true)
     public List<ArtistProfileResponse> getArtistProfileList(UUID exhibitionId) {
         List<ArtistProfile> profiles;
@@ -132,7 +135,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .toList();
     }
 
-    // 프로필 상세 조회 (기존에 중첩 클래스로 되어있던 부분을 메서드로 수정)
+    // 프로필 상세 조회
     @Override
     @Transactional(readOnly = true)
     public ArtistProfileDetailResponse getArtistProfileDetail(UUID profileId) {
@@ -140,7 +143,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        // 2. SNS 리스트 변환 (ContactInfo 계층 구조 반영)
+        // 2. SNS 리스트 변환
         List<ArtistProfileDetailResponse.SnsInfo> snsList = profile.getSnsList().stream()
                 .map(sns -> ArtistProfileDetailResponse.SnsInfo.builder()
                         .snsId(sns.getId())
@@ -149,7 +152,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .toList();
 
-        // 3. BTS 리스트 변환 (Artist + Exhibition 기준 조회)
+        // 3. BTS 리스트 변환
         List<ArtistProfileDetailResponse.BtsSummary> btsResponses = btsRepository
                 .findAllByArtistProfileIdAndExhibitionId(profile.getArtist().getId(), profile.getExhibition().getId())
                 .stream()
@@ -160,7 +163,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .toList();
 
-        // 4. 작품 리스트 변환 (ArtworkArtistMap 활용)
+        // 4. 작품 리스트 변환
         List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses = profile.getArtworkArtistMaps().stream()
                 .map(ArtworkArtistMap::getArtwork)
                 .map(artwork -> ArtistProfileDetailResponse.ArtworkSummary.builder()
@@ -170,7 +173,30 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .toList();
 
-        // 5. 최종 DTO 조립
+        // 5. prev / next 계산
+        List<ArtistProfile> profiles =
+                profileRepository.findAllByExhibitionId(profile.getExhibition().getId());
+
+        // 가나다 정렬
+        profiles.sort(Comparator.comparing(
+                ArtistProfile::getNameKo,
+                Collator.getInstance(Locale.KOREAN)
+        ));
+
+        int currentIndex = -1;
+
+        for (int i = 0; i < profiles.size(); i++) {
+            if (profiles.get(i).getId().equals(profileId)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        ArtistProfile prev = currentIndex > 0 ? profiles.get(currentIndex - 1) : null;
+        ArtistProfile next = currentIndex < profiles.size() - 1 ? profiles.get(currentIndex + 1) : null;
+
+
+        // 6. 최종 DTO 조립
         return ArtistProfileDetailResponse.builder()
                 .profileId(profile.getId())
                 .artistId(profile.getArtist().getId())
@@ -185,6 +211,19 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .behindTheScenes(btsResponses)
                 .artworks(artworkResponses)
+                .prevArtist(prev != null
+                        ? ArtistProfileDetailResponse.NeighborArtist.builder()
+                        .id(prev.getId())
+                        .name(prev.getNameKo())
+                        .build()
+                        : null)
+
+                .nextArtist(next != null
+                        ? ArtistProfileDetailResponse.NeighborArtist.builder()
+                        .id(next.getId())
+                        .name(next.getNameKo())
+                        .build()
+                        : null)
                 .build();
     }
 
