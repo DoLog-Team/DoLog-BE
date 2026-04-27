@@ -6,10 +6,11 @@ import com.dolog.server.domain.exhibition.entity.HostSns;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
-import com.dolog.server.domain.exhibition.repository.HostRepository;
-import com.dolog.server.domain.exhibition.repository.HostSnsRepository;
+import com.dolog.server.domain.exhibition.repository.host.HostRepository;
+import com.dolog.server.domain.exhibition.repository.host.HostSnsRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.host.ExhibitionHostUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.host.HostSnsRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostDetailResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.HostSnsResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class ExhibitionHostServiceImpl implements ExhibitionHostService {
 
     private final HostSnsRepository hostSnsRepository;
 
+    // 주최기관 등록/수정
     @Transactional
     @Override
     public ExhibitionHostResponse upsertExhibitionHost(UUID exhibitionId, ExhibitionHostUpsertRequest request) {
@@ -39,7 +41,12 @@ public class ExhibitionHostServiceImpl implements ExhibitionHostService {
         Host host = hostRepository.findByExhibitionId(exhibitionId)
                 .map(existingHost -> {
                     // 이미 있으면 정보 수정 (전체 교체)
-                    existingHost.update(request.getHost_name(), request.getHost_image_url(), request.getDescription());
+                    existingHost.update(
+                            request.getHost_name(),
+                            request.getHost_image_url(),
+                            request.getDescription(),
+                            request.getEmail()
+                    );
                     return existingHost;
                 })
                 .orElseGet(() -> {
@@ -49,11 +56,31 @@ public class ExhibitionHostServiceImpl implements ExhibitionHostService {
                             .name(request.getHost_name())
                             .img(request.getHost_image_url())
                             .description(request.getDescription())
+                            .email(request.getEmail())
                             .build();
                 });
 
         Host savedHost = hostRepository.save(host);
         return ExhibitionHostResponse.from(savedHost);
+    }
+
+    // 주최기관 조회
+    @Transactional(readOnly = true)
+    @Override
+    public ExhibitionHostDetailResponse getExhibitionHost(UUID exhibitionId) {
+
+        // 1. Host 조회
+        Host host = hostRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.HOST_NOT_FOUND));
+
+        // 2. SNS 조회
+        List<HostSnsResponse> snsList = hostSnsRepository.findByHostId(host.getId())
+                .stream()
+                .map(HostSnsResponse::from)
+                .toList();
+
+        // 3. DTO 변환
+        return ExhibitionHostDetailResponse.from(host, snsList);
     }
 
     // SNS 추가

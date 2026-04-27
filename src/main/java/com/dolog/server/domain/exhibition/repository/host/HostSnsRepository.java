@@ -1,4 +1,4 @@
-package com.dolog.server.domain.exhibition.repository;
+package com.dolog.server.domain.exhibition.repository.host;
 
 import com.dolog.server.domain.exhibition.entity.HostSns;
 import org.springframework.data.jpa.repository.JpaRepository;
