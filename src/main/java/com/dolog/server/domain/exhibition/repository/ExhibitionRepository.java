@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
@@ -24,4 +25,6 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
             "WHERE e.isPublic = true " +
             "ORDER BY e.createdAt DESC")
     List<Exhibition> findTop3PublicExhibitions(Pageable pageable);
+
+    Optional<Exhibition> findBySchoolId(String schoolId);
 }

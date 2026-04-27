@@ -52,6 +52,13 @@ public class ExhibitionController {
         return SuccessResponse.ok(exhibitionService.getFooterInfo(exhibitionId), "전시회 푸터 정보 조회가 완료되었습니다.");
     }
 
+    // 전시회 메타데이터 조회 (OG tag)
+    @GetMapping("/{schoolId}/meta")
+    public SuccessResponse<ExhibitionMetaResponse> getExhibitionMeta(
+            @PathVariable String schoolId) {
+        return SuccessResponse.ok(exhibitionService.getExhibitionMeta(schoolId));
+    }
+
 
     // 전시회 기본정보 등록
     @PreAuthorize("hasRole('DEVELOPER')")
