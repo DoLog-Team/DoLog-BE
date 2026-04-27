@@ -38,7 +38,7 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
 
                     return ExhibitionGuideMap.builder()
                             .exhibition(exhibition)
-                            .zone(zone) // ⭐️ 찾은 zone 객체를 넣어줌
+                            .zone(zone)
                             .imageUrl(req.getImageUrl())
                             .description(req.getDescription())
                             .build();
