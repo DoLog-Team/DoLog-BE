@@ -8,7 +8,6 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
-import com.dolog.server.domain.exhibition.exception.ExhibitionArtistException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
@@ -47,7 +46,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         // 중복 체크
         if (exhibitionArtistMapRepository.existsByExhibitionIdAndArtistId(exhibitionId, artistId)) {
-            throw new ExhibitionArtistException(
+            throw new ExhibitionException(
                     ExhibitionErrorCode.EXHIBITION_ARTIST_ALREADY_EXISTS
             );
         }
@@ -103,7 +102,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         ExhibitionArtistMap map = exhibitionArtistMapRepository
                 .findByExhibitionIdAndArtistId(exhibitionId, artistId)
-                .orElseThrow(() -> new ExhibitionArtistException(
+                .orElseThrow(() -> new ExhibitionException(
                         ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_FOUND
                 ));
 
