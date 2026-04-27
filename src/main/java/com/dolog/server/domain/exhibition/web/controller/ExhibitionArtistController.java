@@ -23,13 +23,11 @@ public class ExhibitionArtistController {
     // 전시 참여 작가 목록 조회
     @GetMapping("/{exhibitionId}/artists")
     public SuccessResponse<List<ExhibitionArtistListResponse>> getArtists(
-            @PathVariable UUID exhibitionId
+            @PathVariable UUID exhibitionId,
+            @RequestParam(defaultValue = "NAME") String sort
     ) {
-        List<ExhibitionArtistListResponse> data =
-                exhibitionArtistService.getArtistsByExhibition(exhibitionId);
-
         return SuccessResponse.ok(
-                data,
+                exhibitionArtistService.getArtistsByExhibition(exhibitionId, sort),
                 "전시 작가 목록 조회 성공"
         );
     }
