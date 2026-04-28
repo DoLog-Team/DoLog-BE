@@ -62,24 +62,22 @@ public class ArtworkController {
 
     /* ---------------- [ 상세 이미지 관련 API ] ---------------- */
 
-    // 5. 작품 상세 이미지 리스트 등록 (POST)
-    @PostMapping("/artworks/{artworkId}/images")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PostMapping(value = "/artworks/{artworkId}/images", consumes = "multipart/form-data")
     public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
             @PathVariable UUID artworkId,
-            @RequestBody List<ArtworkImgCreateRequest> requests
+            @ModelAttribute ArtworkImgListRequest request // List 대신 래퍼 클래스 사용
     ) {
-        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, requests);
+        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, request.getImages());
         return SuccessResponse.ok(response, "작품 상세 이미지 등록에 성공하였습니다.");
     }
 
     // 6. 작품 상세 이미지 개별 수정 (PATCH)
-    @PatchMapping("/artworks/{artworkId}/images/{imageId}") // 주소 확인! images 입니다.
+    @PatchMapping(value = "/artworks/{artworkId}/images/{imageId}", consumes = "multipart/form-data") // 👈 consumes 추가
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId,
-            @RequestBody ArtworkImgUpdateRequest request) {
+            @Valid @ModelAttribute ArtworkImgUpdateRequest request) {
         ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(artworkId, imageId, request);
         return SuccessResponse.ok(data, "상세 이미지 정보가 성공적으로 수정되었습니다.");
     }
@@ -138,12 +136,12 @@ public class ArtworkController {
     }
 
     // 11. 작품 전체 정보 수정 (PUT)
-    @PutMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    @PutMapping(value = "/exhibitions/{exhibitionId}/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkUpdateFullResponse> updateArtworkFull(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId,
-            @Valid @RequestBody ArtworkUpdateFullRequest request
+            @Valid @ModelAttribute ArtworkUpdateFullRequest request
     ) {
         // 서비스 호출 시 exhibitionId를 같이 넘겨서 zone 검증에 활용합니다.
         ArtworkUpdateFullResponse data = artworkService.updateArtworkFull(exhibitionId, artworkId, request);

@@ -26,7 +26,6 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
 
 
     @Query("SELECT DISTINCT a FROM Artwork a " +
-            "LEFT JOIN FETCH a.exhibitionZone " + // 단일 객체 조인은 OK
             "WHERE a.id = :artworkId AND a.exhibition.id = :exhibitionId")
     Optional<Artwork> findDetailById(@Param("exhibitionId") UUID exhibitionId, @Param("artworkId") UUID artworkId);
 }

@@ -11,10 +11,12 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
+import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -28,6 +30,7 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
 
     private final ArtworkRepository artworkRepository;
     private final ArtworkImgRepository artworkImgRepository;
+    private final FileService fileService; // S3 업로드 로직이 담긴 서비스
 
     @Override
     public ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests) {
@@ -35,12 +38,19 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
         List<ArtworkImg> imgs = requests.stream()
-                .map(req -> ArtworkImg.builder()
-                        .artwork(artwork)
-                        .imageUrl(req.getImageUrl())
-                        .description(req.getDescription())
-                        .orderIndex(req.getOrderIndex())
-                        .build())
+                .map(req -> {
+                    try {
+                        String uploadedUrl = fileService.uploadFile(req.getImageFile(), "artworks/detail");
+                        return ArtworkImg.builder()
+                                .artwork(artwork)
+                                .imageUrl(uploadedUrl)
+                                .description(req.getDescription())
+                                .orderIndex(req.getOrderIndex())
+                                .build();
+                    } catch (IOException e) {
+                        throw new ArtworkException(ArtworkErrorCode.FILE_UPLOAD_ERROR);
+                    }
+                })
                 .collect(Collectors.toList());
 
         List<ArtworkImg> savedImgs = artworkImgRepository.saveAll(imgs);
@@ -61,7 +71,16 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
             throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
         }
 
-        artworkImg.update(request.getImageUrl(), request.getDescription(), request.getOrderIndex());
+        String targetUrl = request.getImageUrl();
+        try {
+            if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
+                targetUrl = fileService.uploadFile(request.getImageFile(), "artworks/detail");
+            }
+        } catch (IOException e) {
+            throw new ArtworkException(ArtworkErrorCode.FILE_UPLOAD_ERROR);
+        }
+
+        artworkImg.update(targetUrl, request.getDescription(), request.getOrderIndex());
         return new ArtworkImgUpdateResponse(artworkImg.getId());
     }
 
@@ -100,24 +119,50 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        artwork.getArtworkImg().removeIf(img -> !requestIds.contains(img.getId().toString()));
+        artwork.getArtworkImg().removeIf(img -> {
+            if (!requestIds.contains(img.getId().toString())) {
+                fileService.deleteFile(img.getImageUrl()); // 💡 S3에서도 삭제 호출
+                return true;
+            }
+            return false;
+        });
 
         // 3. 수정 및 추가
         imageDtos.forEach(imgDto -> {
+            String finalUrl; // 람다 내부에서 사용할 '유사 final' 변수
+
+            try {
+                if (imgDto.getImageFile() != null && !imgDto.getImageFile().isEmpty()) {
+                    // ✅ 해결 1: 인수를 2개로 맞춤 ("artworks/detail" 추가)
+                    // ✅ 해결 2: try-catch로 IOException을 처리함
+                    finalUrl = fileService.uploadFile(imgDto.getImageFile(), "artworks/detail");
+                } else {
+                    finalUrl = imgDto.getImageUrl();
+                }
+            } catch (IOException e) {
+                // 💡 람다 내부에서는 체크드 예외를 밖으로 던질 수 없으므로 언체크드 예외로 감싸서 던집니다.
+                throw new ArtworkException(ArtworkErrorCode.FILE_UPLOAD_ERROR);
+            }
+
             if (imgDto.getId() != null) {
-                // 기존 이미지 내용 업데이트
                 artwork.getArtworkImg().stream()
-                        .filter(img -> img.getId().toString().equals(imgDto.getId().toString()))
+                        .filter(img -> img.getId().equals(imgDto.getId()))
                         .findFirst()
-                        .ifPresent(img -> img.update(imgDto.getImageUrl(), imgDto.getDescription(), imgDto.getOrderIndex()));
+                        .ifPresent(img -> {// 💡 만약 파일이 새로 들어왔다면, 기존 S3 파일 삭제 시도
+                            if (imgDto.getImageFile() != null && !imgDto.getImageFile().isEmpty()) {
+                                fileService.deleteFile(img.getImageUrl());
+                            }
+                            img.update(finalUrl, imgDto.getDescription(), imgDto.getOrderIndex());
+                        });
             } else {
-                // 새 이미지 추가
-                artwork.getArtworkImg().add(ArtworkImg.builder()
-                        .artwork(artwork)
-                        .imageUrl(imgDto.getImageUrl())
-                        .description(imgDto.getDescription())
-                        .orderIndex(imgDto.getOrderIndex())
-                        .build());
+                if (finalUrl != null) {
+                    artwork.getArtworkImg().add(ArtworkImg.builder()
+                            .artwork(artwork)
+                            .imageUrl(finalUrl)
+                            .description(imgDto.getDescription())
+                            .orderIndex(imgDto.getOrderIndex())
+                            .build());
+                }
             }
         });
     }
