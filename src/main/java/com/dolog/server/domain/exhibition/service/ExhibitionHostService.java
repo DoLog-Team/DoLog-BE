@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.web.dto.request.host.ExhibitionHostUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.host.HostSnsRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostDetailResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.HostSnsResponse;
 
@@ -11,6 +12,7 @@ import java.util.UUID;
 public interface ExhibitionHostService {
 
     ExhibitionHostResponse upsertExhibitionHost(UUID exhibitionId, ExhibitionHostUpsertRequest request) ;
+    ExhibitionHostDetailResponse getExhibitionHost(UUID exhibitionId);
 
     //SNS
     HostSnsResponse addHostSns(UUID hostId, HostSnsRequest request);

@@ -34,8 +34,13 @@ public class ExhibitionController {
 
     // 메인 전시회 조회
     @GetMapping("/main")
-    public ResponseEntity<SuccessResponse<ExhibitionMainResponse>> getMainExhibitions() {
-        return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getMainExhibitions()));
+    public SuccessResponse<ExhibitionMainResponse> getMainExhibitions(
+            @RequestParam(required = false) String sort
+    ) {
+        return SuccessResponse.ok(
+                exhibitionService.getMainExhibitions(sort),
+                "메인 전시 조회 성공"
+        );
     }
 
     // 전시회 기본+상세+장소 통합 조회
@@ -50,6 +55,13 @@ public class ExhibitionController {
     public SuccessResponse<ExhibitionFooterResponse> getFooterInfo(
             @PathVariable UUID exhibitionId) {
         return SuccessResponse.ok(exhibitionService.getFooterInfo(exhibitionId), "전시회 푸터 정보 조회가 완료되었습니다.");
+    }
+
+    // 전시회 메타데이터 조회 (OG tag)
+    @GetMapping("/{exhibitionId}/meta")
+    public SuccessResponse<ExhibitionMetaResponse> getExhibitionMeta(
+            @PathVariable UUID exhibitionId) {
+        return SuccessResponse.ok(exhibitionService.getExhibitionMeta(exhibitionId));
     }
 
 
@@ -85,11 +97,11 @@ public class ExhibitionController {
 
     // 전시 상세정보 등록/수정
     @PreAuthorize("hasRole('DEVELOPER')")
-    @PutMapping("/{exhibitionId}/details")
+    @PutMapping(value = "/{exhibitionId}/details", consumes = "multipart/form-data")
     public SuccessResponse<ExhibitionDetailUpsertResponse> upsertExhibitionDetail(
             @PathVariable UUID exhibitionId,
-            @Valid @RequestBody ExhibitionDetailUpsertRequest request
-    ) {
+            @Valid @ModelAttribute ExhibitionDetailUpsertRequest request
+    ) throws java.io.IOException {
         ExhibitionDetailUpsertResponse data = exhibitionService.upsertExhibitionDetail(exhibitionId, request);
         return SuccessResponse.ok(data);
     }

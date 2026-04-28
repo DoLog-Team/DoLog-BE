@@ -1,12 +1,13 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
-import com.dolog.server.domain.exhibition.exception.ExhibitionArtistException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
@@ -18,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,14 +44,14 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        // ✅ 중복 체크
+        // 중복 체크
         if (exhibitionArtistMapRepository.existsByExhibitionIdAndArtistId(exhibitionId, artistId)) {
-            throw new ExhibitionArtistException(
+            throw new ExhibitionException(
                     ExhibitionErrorCode.EXHIBITION_ARTIST_ALREADY_EXISTS
             );
         }
 
-        // ✅ 매핑 생성
+        // 매핑
         ExhibitionArtistMap map = ExhibitionArtistMap.builder()
                 .exhibition(exhibition)
                 .artist(artist)
@@ -57,7 +60,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         exhibitionArtistMapRepository.save(map);
 
-        // ⚠️ name 없으면 임시로 univName 사용
+        // name 없으면 임시로 univName 사용
         return ExhibitionArtistAddResponse.of(
                 exhibition.getId(),
                 exhibition.getUnivName(),
@@ -66,24 +69,31 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         );
     }
 
+    // 전시 작가 리스트 조회
     @Override
     @Transactional(readOnly = true)
-    public List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId) {
+    public List<ExhibitionArtistListResponse> getArtistsByExhibition(
+            UUID exhibitionId,
+            String sort
+    ) {
 
-        // 전시 존재 확인
         if (!exhibitionRepository.existsById(exhibitionId)) {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
         }
 
-        List<ExhibitionArtistMap> maps =
-                exhibitionArtistMapRepository.findByExhibitionId(exhibitionId);
+        List<ExhibitionArtistListResponse> artists =
+                exhibitionArtistMapRepository.findArtists(exhibitionId);
 
-        return maps.stream()
-                .map(map -> ExhibitionArtistListResponse.from(
-                        map.getArtist().getId(),
-                        map.getArtist().getNameKo()
-                ))
-                .toList();
+        // 랜덤 정렬
+        if ("RANDOM".equalsIgnoreCase(sort)) {
+            Collections.shuffle(artists);
+            return artists;
+        }
+
+        // 기본: 가나다순
+        artists.sort(Comparator.comparing(ExhibitionArtistListResponse::getNameKo));
+
+        return artists;
     }
 
     // 전시 작가 삭제
@@ -92,7 +102,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         ExhibitionArtistMap map = exhibitionArtistMapRepository
                 .findByExhibitionIdAndArtistId(exhibitionId, artistId)
-                .orElseThrow(() -> new ExhibitionArtistException(
+                .orElseThrow(() -> new ExhibitionException(
                         ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_FOUND
                 ));
 

@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.web.controller;
 import com.dolog.server.domain.exhibition.service.ExhibitionHostService;
 import com.dolog.server.domain.exhibition.web.dto.request.host.ExhibitionHostUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.host.HostSnsRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostDetailResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.HostSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
@@ -28,6 +29,16 @@ public class ExhibitionHostController {
 
         ExhibitionHostResponse response = exhibitionHostService.upsertExhibitionHost(exhibitionId, request);
         return SuccessResponse.ok(response, "주최 기관 정보 등록/수정 성공");
+    }
+
+    @GetMapping("/{exhibitionId}/host")
+    public SuccessResponse<ExhibitionHostDetailResponse> getHost(
+            @PathVariable UUID exhibitionId
+    ) {
+        return SuccessResponse.ok(
+                exhibitionHostService.getExhibitionHost(exhibitionId),
+                "전시 주최기관 조회 성공"
+        );
     }
 
 //===============[SNS]================

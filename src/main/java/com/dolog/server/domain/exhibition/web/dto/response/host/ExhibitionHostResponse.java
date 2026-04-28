@@ -15,6 +15,7 @@ public class ExhibitionHostResponse {
     private String hostName;
     private String hostImageUrl;
     private String description;
+    private String email;
 
     public static ExhibitionHostResponse from(Host host) {
         return ExhibitionHostResponse.builder()
@@ -22,6 +23,7 @@ public class ExhibitionHostResponse {
                 .hostName(host.getName())
                 .hostImageUrl(host.getImg())
                 .description(host.getDescription())
+                .email(host.getEmail())
                 .build();
     }
 }

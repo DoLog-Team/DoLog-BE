@@ -5,6 +5,7 @@ import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsMappingUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.response.BtsCreateResponse;
+import com.dolog.server.domain.bts.web.dto.response.BtsDetailResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
@@ -58,16 +59,6 @@ public class BtsController {
         return SuccessResponse.ok(null, "BTS 콘텐츠가 성공적으로 삭제되었습니다.");
     }
 
-    // BTS 매핑 등록/수정 (PUT)
-    @PutMapping("/{exhibitionId}/bts/{btsId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
-    public SuccessResponse<BtsMappingUpdateResponse> syncBtsMapping(
-            @PathVariable UUID exhibitionId,
-            @PathVariable UUID btsId,
-            @Valid @RequestBody BtsMappingUpdateRequest request) {
-        BtsMappingUpdateResponse data = btsService.syncBtsMapping(exhibitionId, btsId, request);
-        return SuccessResponse.ok(data, "BTS 정보 및 매핑 데이터가 성공적으로 동기화되었습니다.");
-    }
 
     // 조회 (GET)
     @GetMapping("/{exhibitionId}/bts")
@@ -81,4 +72,32 @@ public class BtsController {
 
         return SuccessResponse.ok(response, "BTS 목록을 조회했습니다.");
     }
+
+
+    // 상세 조회 (GET)
+    @GetMapping("/bts/{btsId}")
+    public SuccessResponse<BtsDetailResponse> getBtsDetail(
+            @PathVariable(value = "btsId") UUID btsId
+    ) {
+        // 서비스 호출하여 상세 데이터(작가 프로필, 연관 작품, 추천 BTS 포함) 수신
+        BtsDetailResponse response = btsService.getBtsDetail(btsId);
+
+        return SuccessResponse.ok(response, "BTS 상세 조회 성공");
+    }
+
+
+
+
+
+    // BTS 매핑 등록/수정 (PUT)
+    @PutMapping("/{exhibitionId}/bts/{btsId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<BtsMappingUpdateResponse> syncBtsMapping(
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID btsId,
+            @Valid @RequestBody BtsMappingUpdateRequest request) {
+        BtsMappingUpdateResponse data = btsService.syncBtsMapping(exhibitionId, btsId, request);
+        return SuccessResponse.ok(data, "BTS 정보 및 매핑 데이터가 성공적으로 동기화되었습니다.");
+    }
+
 }

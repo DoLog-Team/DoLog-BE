@@ -17,11 +17,16 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetail
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
+import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,24 +43,107 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+    private final FileService fileService;
 
     @Override
     @Transactional(readOnly = true)
-    public ExhibitionMainResponse getMainExhibitions() {
-        List<ExhibitionDetail> details = exhibitionDetailRepository.findTop3PublicExhibitions(PageRequest.of(0, 3));
-        List<ExhibitionListItemResponse> items = details.stream()
-                .map(ExhibitionListItemResponse::from)
-                .collect(Collectors.toList());
-        return ExhibitionMainResponse.builder().mainExhibitions(items).build();
+    public ExhibitionMainResponse getMainExhibitions(String sort) {
+
+        LocalDate today = LocalDate.now();
+        List<Exhibition> exhibitions;
+
+        if ("RANDOM".equalsIgnoreCase(sort)) {
+
+            List<Exhibition> list =
+                    exhibitionRepository.findLatestExhibitions(today);
+
+            Collections.shuffle(list);
+
+            exhibitions = list.stream()
+                    .limit(3)
+                    .toList();
+
+        }
+        else if ("LATEST".equalsIgnoreCase(sort)) {
+
+            exhibitions =
+                    exhibitionRepository.findLatestExhibitions(today)
+                            .stream()
+                            .limit(3)
+                            .toList();
+        }
+        // ✅ DEFAULT (핵심 로직)
+        else {
+
+            List<Exhibition> list =
+                    exhibitionRepository.findDefaultExhibitions(today);
+
+            exhibitions = list.stream()
+                    .sorted((e1, e2) -> {
+                        LocalDate s1 = e1.getExhibitionDetail().getStartDate();
+                        LocalDate s2 = e2.getExhibitionDetail().getStartDate();
+
+                        boolean ongoing1 = !s1.isAfter(today);
+                        boolean ongoing2 = !s2.isAfter(today);
+
+                        // 1️⃣ 진행중 먼저
+                        if (ongoing1 != ongoing2) {
+                            return ongoing1 ? -1 : 1;
+                        }
+
+                        // 2️⃣ 둘 다 진행중 → startDate DESC (-2 먼저)
+                        if (ongoing1) {
+                            return s2.compareTo(s1);
+                        }
+
+                        // 3️⃣ 둘 다 예정 → startDate ASC (1 먼저)
+                        return s1.compareTo(s2);
+                    })
+                    .limit(3)
+                    .toList();
+        }
+
+        // ✅ DTO 변환 + D-day
+        List<ExhibitionListItemResponse> items = exhibitions.stream()
+                .map(e -> {
+                    ExhibitionDetail d = e.getExhibitionDetail();
+
+                    Long dDay = null;
+                    if (d.getStartDate() != null) {
+                        dDay = ChronoUnit.DAYS.between(today, d.getStartDate());
+                    }
+
+                    return ExhibitionListItemResponse.of(e, d, today)
+                            .toBuilder()
+                            .dDay(dDay)
+                            .build();
+                })
+                .toList();
+
+        return ExhibitionMainResponse.builder()
+                .mainExhibitions(items)
+                .build();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search) {
-        List<ExhibitionDetail> details = exhibitionDetailRepository.findExhibitions(isPublic, univName, search);
-        return details.stream()
-                .map(ExhibitionListItemResponse::from)
-                .collect(Collectors.toList());
+    public List<ExhibitionListItemResponse> getExhibitions(
+            Boolean isPublic,
+            String univName,
+            String search
+    ) {
+        LocalDate today = LocalDate.now();
+
+        List<Exhibition> exhibitions =
+                exhibitionRepository.findExhibitions(isPublic, univName, search);
+
+        return exhibitions.stream()
+                .map(e -> ExhibitionListItemResponse.of(
+                        e,
+                        e.getExhibitionDetail(),
+                        today
+                ))
+                .toList();
     }
 
     @Override
@@ -110,6 +198,18 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ExhibitionMetaResponse getExhibitionMeta(UUID exhibitionId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
+
+        return ExhibitionMetaResponse.of(exhibition, detail);
+    }
+
+    @Override
     public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
         Exhibition exhibition = Exhibition.builder()
                 .account(null) //TODO: JWT -> v2 에서 연동함
@@ -152,29 +252,72 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
 
     @Override
-    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) {
+    @Transactional
+    public ExhibitionDetailUpsertResponse upsertExhibitionDetail(
+            UUID exhibitionId,
+            ExhibitionDetailUpsertRequest request
+    ) throws IOException {
+
+        // 1. 전시 조회
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        Optional<ExhibitionDetail> exhibitionDetailOpt = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+        // 2. 기존 상세 조회
+        Optional<ExhibitionDetail> exhibitionDetailOpt =
+                exhibitionDetailRepository.findByExhibitionId(exhibitionId);
+
         boolean isNew = exhibitionDetailOpt.isEmpty();
 
-        ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() -> ExhibitionDetail.builder()
-                .exhibition(exhibition)
-                .title(request.getTitle())
-                .build());
-
-        exhibitionDetail.updateBasicInfo(
-                request.getTitle(),
-                request.getDescription(),
-                request.getExhibitionImg(),
-                request.getStartDate(),
-                request.getEndDate()
+        ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() ->
+                ExhibitionDetail.builder()
+                        .exhibition(exhibition)
+                        .build()
         );
 
+        // 3. 이미지 처리
+        String imageUrl = exhibitionDetail.getExhibitionImg(); // 기본: 기존 이미지 유지
+
+        if (request.getExhibitionImg() != null && !request.getExhibitionImg().isEmpty()) {
+
+            // 새 이미지 업로드
+            String newImageUrl = fileService.uploadFile(request.getExhibitionImg(), "exhibitions");
+
+            if (newImageUrl == null) {
+                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
+            }
+
+            // 기존 이미지 삭제 (기존 데이터 있을 때만)
+            if (!isNew && exhibitionDetail.getExhibitionImg() != null) {
+                fileService.deleteFile(exhibitionDetail.getExhibitionImg());
+            }
+
+            imageUrl = newImageUrl;
+        }
+
+        // 4. 신규 생성 시 필수값 체크
+        if (isNew && imageUrl == null) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
+        }
+
+        // 5. 업데이트
+        exhibitionDetail.updateBasicInfo(
+                request.getTitle() != null ? request.getTitle() : exhibitionDetail.getTitle(),
+                request.getDescription() != null ? request.getDescription() : exhibitionDetail.getDescription(),
+                imageUrl,
+                request.getStartDate() != null ? request.getStartDate() : exhibitionDetail.getStartDate(),
+                request.getEndDate() != null ? request.getEndDate() : exhibitionDetail.getEndDate(),
+                request.getDateInfo() != null ? request.getDateInfo() : exhibitionDetail.getDateInfo(),
+                request.getEmail() != null ? request.getEmail() : exhibitionDetail.getEmail(),
+                request.getLocationDescription() != null ? request.getLocationDescription() : exhibitionDetail.getLocationDescription()
+        );
+
+        // 6. 저장
         exhibitionDetailRepository.save(exhibitionDetail);
 
-        String message = isNew ? "상세 정보가 성공적으로 등록되었습니다." : "상세 정보가 성공적으로 수정되었습니다.";
+        // 7. 응답
+        String message = isNew
+                ? "상세 정보가 성공적으로 등록되었습니다."
+                : "상세 정보가 성공적으로 수정되었습니다.";
 
         return ExhibitionDetailUpsertResponse.builder()
                 .exhibitionId(exhibition.getId())

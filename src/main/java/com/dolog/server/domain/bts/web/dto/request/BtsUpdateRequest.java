@@ -14,6 +14,6 @@ public class BtsUpdateRequest {
     private String title;
     private String contentUrl;
     private String mainImg;
-    private UUID artistId;           // 작가 변경 시 사용
+    private UUID artistProfileId;           // 작가 변경 시 사용
     private List<UUID> artworkIds;   // 연결할 작품 ID 리스트 (새로 덮어쓰기용)
 }

@@ -6,6 +6,7 @@ import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfile
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -13,6 +14,8 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
+import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
@@ -24,7 +27,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.text.Collator;
+import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -38,6 +45,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final FileService fileService;
     private final ArtistSnsRepository artistSnsRepository;
+    private final ArtistProfileRepository artistProfileRepository;
+    private final BtsRepository btsRepository;
 
     // 프로필 생성
     @Transactional
@@ -97,8 +106,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
             newImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles"); // 새 파일 저장
         }
 
-        // 2. 엔티티 업데이트 (이미지 경로까지 한 번에 전달!)
-        // 이미지가 없으면 null이 넘어가고, 엔티티 내부의 if문에서 null 체크를 하니까 안전합니다.
+        // 2. 엔티티 업데이트
         profile.updateProfile(
                 request.getNameKo(),
                 request.getNameEn(),
@@ -110,6 +118,116 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         // 3. 응답 반환
         return convertToResponse(profile);
     }
+
+    // 프로필 목록 조회 (DB 조회용)
+    @Override
+    @Transactional(readOnly = true)
+    public List<ArtistProfileResponse> getArtistProfileList(UUID exhibitionId) {
+        List<ArtistProfile> profiles;
+
+        if (exhibitionId != null) {
+            profiles = profileRepository.findAllByExhibitionId(exhibitionId);
+        } else {
+            profiles = profileRepository.findAll();
+        }
+
+        return profiles.stream()
+                .map(this::convertToResponse)
+                .toList();
+    }
+
+    // 프로필 상세 조회
+    @Override
+    @Transactional(readOnly = true)
+    public ArtistProfileDetailResponse getArtistProfileDetail(UUID profileId) {
+        // 1. 프로필 조회
+        ArtistProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(ArtistProfileNotFoundException::new);
+
+        // 2. SNS 리스트 변환
+        List<ArtistProfileDetailResponse.SnsInfo> snsList = profile.getSnsList().stream()
+                .map(sns -> ArtistProfileDetailResponse.SnsInfo.builder()
+                        .snsId(sns.getId())
+                        .platformName(sns.getPlatformName())
+                        .url(sns.getUrl())
+                        .build())
+                .toList();
+
+        // 3. BTS 리스트 변환
+        List<ArtistProfileDetailResponse.BtsSummary> btsResponses = btsRepository
+                .findAllByArtistProfileIdAndExhibitionId(profile.getArtist().getId(), profile.getExhibition().getId())
+                .stream()
+                .map(bts -> ArtistProfileDetailResponse.BtsSummary.builder()
+                        .btsId(bts.getId())
+                        .title(bts.getTitle())
+                        .mainImg(bts.getMainImg())
+                        .build())
+                .toList();
+
+        // 4. 작품 리스트 변환
+        List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses = profile.getArtworkArtistMaps().stream()
+                .map(ArtworkArtistMap::getArtwork)
+                .map(artwork -> ArtistProfileDetailResponse.ArtworkSummary.builder()
+                        .artworkId(artwork.getId())
+                        .title(artwork.getTitle())
+                        .image(artwork.getMainImg())
+                        .build())
+                .toList();
+
+        // 5. prev / next 계산
+        List<ArtistProfile> profiles =
+                profileRepository.findAllByExhibitionId(profile.getExhibition().getId());
+
+        // 가나다 정렬
+        profiles.sort(Comparator.comparing(
+                ArtistProfile::getNameKo,
+                Collator.getInstance(Locale.KOREAN)
+        ));
+
+        int currentIndex = -1;
+
+        for (int i = 0; i < profiles.size(); i++) {
+            if (profiles.get(i).getId().equals(profileId)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        ArtistProfile prev = currentIndex > 0 ? profiles.get(currentIndex - 1) : null;
+        ArtistProfile next = currentIndex < profiles.size() - 1 ? profiles.get(currentIndex + 1) : null;
+
+
+        // 6. 최종 DTO 조립
+        return ArtistProfileDetailResponse.builder()
+                .profileId(profile.getId())
+                .artistId(profile.getArtist().getId())
+                .nameKo(profile.getNameKo())
+                .nameEn(profile.getNameEn())
+                .profileImage(profile.getProfileImg())
+                .isPublic(profile.isPublic())
+                .bio(profile.getBio())
+                .contact(ArtistProfileDetailResponse.ContactInfo.builder()
+                        .email(profile.getEmail())
+                        .snsList(snsList)
+                        .build())
+                .behindTheScenes(btsResponses)
+                .artworks(artworkResponses)
+                .prevArtist(prev != null
+                        ? ArtistProfileDetailResponse.NeighborArtist.builder()
+                        .id(prev.getId())
+                        .name(prev.getNameKo())
+                        .build()
+                        : null)
+
+                .nextArtist(next != null
+                        ? ArtistProfileDetailResponse.NeighborArtist.builder()
+                        .id(next.getId())
+                        .name(next.getNameKo())
+                        .build()
+                        : null)
+                .build();
+    }
+
 
 //----------------[ SNS ] ----------------------
 
@@ -182,9 +300,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         var exhibitionDetail = exhibitionDetailRepository.findByExhibition(exhibition)
                 .orElse(null);
 
-        // SNS 목록 가져오기
-        List<ArtistSnsResponse> snsList = artistSnsRepository.findByArtistProfileId(profile.getId())
-                .stream()
+        // 엔티티 내부 리스트 사용
+        List<ArtistSnsResponse> snsList = profile.getSnsList().stream()
                 .map(ArtistSnsResponse::from)
                 .toList();
 
@@ -197,7 +314,11 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .email(profile.getEmail())
                 .profileImg(profile.getProfileImg())
                 .snsList(snsList)
-                .exhibition(ExhibitionListItemResponse.of(exhibition, exhibitionDetail))
+                .exhibition(ExhibitionListItemResponse.of(
+                        exhibition,
+                        exhibitionDetail,
+                        LocalDate.now()
+                ))
                 .build();
     }
 

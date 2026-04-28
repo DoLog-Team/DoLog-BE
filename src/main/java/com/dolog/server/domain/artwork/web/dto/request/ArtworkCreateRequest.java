@@ -5,10 +5,13 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class ArtworkCreateRequest {
@@ -17,18 +20,20 @@ public class ArtworkCreateRequest {
 
     @NotBlank(message = "작품 제목은 필수입니다.")
     private String title;
+    @NotBlank(message = "작품 소개 설명은 필수입니다.")
+    private String intro;
 
+    @NotBlank(message = "작품 카테고리는 필수입니다.")
     private String category;
     private String material;
     private String size;
+    @NotBlank(message = "작품 상세 설명은 필수입니다.")
     private String description;
-
-    private UUID zoneId;       // zone_id 제거
-
-    private String mainImage;   // main_image 제거
-
-    private String purchaseUrl; // purchase_url 제거
-    private Integer orderIndex; // order_index 제거
-
+    private UUID zoneId;
+    private String purchaseUrl;
+    private Integer orderIndex;
     private String artistRole;
+    @NotNull(message = "대표 이미지는 필수입니다.")
+    private MultipartFile mainImageFile;
+    private MultipartFile locationMapFile;
 }

@@ -3,15 +3,15 @@ package com.dolog.server.domain.artwork.web.dto.request;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
 
 @Getter
+@Setter
 @NoArgsConstructor
 public class ArtworkImgUpdateRequest {
-    @JsonProperty("image_url")
     private String imageUrl;
-
+    private MultipartFile imageFile;
     private String description;
-
-    @JsonProperty("order_index")
     private Integer orderIndex;
 }

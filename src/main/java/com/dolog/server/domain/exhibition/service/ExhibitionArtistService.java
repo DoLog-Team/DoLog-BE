@@ -10,7 +10,7 @@ import java.util.UUID;
 public interface ExhibitionArtistService {
     // 전시 <-> 작가 추가, 삭제, 조회
     ExhibitionArtistAddResponse addArtistToExhibition(UUID exhibitionId, UUID artistId);
-    List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId);
+    List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId, String sort);
     ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId);
 
 }

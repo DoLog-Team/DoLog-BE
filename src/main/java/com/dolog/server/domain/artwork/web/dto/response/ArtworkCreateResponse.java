@@ -14,6 +14,7 @@ import java.util.UUID;
 public class ArtworkCreateResponse {
     private UUID id;
     private String title;
+    private String intro;
     private String category;
     private String material;
     private String size;
@@ -23,12 +24,14 @@ public class ArtworkCreateResponse {
     private Integer orderIndex;
     private UUID exhibitionId;
     private String artistName; // 등록된 작가 이름
+    private String locationMap;
 
     // Static Factory Method
     public static ArtworkCreateResponse of(Artwork artwork, String artistName) {
         return ArtworkCreateResponse.builder()
                 .id(artwork.getId())
                 .title(artwork.getTitle())
+                .intro(artwork.getIntro())
                 .category(artwork.getCategory())
                 .material(artwork.getMaterial())
                 .size(artwork.getSize())
@@ -38,6 +41,7 @@ public class ArtworkCreateResponse {
                 .orderIndex(artwork.getOrderIndex())
                 .exhibitionId(artwork.getExhibition().getId())
                 .artistName(artistName)
+                .locationMap(artwork.getLocationMap())
                 .build();
     }
 }

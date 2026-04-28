@@ -22,6 +22,7 @@ public class ExhibitionIntegratedResponse {
     private String exhibitionImg;
     private LocalDate startDate;
     private LocalDate endDate;
+    private String dateInfo;
     private String description;
     private ExhibitionLocationResponse location;
 
@@ -37,6 +38,7 @@ public class ExhibitionIntegratedResponse {
                 .exhibitionImg(detail.getExhibitionImg())
                 .startDate(detail.getStartDate())
                 .endDate(detail.getEndDate())
+                .dateInfo(detail.getDateInfo())
                 .description(detail.getDescription())
                 .location(ExhibitionLocationResponse.from(map))
                 .isPublic(detail.getExhibition().isPublic())

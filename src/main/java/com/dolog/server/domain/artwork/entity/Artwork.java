@@ -5,6 +5,8 @@ import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +34,7 @@ public class Artwork extends BaseEntity {
     private ExhibitionZone exhibitionZone;
 
     @Builder.Default // Builder 사용 시 기본값으로 초기화되도록 설정
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkImg> artworkImg = new ArrayList<>();
 
@@ -50,8 +53,11 @@ public class Artwork extends BaseEntity {
     private String description;
 
     @Lob
-    @Column(name = "main_img")
+    @Column(name = "main_img", length = 700)
     private String mainImg;
+
+    @Column(name = "location_map", length = 700)
+    private String locationMap;
 
     @Column(name = "purchase_url")
     private String purchaseUrl;
@@ -62,18 +68,23 @@ public class Artwork extends BaseEntity {
     @Column(name = "order_index")
     private Integer orderIndex;
 
+    @Column(length = 255)
+    private String intro;
+
     @Builder.Default
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 
 
-    public void updateBasicInfo(String title, String description, String purchaseUrl) {
+    public void updateBasicInfo(String title, String intro, String description, String purchaseUrl) {
         if (title != null) this.title = title;
+        if (intro != null) this.intro = intro;
         if (description != null) this.description = description;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
 
-    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone, String material, String size, String mainImg, String purchaseUrl) {
+    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone, String material, String size, String mainImg, String locationMap,String purchaseUrl) {
         if (title != null) this.title = title;
         if (description != null) this.description = description;
         if (category != null) this.category = category;
@@ -81,6 +92,7 @@ public class Artwork extends BaseEntity {
         if (material != null) this.material = material;
         if (size != null) this.size = size;
         if (mainImg != null) this.mainImg = mainImg;
+        if (locationMap != null) this.locationMap = locationMap;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
 }

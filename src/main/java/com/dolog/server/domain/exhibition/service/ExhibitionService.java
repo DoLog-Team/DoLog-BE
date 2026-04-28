@@ -6,22 +6,24 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdate
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
 public interface ExhibitionService {
 
     // 전시 조회
-    ExhibitionMainResponse getMainExhibitions();
+    ExhibitionMainResponse getMainExhibitions(String sort);
     List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search);
     ExhibitionIntegratedResponse getExhibitionDetails(UUID exhibitionId);
     ExhibitionFooterResponse getFooterInfo(UUID exhibitionId);
     ExhibitionCustomThemeResponse getCustomTheme(UUID exhibitionId);
+    ExhibitionMetaResponse getExhibitionMeta(UUID exhibitionId);
 
     // 전시 생성, 수정, 삭제
     ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request);
     ExhibitionMessageResponse updateExhibition(UUID exhibitionId, ExhibitionUpdateRequest request);
     ExhibitionMessageResponse deleteExhibition(UUID exhibitionId);
 
-    ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request);
+    ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) throws IOException;
 }

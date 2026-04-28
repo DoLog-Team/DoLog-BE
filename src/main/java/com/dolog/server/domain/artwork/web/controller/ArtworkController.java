@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.web.controller;
 
-import com.dolog.server.domain.artwork.service.ArtworkService;
+import com.dolog.server.domain.artwork.service.artwork.ArtworkDetailService;
+import com.dolog.server.domain.artwork.service.artwork.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class ArtworkController {
 
     private final ArtworkService artworkService;
+    private final ArtworkDetailService artworkDetailService;
 
     // 1. 작품 전체 목록 조회
     @GetMapping("/artworks")
@@ -31,20 +33,20 @@ public class ArtworkController {
     }
 
     // 2. 작품 기본 정보 등록
-    @PostMapping("/exhibitions/artworks")
+    @PostMapping(value = "/exhibitions/artworks", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> createArtwork(
-            @Valid @RequestBody ArtworkCreateRequest request) {
+            @Valid @ModelAttribute ArtworkCreateRequest request) {
         ArtworkCreateResponse data = artworkService.createArtwork(request);
         return SuccessResponse.created(data);
     }
 
     // 3. 작품 기본 정보 수정 (PATCH)
-    @PatchMapping("/exhibitions/artworks/{artworkId}")
+    @PatchMapping(value = "/exhibitions/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> updateArtwork(
             @PathVariable UUID artworkId,
-            @Valid @RequestBody ArtworkUpdateRequest request) {
+            @Valid @ModelAttribute ArtworkUpdateRequest request) {
         ArtworkCreateResponse data = artworkService.updateArtwork(artworkId, request);
         return SuccessResponse.ok(data, "정보가 성공적으로 수정되었습니다.");
     }
@@ -60,24 +62,22 @@ public class ArtworkController {
 
     /* ---------------- [ 상세 이미지 관련 API ] ---------------- */
 
-    // 5. 작품 상세 이미지 리스트 등록 (POST)
-    @PostMapping("/artworks/{artworkId}/images")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PostMapping(value = "/artworks/{artworkId}/images", consumes = "multipart/form-data")
     public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
             @PathVariable UUID artworkId,
-            @RequestBody List<ArtworkImgCreateRequest> requests
+            @ModelAttribute ArtworkImgListRequest request // List 대신 래퍼 클래스 사용
     ) {
-        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, requests);
+        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, request.getImages());
         return SuccessResponse.ok(response, "작품 상세 이미지 등록에 성공하였습니다.");
     }
 
     // 6. 작품 상세 이미지 개별 수정 (PATCH)
-    @PatchMapping("/artworks/{artworkId}/images/{imageId}") // 주소 확인! images 입니다.
+    @PatchMapping(value = "/artworks/{artworkId}/images/{imageId}", consumes = "multipart/form-data") // 👈 consumes 추가
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId,
-            @RequestBody ArtworkImgUpdateRequest request) {
+            @Valid @ModelAttribute ArtworkImgUpdateRequest request) {
         ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(artworkId, imageId, request);
         return SuccessResponse.ok(data, "상세 이미지 정보가 성공적으로 수정되었습니다.");
     }
@@ -136,15 +136,23 @@ public class ArtworkController {
     }
 
     // 11. 작품 전체 정보 수정 (PUT)
-    @PutMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    @PutMapping(value = "/exhibitions/{exhibitionId}/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkUpdateFullResponse> updateArtworkFull(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId,
-            @Valid @RequestBody ArtworkUpdateFullRequest request
+            @Valid @ModelAttribute ArtworkUpdateFullRequest request
     ) {
         // 서비스 호출 시 exhibitionId를 같이 넘겨서 zone 검증에 활용합니다.
         ArtworkUpdateFullResponse data = artworkService.updateArtworkFull(exhibitionId, artworkId, request);
         return SuccessResponse.ok(data, "작품 정보 및 연관 데이터가 성공적으로 동기화되었습니다.");
+    }
+
+    // 상세 조회 API만 신규 서비스를 타게 합니다.
+    @GetMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
+    public SuccessResponse<ArtworkDetailResponse> getArtworkDetail(
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID artworkId) {
+        return SuccessResponse.ok(artworkDetailService.getArtworkDetail(exhibitionId, artworkId), "작품 상세 조회 성공");
     }
 }
