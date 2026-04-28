@@ -33,17 +33,6 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
         Artwork artwork = artworkRepository.findDetailById(exhibitionId, artworkId)
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
-        // 1. 해당 구역(Zone)의 지도 이미지 찾아오기
-        String zoneMapImage = null;
-        if (artwork.getExhibitionZone() != null) {
-            // Zone ID로 매핑된 가이드 맵 중 첫 번째 이미지를 가져옵니다.
-            zoneMapImage = guideMapRepository.findByZoneId(artwork.getExhibitionZone().getId())
-                    .stream()
-                    .findFirst()
-                    .map(ExhibitionGuideMap::getImageUrl)
-                    .orElse(null);
-        }
-
         // 2. 해당 작품과 연관된 BTS 콘텐츠 조회
         List<ArtworkDetailResponse.RelatedBtsInfo> relatedBts = btsRepository.findAllByArtworkId(artworkId).stream()
                 .map(bts -> ArtworkDetailResponse.RelatedBtsInfo.builder()
@@ -63,11 +52,6 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                 .purchaseUrl(artwork.getPurchaseUrl())
                 .mainImage(artwork.getMainImg())
                 .locationMap(artwork.getLocationMap())
-                .zone(artwork.getExhibitionZone() != null ? ArtworkDetailResponse.ZoneInfo.builder()
-                        .id(artwork.getExhibitionZone().getId())
-                        .name(artwork.getExhibitionZone().getName())
-                        .mapImage(zoneMapImage)
-                        .build() : null)
                 .detailImages(artwork.getArtworkImg().stream()
                         .map(img -> ArtworkDetailResponse.DetailImageInfo.builder()
                                 .imageUrl(img.getImageUrl())
