@@ -1,5 +1,6 @@
 package com.dolog.server.domain.exhibition.web.dto.response.artwork;
 
+import com.dolog.server.domain.artwork.web.dto.response.CategoryArtworkResponse;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -12,13 +13,27 @@ public class ExhibitionArtworkListResponse {
     private UUID exhibitionId;
 
     private List<MapInfo> maps;
-    private List<ArtworkInfo> artworks;
+    private List<ZoneInfo> zones;
+
+    @Getter
+    @Builder
+    public static class ZoneInfo {
+        private String zoneName;
+        private Integer zoneOrderId; // 피드백: 존 순서
+        private List<CategoryArtworkResponse> categories; // 기존 CategoryArtworkResponse 재사용
+    }
 
     @Getter @Builder
     public static class MapInfo {
         private UUID id;
         private String imageUrl;
         private String description;
+    }
+
+    @Getter @Builder
+    public static class CategoryInfo {
+        private String categoryName;
+        private List<ArtworkInfo> artworks; // 카테고리 안에 드디어 작품 리스트!
     }
 
     @Getter @Builder
