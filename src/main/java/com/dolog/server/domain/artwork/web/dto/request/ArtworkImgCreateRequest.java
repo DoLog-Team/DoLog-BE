@@ -2,17 +2,17 @@ package com.dolog.server.domain.artwork.web.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class ArtworkImgCreateRequest {
-    @NotBlank(message = "상세 이미지 URL은 필수입니다.")
-    private String imageUrl;
+    @NotNull(message = "이미지 파일은 필수입니다.")
+    private MultipartFile imageFile;
 
     private String description;
     private Integer orderIndex;
