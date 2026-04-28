@@ -29,8 +29,12 @@ public class ExhibitionZone extends BaseEntity {
     @Column(length = 255)
     private String description;
 
-    public void update(String name, String description) {
+    @Column(name = "order_id")
+    private Integer orderId;
+
+    public void update(String name, String description, Integer orderId) {
         if (name != null) this.name = name;
         if (description != null) this.description = description;
+        if (orderId != null) this.orderId = orderId;
     }
 }
