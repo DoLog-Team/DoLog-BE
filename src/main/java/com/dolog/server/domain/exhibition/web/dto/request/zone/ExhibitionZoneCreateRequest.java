@@ -14,4 +14,6 @@ public class ExhibitionZoneCreateRequest {
 
     @JsonProperty("desc")
     private String description;
+    @JsonProperty("order_id")
+    private Integer orderId;
 }

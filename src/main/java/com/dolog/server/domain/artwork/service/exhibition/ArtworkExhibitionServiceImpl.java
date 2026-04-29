@@ -2,6 +2,7 @@ package com.dolog.server.domain.artwork.service.exhibition;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.web.dto.response.CategoryArtworkResponse;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,7 +30,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
     private final ArtworkRepository artworkRepository; // 작품 조회를 위해 필요
 
     @Override
-    public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category) {
+    public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search) {
         // 1. 전시회 존재 여부 확인
         if (!exhibitionRepository.existsById(exhibitionId)) {
             throw new RuntimeException("해당 전시회를 찾을 수 없습니다.");
@@ -37,10 +39,49 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
         // 2. 안내 지도 리스트 조회
         List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionId(exhibitionId);
 
-        // 3. 작품 및 작가 상세 정보 조회 (아까 Repository에 추가한 fetch join 메서드 사용)
-        List<Artwork> artworks = artworkRepository.findArtworksForList(exhibitionId, zone, category);
+        // 3. 작품 조회 로직 분기 (검색어 여부에 따라 다른 Repository 메서드 호출)
+        List<Artwork> artworks;
+        if (search != null && !search.trim().isEmpty()) {
+            // 검색어가 있으면 검색 쿼리 사용 (Repository에 findArtworksBySearch 추가 필요)
+            artworks = artworkRepository.findArtworksBySearch(exhibitionId, search);
+        } else {
+            // 검색어가 없으면 기존 필터링 쿼리 사용
+            artworks = artworkRepository.findArtworksForList(exhibitionId, zone, category);
+        }
 
-        // 4. DTO 변환 및 반환
+        // 4. 데이터 가공: Zone별 그룹화 -> 그 안에서 다시 Category별 그룹화
+        // Optional.ofNullable을 사용하여 null 키 문제를 우회합니다.
+        Map<java.util.Optional<com.dolog.server.domain.exhibition.entity.ExhibitionZone>, Map<String, List<Artwork>>> groupedData = artworks.stream()
+                .collect(Collectors.groupingBy(
+                        a -> java.util.Optional.ofNullable(a.getExhibitionZone()), // null을 Optional.empty()로 변환
+                        Collectors.groupingBy(a -> a.getCategory() != null ? a.getCategory() : "기타")
+                ));
+
+        // 5. DTO 조립 및 정렬
+        List<ExhibitionArtworkListResponse.ZoneInfo> zoneInfos = groupedData.entrySet().stream()
+                .map(zoneEntry -> {
+                    var ez = zoneEntry.getKey().orElse(null); // ExhibitionZone 엔티티
+
+                    // 카테고리별 응답 리스트 생성
+                    List<CategoryArtworkResponse> categoryResponses = zoneEntry.getValue().entrySet().stream()
+                            .map(catEntry -> CategoryArtworkResponse.builder()
+                                    .categoryName(catEntry.getKey())
+                                    .artworks(catEntry.getValue().stream()
+                                            .map(this::mapToSimpleArtwork) // 작품 변환 로직 분리
+                                            .toList())
+                                    .build())
+                            .toList();
+
+                    return ExhibitionArtworkListResponse.ZoneInfo.builder()
+                            .zoneName(ez != null ? ez.getName() : "미지정 구역")
+                            .zoneOrderId(ez != null ? ez.getOrderId() : 999) // 순서 지정
+                            .categories(categoryResponses)
+                            .build();
+                })
+                // 구역 순서(zoneOrderId)에 따른 정렬
+                .sorted(Comparator.comparingInt(z -> z.getZoneOrderId() != null ? z.getZoneOrderId() : Integer.MAX_VALUE))
+                .toList();
+
         return ExhibitionArtworkListResponse.builder()
                 .exhibitionId(exhibitionId)
                 .maps(guideMaps.stream()
@@ -50,21 +91,28 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
                                 .description(m.getDescription())
                                 .build())
                         .toList())
-                .artworks(artworks.stream()
-                        .map(a -> ExhibitionArtworkListResponse.ArtworkInfo.builder()
-                                .artworkId(a.getId())
-                                .title(a.getTitle())
-                                .category(a.getCategory())
-                                .zone(a.getExhibitionZone() != null ? a.getExhibitionZone().getName() : null)
-                                .mainImage(a.getMainImg())
-                                .artists(a.getArtworkArtistMaps().stream()
-                                        .map(map -> ExhibitionArtworkListResponse.ArtistInfo.builder()
-                                                .id(map.getArtist().getId())
-                                                .name(map.getArtist().getNameKo())
-                                                .build())
-                                        .toList())
-                                .build())
-                        .toList())
+                .zones(zoneInfos) // 가공된 zones 데이터 삽입
+                .build();
+    }
+
+    private CategoryArtworkResponse.SimpleArtworkResponse mapToSimpleArtwork(Artwork a) {
+        // 작가가 여러 명일 수 있으므로 쉼표로 연결
+        String artistNames = a.getArtworkArtistMaps().stream()
+                .map(map -> map.getArtist().getNameKo())
+                .collect(Collectors.joining(", "));
+
+        // 2. 전시회 제목 가져오기 (ExhibitionDetail이 @OneToOne이므로 바로 접근)
+        String exhibitionTitle = "";
+        if (a.getExhibition() != null && a.getExhibition().getExhibitionDetail() != null) {
+            exhibitionTitle = a.getExhibition().getExhibitionDetail().getTitle();
+        }
+
+        return CategoryArtworkResponse.SimpleArtworkResponse.builder()
+                .id(a.getId())
+                .title(a.getTitle())
+                .imageUrl(a.getMainImg())
+                .exhibitionTitle(exhibitionTitle) // 빨간 불 해결!
+                .artistName(artistNames)
                 .build();
     }
 

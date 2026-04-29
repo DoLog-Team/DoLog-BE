@@ -43,6 +43,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .exhibition(exhibition)
                 .name(request.getName())
                 .description(request.getDescription())
+                .orderId(request.getOrderId())
                 .build();
 
         exhibitionZoneRepository.save(zone);
@@ -55,7 +56,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
 
-        zone.update(request.getName(), request.getDescription());
+        zone.update(request.getName(), request.getDescription(), request.getOrderId());
 
         return ExhibitionZoneUpdateResponse.from(zone);
     }
