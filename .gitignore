@@ -80,4 +80,4 @@ Icon?
 __MACOSX/
 .DS_Store?
 
-C:/uploads/
+C:/uploads/*.postman_collection.json

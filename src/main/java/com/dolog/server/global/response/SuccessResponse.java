@@ -46,7 +46,7 @@ public class SuccessResponse<T> extends BaseResponse{
         return new SuccessResponse<>(
                 data,
                 new BaseResponseCode() {
-                    public String getCode() { return "SUCCESS_201"; }
+                    public String getCode() { return "CREATED_201"; }
                     public int getHttpStatus() { return 201; }
                     public String getMessage() { return message; }
                 }
