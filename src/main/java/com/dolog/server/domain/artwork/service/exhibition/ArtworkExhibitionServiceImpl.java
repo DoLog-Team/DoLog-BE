@@ -43,17 +43,17 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
         List<Artwork> artworks = artworkRepository.findArtworksForList(exhibitionId, zone, category);
 
         // 4. 데이터 가공: Zone별 그룹화 -> 그 안에서 다시 Category별 그룹화
-        // ExhibitionZone 엔티티 자체를 Key로 써서 그룹화합니다.
-        Map<com.dolog.server.domain.exhibition.entity.ExhibitionZone, Map<String, List<Artwork>>> groupedData = artworks.stream()
+        // Optional.ofNullable을 사용하여 null 키 문제를 우회합니다.
+        Map<java.util.Optional<com.dolog.server.domain.exhibition.entity.ExhibitionZone>, Map<String, List<Artwork>>> groupedData = artworks.stream()
                 .collect(Collectors.groupingBy(
-                        a -> a.getExhibitionZone(), // 1차 그룹: Zone (null 허용)
-                        Collectors.groupingBy(a -> a.getCategory() != null ? a.getCategory() : "기타") // 2차 그룹: 카테고리
+                        a -> java.util.Optional.ofNullable(a.getExhibitionZone()), // null을 Optional.empty()로 변환
+                        Collectors.groupingBy(a -> a.getCategory() != null ? a.getCategory() : "기타")
                 ));
 
         // 5. DTO 조립 및 정렬
         List<ExhibitionArtworkListResponse.ZoneInfo> zoneInfos = groupedData.entrySet().stream()
                 .map(zoneEntry -> {
-                    var ez = zoneEntry.getKey(); // ExhibitionZone 엔티티
+                    var ez = zoneEntry.getKey().orElse(null); // ExhibitionZone 엔티티
 
                     // 카테고리별 응답 리스트 생성
                     List<CategoryArtworkResponse> categoryResponses = zoneEntry.getValue().entrySet().stream()
@@ -67,7 +67,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
 
                     return ExhibitionArtworkListResponse.ZoneInfo.builder()
                             .zoneName(ez != null ? ez.getName() : "미지정 구역")
-                            .zoneOrderId(ez != null ? ez.getOrderId() : Integer.MAX_VALUE) // 순서 지정
+                            .zoneOrderId(ez != null ? ez.getOrderId() : 999) // 순서 지정
                             .categories(categoryResponses)
                             .build();
                 })
