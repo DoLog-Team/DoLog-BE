@@ -45,24 +45,22 @@ public class ExhibitionZoneController {
 
     // 전시 구역 수정
     @PreAuthorize("hasRole('DEVELOPER')")
-    @PatchMapping("/{exhibitionId}/zones/{zoneId}")
+    @PatchMapping("/zones/{zoneId}")
     public SuccessResponse<ExhibitionZoneUpdateResponse> updateZone(
-            @PathVariable UUID exhibitionId,
             @PathVariable UUID zoneId,
             @RequestBody ExhibitionZoneUpdateRequest request
     ) {
-        ExhibitionZoneUpdateResponse data = exhibitionZoneService.updateZone(exhibitionId, zoneId, request);
+        ExhibitionZoneUpdateResponse data = exhibitionZoneService.updateZone(zoneId, request);
         return SuccessResponse.ok(data, "구역 정보가 성공적으로 수정되었습니다.");
     }
 
     // 전시 구역 삭제
     @PreAuthorize("hasRole('DEVELOPER')")
-    @DeleteMapping("/{exhibitionId}/zones/{zoneId}")
+    @DeleteMapping("/zones/{zoneId}")
     public SuccessResponse<Void> deleteZone(
-            @PathVariable UUID exhibitionId,
             @PathVariable UUID zoneId
     ) {
-        exhibitionZoneService.deleteZone(exhibitionId, zoneId);
+        exhibitionZoneService.deleteZone(zoneId);
         return SuccessResponse.ok(null, "전시 구역이 삭제되었습니다.");
     }
 }

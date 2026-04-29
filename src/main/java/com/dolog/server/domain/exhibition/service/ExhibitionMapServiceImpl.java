@@ -45,20 +45,21 @@ public class ExhibitionMapServiceImpl implements ExhibitionMapService {
         ExhibitionMap saved = exhibitionMapRepository.save(exhibitionMap);
 
         return ExhibitionMapCreateResponse.builder()
-                .mapId(saved.getId().toString())
-                .exhibitionId(exhibition.getId().toString())
+                .mapId(saved.getId())
+                .exhibitionId(exhibition.getId())
                 .build();
     }
 
     // 전시 장소 정보 수정
     @Override
     public ExhibitionMapUpdateResponse updateExhibitionMap(UUID exhibitionId, ExhibitionMapUpdateRequest request) {
-        if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
-        }
-
         ExhibitionMap exhibitionMap = exhibitionMapRepository.findByExhibitionId(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+                .orElseThrow(() -> {
+                    if (!exhibitionRepository.existsById(exhibitionId)) {
+                        return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+                    }
+                    return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND);
+                });
 
         exhibitionMap.update(
                 request.getAddress(),
@@ -68,19 +69,20 @@ public class ExhibitionMapServiceImpl implements ExhibitionMapService {
         );
 
         return ExhibitionMapUpdateResponse.builder()
-                .mapId(exhibitionMap.getId().toString())
+                .mapId(exhibitionMap.getId())
                 .build();
     }
 
     // 전시 장소 정보 삭제
     @Override
     public void deleteExhibitionMap(UUID exhibitionId) {
-        if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
-        }
-
         ExhibitionMap exhibitionMap = exhibitionMapRepository.findByExhibitionId(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+                .orElseThrow(() -> {
+                    if (!exhibitionRepository.existsById(exhibitionId)) {
+                        return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+                    }
+                    return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND);
+                });
 
         exhibitionMapRepository.delete(exhibitionMap);
     }

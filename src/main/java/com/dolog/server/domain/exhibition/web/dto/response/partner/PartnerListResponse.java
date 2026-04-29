@@ -67,6 +67,9 @@ public class PartnerListResponse {
         @JsonProperty("member_name")
         private String memberName;
 
+        @JsonProperty("member_name_en")
+        private String memberNameEn;
+
         @JsonProperty("member_email")
         private String memberEmail;
 
@@ -77,6 +80,7 @@ public class PartnerListResponse {
             return MemberItem.builder()
                     .memberId(member.getId())
                     .memberName(member.getName())
+                    .memberNameEn(member.getNameEn())
                     .memberEmail(member.getEmail())
                     .memberImageUrl(member.getImageUrl())
                     .build();

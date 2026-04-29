@@ -26,6 +26,9 @@ public class PartnerMember extends BaseEntity {
     private String name;
 
     @Column(length = 100)
+    private String nameEn;
+
+    @Column(length = 100)
     private String role;
 
     @Column(length = 255)
@@ -34,8 +37,9 @@ public class PartnerMember extends BaseEntity {
     @Column(length = 500)
     private String imageUrl;
 
-    public void update(String name, String email, String imageUrl) {
+    public void update(String name, String nameEn, String email, String imageUrl) {
         if (name != null) this.name = name;
+        if (nameEn != null) this.nameEn = nameEn;
         if (email != null) this.email = email;
         if (imageUrl != null) this.imageUrl = imageUrl;
     }
