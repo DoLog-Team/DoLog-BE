@@ -67,6 +67,10 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3:2.20.0'
 	implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
 	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+
+	// 이미지 처리 및 WebP 변환을 위한 라이브러리
+	implementation 'com.sksamuel.scrimage:scrimage-core:4.1.2'
+	implementation 'com.sksamuel.scrimage:scrimage-webp:4.1.2'
 }
 
 dependencyManagement {
