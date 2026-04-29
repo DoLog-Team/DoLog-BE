@@ -13,10 +13,12 @@ import com.dolog.server.domain.exhibition.web.dto.request.host.HostSnsRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostDetailResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.host.HostSnsResponse;
+import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,32 +31,54 @@ public class ExhibitionHostServiceImpl implements ExhibitionHostService {
 
     private final HostSnsRepository hostSnsRepository;
 
+    private final FileService fileService;
+
     // 주최기관 등록/수정
     @Transactional
     @Override
     public ExhibitionHostResponse upsertExhibitionHost(UUID exhibitionId, ExhibitionHostUpsertRequest request) {
-        // 1. 전시 존재 확인
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        // 2. 이미 등록된 주최기관이 있는지 확인
         Host host = hostRepository.findByExhibitionId(exhibitionId)
                 .map(existingHost -> {
-                    // 이미 있으면 정보 수정 (전체 교체)
+                    String imageUrl = existingHost.getImg();
+
+                    // DTO 필드명이 img라면 getImg()로 호출
+                    if (request.getImg() != null && !request.getImg().isEmpty()) {
+                        try {
+                            if (imageUrl != null) {
+                                fileService.deleteFile(imageUrl);
+                            }
+                            imageUrl = fileService.uploadFile(request.getImg(), "hosts");
+                        } catch (IOException e) {
+                            throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
+                        }
+                    }
+
+                    // DTO 필드명이 name이라면 getName()으로 호출
                     existingHost.update(
-                            request.getHost_name(),
-                            request.getHost_image_url(),
+                            request.getName(),
+                            imageUrl,
                             request.getDescription(),
                             request.getEmail()
                     );
                     return existingHost;
                 })
                 .orElseGet(() -> {
-                    // 없으면 새로 생성
+                    String imageUrl = null;
+                    if (request.getImg() != null && !request.getImg().isEmpty()) {
+                        try {
+                            imageUrl = fileService.uploadFile(request.getImg(), "hosts");
+                        } catch (IOException e) {
+                            throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
+                        }
+                    }
+
                     return Host.builder()
                             .exhibition(exhibition)
-                            .name(request.getHost_name())
-                            .img(request.getHost_image_url())
+                            .name(request.getName())
+                            .img(imageUrl)
                             .description(request.getDescription())
                             .email(request.getEmail())
                             .build();
