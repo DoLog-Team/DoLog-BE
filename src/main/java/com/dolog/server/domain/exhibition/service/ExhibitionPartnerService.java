@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public interface ExhibitionPartnerService {
 
-    PartnerListResponse getPartners(UUID exhibitionId);
+    PartnerListResponse getPartners(UUID exhibitionId, String sort);
 
     PartnerPartResponse createPart(UUID exhibitionId, PartnerPartCreateRequest request);
 

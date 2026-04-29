@@ -12,5 +12,7 @@ public interface PartnerMemberRepository extends JpaRepository<PartnerMember, UU
 
     List<PartnerMember> findByPartnerIdIn(List<UUID> partnerIds);
 
+    List<PartnerMember> findByPartnerIdInOrderByNameAsc(List<UUID> partnerIds);
+
     void deleteByPartnerId(UUID partnerId);
 }

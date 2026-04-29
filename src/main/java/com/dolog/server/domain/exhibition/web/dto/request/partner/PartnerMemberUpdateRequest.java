@@ -11,6 +11,9 @@ public class PartnerMemberUpdateRequest {
     @JsonProperty("member_name")
     private String memberName;
 
+    @JsonProperty("member_name_en")
+    private String memberNameEn;
+
     @JsonProperty("member_email")
     private String memberEmail;
 

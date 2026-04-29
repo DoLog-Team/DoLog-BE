@@ -33,13 +33,16 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
     @Override
     @Transactional(readOnly = true)
-    public PartnerListResponse getPartners(UUID exhibitionId) {
+    public PartnerListResponse getPartners(UUID exhibitionId, String sort) {
         exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         List<Partner> partners = partnerRepository.findByExhibitionIdOrderByOrderAscCreatedAtAsc(exhibitionId);
         List<UUID> partnerIds = partners.stream().map(Partner::getId).collect(java.util.stream.Collectors.toList());
-        List<PartnerMember> allMembers = partnerMemberRepository.findByPartnerIdIn(partnerIds);
+
+        List<PartnerMember> allMembers = "name".equals(sort)
+                ? partnerMemberRepository.findByPartnerIdInOrderByNameAsc(partnerIds)
+                : partnerMemberRepository.findByPartnerIdIn(partnerIds);
 
         return PartnerListResponse.from(partners, allMembers);
     }
@@ -87,6 +90,7 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
         PartnerMember member = PartnerMember.builder()
                 .partner(partner)
                 .name(request.getMemberName())
+                .nameEn(request.getMemberNameEn())
                 .imageUrl(request.getMemberImageUrl())
                 .email(request.getMemberEmail())
                 .build();
@@ -101,7 +105,7 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
         PartnerMember member = partnerMemberRepository.findById(memberId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND));
 
-        member.update(request.getMemberName(), request.getMemberEmail(), request.getMemberImageUrl());
+        member.update(request.getMemberName(), request.getMemberNameEn(), request.getMemberEmail(), request.getMemberImageUrl());
 
         return PartnerMemberResponse.from(member);
     }

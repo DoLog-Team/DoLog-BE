@@ -24,9 +24,10 @@ public class ExhibitionPartnerController {
     // 도움을 주신 분들 목록 조회
     @GetMapping("/{exhibitionId}/partners")
     public SuccessResponse<PartnerListResponse> getPartners(
-            @PathVariable UUID exhibitionId
+            @PathVariable UUID exhibitionId,
+            @RequestParam(required = false) String sort
     ) {
-        PartnerListResponse data = exhibitionPartnerService.getPartners(exhibitionId);
+        PartnerListResponse data = exhibitionPartnerService.getPartners(exhibitionId, sort);
         return SuccessResponse.ok(data, "도움을 주신 분들 목록 조회가 완료되었습니다.");
     }
 

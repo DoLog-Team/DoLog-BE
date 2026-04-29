@@ -13,6 +13,9 @@ public class PartnerMemberCreateRequest {
     @JsonProperty("member_name")
     private String memberName;
 
+    @JsonProperty("member_name_en")
+    private String memberNameEn;
+
     @JsonProperty("member_image_url")
     private String memberImageUrl;
 
