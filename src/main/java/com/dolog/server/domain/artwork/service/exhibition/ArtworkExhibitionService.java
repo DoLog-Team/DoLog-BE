@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface ArtworkExhibitionService {
     // 1. 전시회별 작품 목록 조회 (기존 getExhibitionArtworkList)
-    ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category);
+    ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search);
 
     // 2. 전시회 제목 일괄 조회 (N+1 방지용)
     Map<UUID, String> fetchExhibitionDetailMap(List<UUID> exhibitionIds);

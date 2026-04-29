@@ -28,4 +28,12 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     @Query("SELECT DISTINCT a FROM Artwork a " +
             "WHERE a.id = :artworkId AND a.exhibition.id = :exhibitionId")
     Optional<Artwork> findDetailById(@Param("exhibitionId") UUID exhibitionId, @Param("artworkId") UUID artworkId);
+
+
+    @Query("SELECT DISTINCT a FROM Artwork a " +
+            "LEFT JOIN FETCH a.artworkArtistMaps am " +
+            "LEFT JOIN FETCH am.artist art " +
+            "WHERE (a.title LIKE %:search% OR art.nameKo LIKE %:search%) " +
+            "AND a.exhibition.id = :exhibitionId")
+    List<Artwork> findArtworksBySearch(UUID exhibitionId, String search);
 }
