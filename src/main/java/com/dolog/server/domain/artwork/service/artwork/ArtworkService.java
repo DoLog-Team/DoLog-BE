@@ -28,7 +28,7 @@ public interface ArtworkService {
 
     void deleteArtistMapping(UUID artworkId, UUID artistId);
 
-    ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category);
+    ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search);
 
     /**
      * 작품 전체 정보 수정 (PUT)

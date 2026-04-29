@@ -30,7 +30,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
     private final ArtworkRepository artworkRepository; // 작품 조회를 위해 필요
 
     @Override
-    public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category) {
+    public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search) {
         // 1. 전시회 존재 여부 확인
         if (!exhibitionRepository.existsById(exhibitionId)) {
             throw new RuntimeException("해당 전시회를 찾을 수 없습니다.");
@@ -39,8 +39,15 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
         // 2. 안내 지도 리스트 조회
         List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionId(exhibitionId);
 
-        // 3. 작품 및 작가 상세 정보 조회 (아까 Repository에 추가한 fetch join 메서드 사용)
-        List<Artwork> artworks = artworkRepository.findArtworksForList(exhibitionId, zone, category);
+        // 3. 작품 조회 로직 분기 (검색어 여부에 따라 다른 Repository 메서드 호출)
+        List<Artwork> artworks;
+        if (search != null && !search.trim().isEmpty()) {
+            // 검색어가 있으면 검색 쿼리 사용 (Repository에 findArtworksBySearch 추가 필요)
+            artworks = artworkRepository.findArtworksBySearch(exhibitionId, search);
+        } else {
+            // 검색어가 없으면 기존 필터링 쿼리 사용
+            artworks = artworkRepository.findArtworksForList(exhibitionId, zone, category);
+        }
 
         // 4. 데이터 가공: Zone별 그룹화 -> 그 안에서 다시 Category별 그룹화
         // Optional.ofNullable을 사용하여 null 키 문제를 우회합니다.

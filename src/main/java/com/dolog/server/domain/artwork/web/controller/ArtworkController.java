@@ -129,9 +129,10 @@ public class ArtworkController {
     public SuccessResponse<ExhibitionArtworkListResponse> getExhibitionArtworks(
             @PathVariable UUID exhibitionId,
             @RequestParam(required = false) String zone,
-            @RequestParam(required = false) String category
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String search
     ) {
-        ExhibitionArtworkListResponse data = artworkService.getExhibitionArtworkList(exhibitionId, zone, category);
+        ExhibitionArtworkListResponse data = artworkService.getExhibitionArtworkList(exhibitionId, zone, category, search);
         return SuccessResponse.ok(data, "작품 목록 및 관람 안내 조회에 성공하였습니다.");
     }
 

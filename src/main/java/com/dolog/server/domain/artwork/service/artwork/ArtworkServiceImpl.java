@@ -255,8 +255,8 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     @Transactional(readOnly = true)
-    public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category) {
-        return artworkExhibitionService.getExhibitionArtworkList(exhibitionId, zone, category);
+    public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search) {
+        return artworkExhibitionService.getExhibitionArtworkList(exhibitionId, zone, category, search);
     }
 
     @Override
