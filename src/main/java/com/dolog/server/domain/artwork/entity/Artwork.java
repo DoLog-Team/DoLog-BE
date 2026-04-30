@@ -3,6 +3,7 @@ package com.dolog.server.domain.artwork.entity;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.global.entity.BaseEntity;
+import com.dolog.server.global.order.Orderable;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "artworks")
-public class Artwork extends BaseEntity {
+public class Artwork extends BaseEntity implements Orderable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -33,7 +34,7 @@ public class Artwork extends BaseEntity {
     @JoinColumn(name = "zone_id")
     private ExhibitionZone exhibitionZone;
 
-    @Builder.Default // Builder 사용 시 기본값으로 초기화되도록 설정
+    @Builder.Default
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkImg> artworkImg = new ArrayList<>();
@@ -62,14 +63,8 @@ public class Artwork extends BaseEntity {
     @Column(name = "purchase_url")
     private String purchaseUrl;
 
-    @Column(name = "zone", length = 50)
-    private String zone;
-
     @Column(name = "order_index")
     private Integer orderIndex;
-
-    @Column(length = 255)
-    private String intro;
 
     @Builder.Default
     @BatchSize(size = 100)
@@ -79,7 +74,6 @@ public class Artwork extends BaseEntity {
 
     public void updateBasicInfo(String title, String intro, String description, String purchaseUrl) {
         if (title != null) this.title = title;
-        if (intro != null) this.intro = intro;
         if (description != null) this.description = description;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
     }
@@ -94,5 +88,21 @@ public class Artwork extends BaseEntity {
         if (mainImg != null) this.mainImg = mainImg;
         if (locationMap != null) this.locationMap = locationMap;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
+    }
+
+
+    // 순서 정렬
+    @Override
+    public Integer getOrderIndex() {
+        return this.orderIndex;
+    }
+
+    @Override
+    public void updateOrder(Integer orderIndex) {
+        this.orderIndex = orderIndex;
+    }
+
+    public void updateZone(ExhibitionZone zone) {
+        this.exhibitionZone = zone;
     }
 }
