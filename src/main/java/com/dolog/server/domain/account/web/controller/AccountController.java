@@ -1,5 +1,7 @@
 package com.dolog.server.domain.account.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.service.AccountService;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Tag(name = "account")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/accounts")
@@ -24,6 +27,7 @@ public class AccountController {
 
     // 슈퍼어드민만 접근 가능\
     // admin 계정 생성
+    @Operation(summary = "admin 계정(전시 총대) 생성")
     @PostMapping("/admin")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<AccountResponse> createAdmin(
@@ -40,6 +44,7 @@ public class AccountController {
     }
 
     // admin 계정 조회
+    @Operation(summary = "계정 목록 조회")
     @GetMapping
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<List<AccountResponse>> getAccounts(
@@ -57,6 +62,7 @@ public class AccountController {
         );
     }
 
+    @Operation(summary = "비밀번호 변경")
     @PatchMapping("/me/password")
     public SuccessResponse<AccountResponse> changePassword(
             @AuthenticationPrincipal CustomUserDetails userDetails,

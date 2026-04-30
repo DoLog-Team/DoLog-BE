@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionService;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "exhibition")
 @RestController
 @RequestMapping("/exhibitions")
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class ExhibitionController {
     private final ExhibitionService exhibitionService;
 
     // 전시회 전체 목록 조회
+    @Operation(summary = "전시회 전체 목록 조회")
     @GetMapping
     public ResponseEntity<SuccessResponse<List<ExhibitionListItemResponse>>> getExhibitions(
             @RequestParam(name = "is_public", required = false) Boolean isPublic,
@@ -33,6 +37,7 @@ public class ExhibitionController {
     }
 
     // 메인 전시회 조회
+    @Operation(summary = "메인 전시회 조회")
     @GetMapping("/main")
     public SuccessResponse<ExhibitionMainResponse> getMainExhibitions(
             @RequestParam(required = false) String sort
@@ -44,6 +49,7 @@ public class ExhibitionController {
     }
 
     // 전시회 기본+상세+장소 통합 조회
+    @Operation(summary = "전시회 정보 통합 조회")
     @GetMapping("/{exhibitionId}/details")
     public SuccessResponse<ExhibitionIntegratedResponse> getExhibitionDetails(
             @PathVariable UUID exhibitionId) {
@@ -51,6 +57,7 @@ public class ExhibitionController {
     }
 
     // 전시회 푸터 정보 조회
+    @Operation(summary = "전시회 푸터 정보 통합 조회")
     @GetMapping("/{exhibitionId}/footer-info")
     public SuccessResponse<ExhibitionFooterResponse> getFooterInfo(
             @PathVariable UUID exhibitionId) {
@@ -58,6 +65,7 @@ public class ExhibitionController {
     }
 
     // 전시회 메타데이터 조회 (OG tag)
+    @Operation(summary = "전시회 메타 데이터 조회")
     @GetMapping("/{exhibitionId}/meta")
     public SuccessResponse<ExhibitionMetaResponse> getExhibitionMeta(
             @PathVariable UUID exhibitionId) {
@@ -66,6 +74,7 @@ public class ExhibitionController {
 
 
     // 전시회 기본정보 등록
+    @Operation(summary = "전시회 기본정보 등록")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping
     public ResponseEntity<SuccessResponse<ExhibitionCreateResponse>> createExhibition(
@@ -75,6 +84,7 @@ public class ExhibitionController {
     }
 
     // 전시회 기본정보 수정
+    @Operation(summary = "전시회 기본정보 수정")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/{exhibitionId}")
     public ResponseEntity<SuccessResponse<ExhibitionMessageResponse>> updateExhibition(
@@ -85,6 +95,7 @@ public class ExhibitionController {
     }
 
     // 전시회 삭제
+    @Operation(summary = "전시회 삭제")
     @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/{exhibitionId}")
     public ResponseEntity<SuccessResponse<ExhibitionMessageResponse>> deleteExhibition(
@@ -96,6 +107,7 @@ public class ExhibitionController {
 //   -----------------------------------------------------------------------------
 
     // 전시 상세정보 등록/수정
+    @Operation(summary = "전시회 상세정보 등록/수정")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PutMapping(value = "/{exhibitionId}/details", consumes = "multipart/form-data")
     public SuccessResponse<ExhibitionDetailUpsertResponse> upsertExhibitionDetail(

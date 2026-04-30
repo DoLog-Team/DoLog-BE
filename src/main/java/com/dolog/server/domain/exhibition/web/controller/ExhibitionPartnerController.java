@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionPartnerService;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "exhibition-partner")
 @RestController
 @RequestMapping("/exhibitions")
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class ExhibitionPartnerController {
     private final ExhibitionPartnerService exhibitionPartnerService;
 
     // 도움을 주신 분들 목록 조회
+    @Operation(summary = "도움을 주신 분들 목록 조회")
     @GetMapping("/{exhibitionId}/partners")
     public SuccessResponse<PartnerListResponse> getPartners(
             @PathVariable UUID exhibitionId,
@@ -32,6 +36,7 @@ public class ExhibitionPartnerController {
     }
 
     // 파트 생성
+    @Operation(summary = "도움을 주신 분들 파트 생성")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping("/{exhibitionId}/partners/parts")
     public ResponseEntity<SuccessResponse<PartnerPartResponse>> createPart(

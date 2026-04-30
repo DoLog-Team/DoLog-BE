@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionMapService;
 import com.dolog.server.domain.exhibition.web.dto.request.map.ExhibitionMapCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.map.ExhibitionMapUpdateRequest;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "exhibition-map")
 @RestController
 @RequestMapping("/exhibitions")
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class ExhibitionMapController {
     private final ExhibitionMapService exhibitionMapService;
 
     // 전시 장소 정보 등록
+    @Operation(summary = "전시회 장소 정보 생성")
     @PostMapping("/{exhibitionId}/map")
     @PreAuthorize("hasRole('DEVELOPER')")
     public ResponseEntity<SuccessResponse<ExhibitionMapCreateResponse>> createExhibitionMap(
@@ -33,6 +37,7 @@ public class ExhibitionMapController {
     }
 
     // 전시 장소 정보 수정
+    @Operation(summary = "전시회 장소 정보 수정")
     @PatchMapping("/{exhibitionId}/map")
     @PreAuthorize("hasRole('DEVELOPER')")
     public ResponseEntity<SuccessResponse<ExhibitionMapUpdateResponse>> updateExhibitionMap(
@@ -43,6 +48,7 @@ public class ExhibitionMapController {
     }
 
     // 전시 장소 정보 삭제
+    @Operation(summary = "전시회 장소 정보 삭제")
     @DeleteMapping("/{exhibitionId}/map")
     @PreAuthorize("hasRole('DEVELOPER')")
     public ResponseEntity<SuccessResponse<Void>> deleteExhibitionMap(

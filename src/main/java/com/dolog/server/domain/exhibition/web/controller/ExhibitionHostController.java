@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionHostService;
 import com.dolog.server.domain.exhibition.web.dto.request.host.ExhibitionHostUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.host.HostSnsRequest;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@Tag(name = "exhibition-host")
 @RestController
 @RequestMapping("/exhibitions")
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class ExhibitionHostController {
 
     private final ExhibitionHostService exhibitionHostService;
 
+    @Operation(summary = "주최기관 등록/교체")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PutMapping("/{exhibitionId}/host")
     public SuccessResponse<ExhibitionHostResponse> upsertHost(
@@ -31,6 +35,7 @@ public class ExhibitionHostController {
         return SuccessResponse.ok(response, "주최 기관 정보 등록/수정 성공");
     }
 
+    @Operation(summary = "주최기관 조회")
     @GetMapping("/{exhibitionId}/host")
     public SuccessResponse<ExhibitionHostDetailResponse> getHost(
             @PathVariable UUID exhibitionId
@@ -43,6 +48,7 @@ public class ExhibitionHostController {
 
 //===============[SNS]================
 // SNS 추가
+@Operation(summary = "주최기관 SNS 추가")
 @PreAuthorize("hasRole('DEVELOPER')")
 @PostMapping("/{exhibitionId}/host/sns")
 public SuccessResponse<HostSnsResponse> addHostSns(
@@ -52,6 +58,7 @@ public SuccessResponse<HostSnsResponse> addHostSns(
 }
 
     // SNS 목록 조회
+    @Operation(summary = "주최기관 SNS 조회")
     @GetMapping("/{exhibitionId}/host/sns")
     public SuccessResponse<List<HostSnsResponse>> getHostSnsList(
             @PathVariable UUID exhibitionId) {
@@ -59,6 +66,7 @@ public SuccessResponse<HostSnsResponse> addHostSns(
     }
 
     // SNS 수정
+    @Operation(summary = "주최기관 SNS 링크 수정")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/host/sns/{snsId}")
     public SuccessResponse<List<HostSnsResponse>> updateHostSns(
@@ -68,6 +76,7 @@ public SuccessResponse<HostSnsResponse> addHostSns(
     }
 
     // SNS 삭제
+    @Operation(summary = "주최기관 SNS 링크 삭제")
     @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/host/sns/{snsId}")
     public SuccessResponse<List<HostSnsResponse>> deleteHostSns(@PathVariable UUID snsId) {

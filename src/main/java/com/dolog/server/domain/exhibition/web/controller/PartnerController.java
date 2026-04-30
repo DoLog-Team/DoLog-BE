@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionPartnerService;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberUpdateRequest;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "exhibition-partner")
 @RestController
 @RequestMapping("/partners")
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ public class PartnerController {
     private final ExhibitionPartnerService exhibitionPartnerService;
 
     // 파트 수정
+    @Operation(summary = "도움을 주신 분들 파트 정보 수정")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/parts/{partId}")
     public SuccessResponse<PartnerPartResponse> updatePart(
@@ -35,6 +39,7 @@ public class PartnerController {
     }
 
     // 파트 삭제
+    @Operation(summary = "도움을 주신 분들 파트 삭제")
     @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/parts/{partId}")
     public SuccessResponse<Void> deletePart(
@@ -45,6 +50,7 @@ public class PartnerController {
     }
 
     // 멤버 등록
+    @Operation(summary = "도움을 주신 분들 멤버 등록")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PostMapping("/parts/{partId}/members")
     public ResponseEntity<SuccessResponse<PartnerMemberResponse>> createMember(
@@ -56,6 +62,7 @@ public class PartnerController {
     }
 
     // 멤버 수정
+    @Operation(summary = "도움을 주신 분들 멤버 수정")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PatchMapping("/members/{memberId}")
     public SuccessResponse<PartnerMemberResponse> updateMember(
@@ -67,6 +74,7 @@ public class PartnerController {
     }
 
     // 멤버 삭제
+    @Operation(summary = "도움을 주신 분들 멤버 삭제")
     @PreAuthorize("hasRole('DEVELOPER')")
     @DeleteMapping("/members/{memberId}")
     public SuccessResponse<Void> deleteMember(

@@ -1,5 +1,7 @@
 package com.dolog.server.domain.account.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.account.service.AuthService;
 import com.dolog.server.domain.account.web.dto.request.ChangePasswordRequest;
 import com.dolog.server.domain.account.web.dto.request.LoginRequest;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "account")
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class AuthController {
     private final AuthService authService;
 
     // 로그인
+    @Operation(summary = "로그인")
     @PostMapping("/login")
     public SuccessResponse<LoginResponse> login(@RequestBody LoginRequest request) {
         LoginResponse tokens = authService.login(request.getEmail(), request.getPassword());
@@ -28,6 +32,7 @@ public class AuthController {
 
 
     // 토큰 재발급
+    @Operation(summary = "토큰 재발급")
     @PostMapping("/refresh")
     public SuccessResponse<TokenResponse> refresh(
             @RequestBody RefreshTokenRequest request

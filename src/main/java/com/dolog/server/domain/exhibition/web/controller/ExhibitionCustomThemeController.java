@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionCustomThemeService;
 import com.dolog.server.domain.exhibition.service.ExhibitionService;
 import com.dolog.server.domain.exhibition.web.dto.request.custom.ExhibitionCustomThemeRequest;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Tag(name = "exhibition-custom-theme")
 @RestController
 @RequestMapping("/exhibitions")
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class ExhibitionCustomThemeController {
     private final ExhibitionService exhibitionService;
 
     // 전시회 커스텀 테마 설정
+    @Operation(summary = "전시회 커스텀 테마 설정")
     @PreAuthorize("hasRole('DEVELOPER')")
     @PutMapping("/{exhibitionId}/custom/theme")
     public SuccessResponse<ExhibitionCustomThemeResponse> upsertCustomTheme(
@@ -31,6 +35,7 @@ public class ExhibitionCustomThemeController {
     }
 
     // 전시회 커스텀 설정 조회
+    @Operation(summary = "전시회 커스텀 설정 통합 조회")
     @GetMapping("/{exhibitionId}/custom")
     public SuccessResponse<ExhibitionCustomThemeResponse> getCustomTheme(
             @PathVariable UUID exhibitionId) {

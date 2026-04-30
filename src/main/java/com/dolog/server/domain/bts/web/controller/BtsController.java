@@ -1,5 +1,7 @@
 package com.dolog.server.domain.bts.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.bts.service.BtsService;
 import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsMappingUpdateRequest;
@@ -23,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Tag(name = "bts")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/exhibitions")
@@ -31,6 +34,7 @@ public class BtsController {
     private final BtsService btsService;
 
     // 등록 (POST)
+    @Operation(summary = "BTS 등록")
     @PostMapping("/bts")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsCreateResponse> createBts(
@@ -41,6 +45,7 @@ public class BtsController {
     }
 
     // 수정 (PATCH)
+    @Operation(summary = "BTS 수정")
     @PatchMapping("/bts/{btsId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsCreateResponse> updateBts(
@@ -52,6 +57,7 @@ public class BtsController {
     }
 
     // 삭제 (DELETE)
+    @Operation(summary = "BTS 삭제")
     @DeleteMapping("/bts/{btsId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteBts(@PathVariable UUID btsId) {
@@ -61,6 +67,7 @@ public class BtsController {
 
 
     // 조회 (GET)
+    @Operation(summary = "BTS 목록 조회")
     @GetMapping("/{exhibitionId}/bts")
     public SuccessResponse<Map<String, Object>> getBtsList(@PathVariable UUID exhibitionId) {
         List<BtsListResponse> btsList = btsService.getExhibitionBtsList(exhibitionId);
@@ -75,6 +82,7 @@ public class BtsController {
 
 
     // 상세 조회 (GET)
+    @Operation(summary = "BTS 상세 조회")
     @GetMapping("/bts/{btsId}")
     public SuccessResponse<BtsDetailResponse> getBtsDetail(
             @PathVariable(value = "btsId") UUID btsId
@@ -90,6 +98,7 @@ public class BtsController {
 
 
     // BTS 매핑 등록/수정 (PUT)
+    @Operation(summary = "BTS 매핑 등록/수정")
     @PutMapping("/{exhibitionId}/bts/{btsId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsMappingUpdateResponse> syncBtsMapping(
