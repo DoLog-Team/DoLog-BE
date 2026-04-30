@@ -10,7 +10,7 @@ import java.util.UUID;
 @Builder
 public class ExhibitionArtistListResponse {
 
-    private UUID artistId;
+    private UUID profileId;
     private String nameKo;
     private String nameEn;
     private String profileImg;
