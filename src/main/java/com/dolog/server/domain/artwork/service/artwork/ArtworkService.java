@@ -18,6 +18,9 @@ public interface ArtworkService {
 
     void deleteArtwork(UUID artworkId);
 
+    void reorderArtwork(UUID artworkId, Integer prev, Integer next);
+    void moveArtworkZone(UUID artworkId, UUID zoneId, Integer prev, Integer next);
+
     ArtworkImgUpdateResponse updateArtworkImage(UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request);
 
     void deleteArtworkImage(UUID artworkId, UUID imageId);

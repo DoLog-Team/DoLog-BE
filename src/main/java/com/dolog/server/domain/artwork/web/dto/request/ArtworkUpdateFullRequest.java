@@ -16,10 +16,15 @@ public class ArtworkUpdateFullRequest {
     private String title;
     private String description;
     private String category;
+
     private UUID zoneId;
+    private Integer prevOrder;
+    private Integer nextOrder;
+
     private String purchaseUrl;
     private List<UUID> artistIds = new ArrayList<>();
     private List<ImageUpdateDto> images = new ArrayList<>();
+
 
     @Getter
     @Setter

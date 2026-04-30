@@ -19,8 +19,12 @@ public class ArtworkUpdateRequest {
     private String description;
     private String purchaseUrl;
     private Integer orderIndex;
-    private UUID zoneId; // 구역 이동이 있을 수 있으니 포함
+
+    private UUID zoneId;
+    private Integer prevOrder;
+    private Integer nextOrder;
+
     private String artistRole;
-    private MultipartFile mainImageFile;   // 추가
-    private MultipartFile locationMapFile; // 추가
+    private MultipartFile mainImageFile;
+    private MultipartFile locationMapFile;
 }

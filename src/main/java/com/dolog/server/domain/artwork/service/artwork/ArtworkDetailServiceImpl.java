@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // 조회 전용이므로 readOnly 설정
+@Transactional(readOnly = true)
 public class ArtworkDetailServiceImpl implements ArtworkDetailService {
 
     private final ArtworkRepository artworkRepository;
@@ -31,7 +31,7 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
 
     @Override
     public ArtworkDetailResponse getArtworkDetail(UUID exhibitionId, UUID artworkId) {
-        // 1. 작품 상세 정보 조회 (이미지, 작가, SNS까지 fetch join으로 가져온다고 가정)
+        // 1. 작품 상세 정보 조회
         Artwork artwork = artworkRepository.findDetailById(exhibitionId, artworkId)
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
@@ -77,7 +77,7 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
     }
 
     private ArtworkDetailResponse.RelatedArtworkInfo convertToRelatedInfo(Artwork artwork) {
-        // 보내주신 ArtworkArtistServiceImpl의 fetchArtistMap 로직을 한 객체에 대해 적용
+
         String combinedArtistNames = artwork.getArtworkArtistMaps().stream()
                 .map(aam -> {
                     if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null) {

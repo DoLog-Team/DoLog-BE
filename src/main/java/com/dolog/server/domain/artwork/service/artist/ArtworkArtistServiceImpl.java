@@ -42,7 +42,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
         ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        // 검증 및 저장 로직 (기존 코드 그대로 복사)
+        // 검증 및 저장 로직
         if (!artwork.getExhibition().getId().equals(profile.getExhibition().getId())) {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
         }
@@ -99,7 +99,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
 
     @Override
     public void updateArtworkArtists(Artwork artwork, List<UUID> artistIds) {
-        // 기존 매핑 싹 비우기
+        // 기존 매핑 비우기
         artwork.getArtworkArtistMaps().clear();
 
         // 새로 받은 ID들로 매핑 다시 만들기
