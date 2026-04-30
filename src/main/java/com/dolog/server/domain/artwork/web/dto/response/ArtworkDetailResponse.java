@@ -22,6 +22,8 @@ public class ArtworkDetailResponse {
     private List<DetailImageInfo> detailImages;
     private List<ParticipantInfo> participants;
     private List<RelatedBtsInfo> relatedBts;
+    private List<RelatedArtworkInfo> sameCategoryArtworks;
+    private List<RelatedArtworkInfo> alphabeticalArtworks;
 
     @Getter @Builder
     public static class DetailImageInfo {
@@ -53,5 +55,13 @@ public class ArtworkDetailResponse {
         private UUID id;
         private String title;
         private String mainImg;
+    }
+
+    @Getter @Builder
+    public static class RelatedArtworkInfo {
+        private UUID id;
+        private String title;
+        private String category;
+        private String artistName; // "홍길동, 김철수" 형태로 반환
     }
 }
