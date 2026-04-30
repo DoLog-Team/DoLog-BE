@@ -10,6 +10,7 @@ import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,13 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                         .build())
                 .toList();
 
+        // 2. 동일 카테고리 인근 작품 2개 조회
+        List<Artwork> sameCatList = artworkRepository.findRelatedByCategory(
+                exhibitionId, artwork.getCategory(), artworkId, artwork.getOrderIndex(), PageRequest.of(0, 2));
+
+        // 3. 가나다순 작품 2개 조회
+        List<Artwork> alphaList = artworkRepository.findTopAlphabetical(exhibitionId, PageRequest.of(0, 2));
+
         // 4. 최종 DTO 조립
         return ArtworkDetailResponse.builder()
                 .title(artwork.getTitle())
@@ -62,6 +71,27 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                         .map(this::convertToParticipantInfo)
                         .toList())
                 .relatedBts(relatedBts)
+                .sameCategoryArtworks(sameCatList.stream().map(this::convertToRelatedInfo).toList())
+                .alphabeticalArtworks(alphaList.stream().map(this::convertToRelatedInfo).toList())
+                .build();
+    }
+
+    private ArtworkDetailResponse.RelatedArtworkInfo convertToRelatedInfo(Artwork artwork) {
+        // 보내주신 ArtworkArtistServiceImpl의 fetchArtistMap 로직을 한 객체에 대해 적용
+        String combinedArtistNames = artwork.getArtworkArtistMaps().stream()
+                .map(aam -> {
+                    if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null) {
+                        return aam.getArtistProfile().getNameKo();
+                    }
+                    return aam.getArtist().getNameKo();
+                })
+                .collect(Collectors.joining(", "));
+
+        return ArtworkDetailResponse.RelatedArtworkInfo.builder()
+                .id(artwork.getId())
+                .title(artwork.getTitle())
+                .category(artwork.getCategory())
+                .artistName(combinedArtistNames)
                 .build();
     }
 
