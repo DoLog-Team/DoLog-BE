@@ -27,11 +27,13 @@ public class ArtworkOrderAdapter {
                 .findByExhibitionIdAndExhibitionZoneIdOrderByOrderIndexAsc(
                         artwork.getExhibition().getId(),
                         artwork.getExhibitionZone().getId()
-                );
+                )
+                .stream()
+                .filter(a -> !a.getId().equals(artwork.getId()))
+                .toList();
 
         artwork.updateOrder(orderProcessor.assignNext(artworks));
     }
-
     /**
      * 같은 zone 내 reorder
      */
@@ -57,13 +59,29 @@ public class ArtworkOrderAdapter {
      */
     public void moveZone(Artwork artwork, UUID zoneId, Integer prev, Integer next) {
 
-        ExhibitionZone zone = zoneRepository.findById(zoneId)
+        // 기존 zone 저장
+        UUID oldZoneId = artwork.getExhibitionZone().getId();
+
+        ExhibitionZone newZone = zoneRepository.findById(zoneId)
                 .orElseThrow();
 
-        // 1. zone 변경
-        artwork.updateZone(zone);
+        artwork.updateZone(newZone);
+        artworkRepository.flush();
 
-        // 2. 새 zone 기준으로 reorder
-        reorder(artwork, prev, next);
+        // 새로운 zone 처리
+        if (prev == null && next == null) {
+            assign(artwork);
+        } else {
+            reorder(artwork, prev, next);
+        }
+
+        // 기존 zone 정리
+        List<Artwork> oldZoneArtworks = artworkRepository
+                .findByExhibitionIdAndExhibitionZoneIdOrderByOrderIndexAsc(
+                        artwork.getExhibition().getId(),
+                        oldZoneId
+                );
+
+        orderProcessor.rebalance(oldZoneArtworks);
     }
 }
