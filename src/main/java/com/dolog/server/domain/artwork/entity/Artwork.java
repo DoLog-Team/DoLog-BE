@@ -49,7 +49,7 @@ public class Artwork extends BaseEntity {
     private String size;
 
     @Lob
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Lob
