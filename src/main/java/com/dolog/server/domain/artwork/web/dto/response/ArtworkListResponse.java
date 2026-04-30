@@ -14,7 +14,12 @@ public class ArtworkListResponse {
     private String title;
     private String category;
     private String imageUrl;
+
     private UUID exhibitionId;
     private String exhibitionTitle;
     private String artistName;
+
+    private UUID zoneId;
+    private String zoneName;
+    private Integer orderIndex;
 }
