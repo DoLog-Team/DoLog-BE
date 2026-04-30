@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionCustomSplashService;
 import com.dolog.server.domain.exhibition.web.dto.request.custom.ExhibitionCustomSplashRequest;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "exhibition-custom-splash")
 @RestController
 @RequestMapping("/exhibitions")

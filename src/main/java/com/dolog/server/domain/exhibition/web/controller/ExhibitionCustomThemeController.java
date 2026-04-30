@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionCustomThemeService;
 import com.dolog.server.domain.exhibition.service.ExhibitionService;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "exhibition-custom-theme")
 @RestController
 @RequestMapping("/exhibitions")

@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artwork.service.artwork.ArtworkDetailService;
 import com.dolog.server.domain.artwork.service.artwork.ArtworkService;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "artwork")
 @RestController
 @RequiredArgsConstructor

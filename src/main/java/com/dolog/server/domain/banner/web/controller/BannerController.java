@@ -1,6 +1,7 @@
 package com.dolog.server.domain.banner.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.banner.service.MainBannerService;
 import com.dolog.server.domain.banner.web.dto.request.MainBannerUpdateRequest;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "exhibition-banner")
 @RestController
 @RequestMapping("/exhibitions")

@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artist.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistProfileService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
@@ -19,6 +20,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "artist-전시참여작가")
 @RestController
 @RequestMapping("artist-profiles")

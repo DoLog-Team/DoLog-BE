@@ -1,6 +1,7 @@
 package com.dolog.server.domain.bts.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.bts.service.BtsService;
 import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "bts")
 @RestController
 @RequiredArgsConstructor

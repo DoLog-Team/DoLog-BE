@@ -1,6 +1,7 @@
 package com.dolog.server.domain.account.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.enums.Role;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "account")
 @RestController
 @RequiredArgsConstructor
