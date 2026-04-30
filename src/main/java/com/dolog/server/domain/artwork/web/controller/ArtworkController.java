@@ -1,5 +1,8 @@
 package com.dolog.server.domain.artwork.web.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artwork.service.artwork.ArtworkDetailService;
 import com.dolog.server.domain.artwork.service.artwork.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
@@ -14,6 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "artwork")
 @RestController
 @RequiredArgsConstructor
 public class ArtworkController {
@@ -22,6 +27,7 @@ public class ArtworkController {
     private final ArtworkDetailService artworkDetailService;
 
     // 1. 작품 전체 목록 조회
+    @Operation(summary = "작품 전체 목록 조회")
     @GetMapping("/artworks")
     public SuccessResponse<Object> getArtworks(
             @RequestParam(required = false) Boolean main,
@@ -33,6 +39,7 @@ public class ArtworkController {
     }
 
     // 2. 작품 기본 정보 등록
+    @Operation(summary = "작품 등록")
     @PostMapping(value = "/exhibitions/artworks", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> createArtwork(
@@ -42,6 +49,7 @@ public class ArtworkController {
     }
 
     // 3. 작품 기본 정보 수정 (PATCH)
+    @Operation(summary = "작품 기본 정보 수정")
     @PatchMapping(value = "/exhibitions/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkCreateResponse> updateArtwork(
@@ -52,6 +60,7 @@ public class ArtworkController {
     }
 
     // 4. 작품 삭제 (DELETE)
+    @Operation(summary = "작품 기본 정보 삭제")
     @DeleteMapping("/exhibitions/artworks/{artworkId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteArtwork(
@@ -62,6 +71,7 @@ public class ArtworkController {
 
     /* ---------------- [ 상세 이미지 관련 API ] ---------------- */
 
+    @Operation(summary = "작품 상세 이미지 등록")
     @PostMapping(value = "/artworks/{artworkId}/images", consumes = "multipart/form-data")
     public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
             @PathVariable UUID artworkId,
@@ -72,7 +82,8 @@ public class ArtworkController {
     }
 
     // 6. 작품 상세 이미지 개별 수정 (PATCH)
-    @PatchMapping(value = "/artworks/{artworkId}/images/{imageId}", consumes = "multipart/form-data") // 👈 consumes 추가
+    @Operation(summary = "작품 상세 이미지 수정")
+    @PatchMapping(value = "/artworks/{artworkId}/images/{imageId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
             @PathVariable UUID artworkId,
@@ -83,7 +94,8 @@ public class ArtworkController {
     }
 
     // 7. 작품 상세 이미지 개별 삭제 (DELETE)
-    @DeleteMapping("/artworks/{artworkId}/images/{imageId}") // 주소 확인! images 입니다.
+    @Operation(summary = "작품 상세 이미지 삭제")
+    @DeleteMapping("/artworks/{artworkId}/images/{imageId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteArtworkImage(
             @PathVariable UUID artworkId,
@@ -95,6 +107,7 @@ public class ArtworkController {
     /* ---------------- [ 작가 매핑 관련 API ] ---------------- */
 
     // 8. 작품 작가 매핑 등록 (POST)
+    @Operation(summary = "작품 공동 작가 등록")
     @PostMapping("/artworks/{artworkId}/artists")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkArtistMappingResponse> createArtistMapping(
@@ -105,6 +118,7 @@ public class ArtworkController {
     }
 
     // 9. 작품 작가 매핑 수정 (PATCH)
+    @Operation(summary = "작품 공동 작가 수정")
     @PatchMapping("/artworks/{artworkId}/artists/{artistProfileId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkArtistMappingResponse> updateArtistMapping(
@@ -116,6 +130,7 @@ public class ArtworkController {
     }
 
     // 10. 작품 작가 매핑 삭제 (DELETE)
+    @Operation(summary = "작품 공동 작가 삭제")
     @DeleteMapping("/artworks/{artworkId}/artists/{artistProfileId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> deleteArtistMapping(
@@ -125,6 +140,7 @@ public class ArtworkController {
         return SuccessResponse.ok(null, "작가 연결이 성공적으로 해제되었습니다.");
     }
 
+    @Operation(summary = "작품 목록 조회")
     @GetMapping("/exhibitions/{exhibitionId}/artworks")
     public SuccessResponse<ExhibitionArtworkListResponse> getExhibitionArtworks(
             @PathVariable UUID exhibitionId,
@@ -137,6 +153,7 @@ public class ArtworkController {
     }
 
     // 11. 작품 전체 정보 수정 (PUT)
+    @Operation(summary = "작품 전체 정보 수정")
     @PutMapping(value = "/exhibitions/{exhibitionId}/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtworkUpdateFullResponse> updateArtworkFull(
@@ -150,6 +167,7 @@ public class ArtworkController {
     }
 
     // 상세 조회 API만 신규 서비스를 타게 합니다.
+    @Operation(summary = "작품 상세 조회")
     @GetMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
     public SuccessResponse<ArtworkDetailResponse> getArtworkDetail(
             @PathVariable UUID exhibitionId,
