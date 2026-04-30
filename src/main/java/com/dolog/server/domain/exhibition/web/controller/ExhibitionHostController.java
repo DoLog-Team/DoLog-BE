@@ -11,6 +11,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.host.ExhibitionHostRe
 import com.dolog.server.domain.exhibition.web.dto.response.host.HostSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,10 +29,10 @@ public class ExhibitionHostController {
 
     @Operation(summary = "주최기관 등록/교체")
     @PreAuthorize("hasRole('DEVELOPER')")
-    @PutMapping("/{exhibitionId}/host")
+    @PutMapping(value = "/{exhibitionId}/host", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SuccessResponse<ExhibitionHostResponse> upsertHost(
             @PathVariable UUID exhibitionId,
-            @RequestBody ExhibitionHostUpsertRequest request) {
+            @ModelAttribute ExhibitionHostUpsertRequest request) { // @RequestBody 대신 @ModelAttribute
 
         ExhibitionHostResponse response = exhibitionHostService.upsertExhibitionHost(exhibitionId, request);
         return SuccessResponse.ok(response, "주최 기관 정보 등록/수정 성공");
