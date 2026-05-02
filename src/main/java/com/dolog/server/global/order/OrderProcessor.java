@@ -7,7 +7,7 @@ import java.util.List;
 @Component
 public class OrderProcessor {
 
-    private static final int GAP = 1000;
+    private static final int GAP = 10;
 
     public int assignNext(List<? extends Orderable> items) {
         if (items.isEmpty()) return GAP;
