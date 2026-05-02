@@ -14,6 +14,7 @@ import java.time.temporal.ChronoUnit;
 @AllArgsConstructor
 public class ExhibitionListItemResponse {
     private String id;
+    private String slug;
     private String title;
     private String univName;
     private String deptName;
@@ -35,6 +36,7 @@ public class ExhibitionListItemResponse {
 
         return ExhibitionListItemResponse.builder()
                 .id(exhibition.getId().toString())
+                .slug(exhibition.getSlug())
                 .univName(exhibition.getUnivName())
                 .deptName(exhibition.getDeptName())
 

@@ -38,6 +38,14 @@ public class ExhibitionController {
         return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getExhibitions(isPublic, univName, search)));
     }
 
+    // slug로 uuid 조회
+    @Operation(summary = "slug로 전시회 uuid 조회")
+    @GetMapping("/resolve/{slug}")
+    public SuccessResponse<ExhibitionResolveResponse> resolveSlug(
+            @PathVariable String slug) {
+        return SuccessResponse.ok(exhibitionService.resolveSlug(slug));
+    }
+
     // 메인 전시회 조회
     @Operation(summary = "메인 전시회 조회")
     @GetMapping("/main")

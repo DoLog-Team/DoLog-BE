@@ -210,11 +210,24 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ExhibitionResolveResponse resolveSlug(String slug) {
+        Exhibition exhibition = exhibitionRepository.findBySlug(slug)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_NOT_FOUND));
+        return ExhibitionResolveResponse.of(exhibition.getId());
+    }
+
+    @Override
     public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
+        if (exhibitionRepository.existsBySlug(request.getSlug())) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_DUPLICATE);
+        }
+
         Exhibition exhibition = Exhibition.builder()
                 .account(null) //TODO: JWT -> v2 에서 연동함
                 .univName(request.getUnivName())
                 .deptName(request.getDeptName())
+                .slug(request.getSlug())
                 .isPublic(request.getIsPublic() != null ? request.getIsPublic() : true)
                 .build();
 
@@ -222,6 +235,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
         return ExhibitionCreateResponse.builder()
                 .id(saved.getId().toString())
+                .slug(saved.getSlug())
                 .message("전시회가 성공적으로 등록되었습니다.")
                 .build();
     }
