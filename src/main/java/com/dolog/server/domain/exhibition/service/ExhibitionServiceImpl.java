@@ -245,9 +245,14 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        if (request.getSlug() != null && !request.getSlug().equals(exhibition.getSlug())
-                && exhibitionRepository.existsBySlug(request.getSlug())) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_DUPLICATE);
+        if (request.getSlug() != null) {
+            if (request.getSlug().isBlank()) {
+                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_INVALID);
+            }
+            if (!request.getSlug().equals(exhibition.getSlug())
+                    && exhibitionRepository.existsBySlug(request.getSlug())) {
+                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_DUPLICATE);
+            }
         }
 
         exhibition.updateBasicInfo(request.getUnivName(), request.getDeptName(), request.getSlug(), request.getIsPublic());
