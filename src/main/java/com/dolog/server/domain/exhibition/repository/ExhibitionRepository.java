@@ -34,6 +34,7 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
     );
 
     Optional<Exhibition> findBySlug(String slug);
+    boolean existsBySlug(String slug);
 
     // 진행 중 전시 (최신순)
     @Query("""

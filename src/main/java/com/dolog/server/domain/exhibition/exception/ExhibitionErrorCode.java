@@ -36,7 +36,8 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     EXHIBITION_IMAGE_REQUIRED("EXHIBITION_400_1", BAD_REQUEST, "전시회 이미지는 필수 입력 항목입니다."),
 
-    EXHIBITION_SLUG_NOT_FOUND("EXHIBITION_SLUG_404", NOT_FOUND, "해당 slug의 전시회를 찾을 수 없습니다.");
+    EXHIBITION_SLUG_NOT_FOUND("EXHIBITION_SLUG_404", NOT_FOUND, "해당 slug의 전시회를 찾을 수 없습니다."),
+    EXHIBITION_SLUG_DUPLICATE("EXHIBITION_SLUG_409", CONFLICT, "이미 사용 중인 slug입니다.");
 
     private final String code;
     private final int httpStatus;

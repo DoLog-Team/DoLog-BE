@@ -219,6 +219,10 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     @Override
     public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
+        if (exhibitionRepository.existsBySlug(request.getSlug())) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_DUPLICATE);
+        }
+
         Exhibition exhibition = Exhibition.builder()
                 .account(null) //TODO: JWT -> v2 에서 연동함
                 .univName(request.getUnivName())
