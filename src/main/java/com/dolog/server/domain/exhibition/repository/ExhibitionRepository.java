@@ -33,6 +33,8 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
             @Param("today") LocalDate today
     );
 
+    Optional<Exhibition> findBySlug(String slug);
+
     // 진행 중 전시 (최신순)
     @Query("""
             SELECT e FROM Exhibition e

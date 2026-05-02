@@ -34,7 +34,9 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     CUSTOM_THEME_NOT_FOUND("EXHIBITION_CUSTOM_THEME_404", NOT_FOUND, "커스텀 설정이 등록되지 않은 전시회입니다."),
 
-    EXHIBITION_IMAGE_REQUIRED("EXHIBITION_400_1", BAD_REQUEST, "전시회 이미지는 필수 입력 항목입니다.");
+    EXHIBITION_IMAGE_REQUIRED("EXHIBITION_400_1", BAD_REQUEST, "전시회 이미지는 필수 입력 항목입니다."),
+
+    EXHIBITION_SLUG_NOT_FOUND("EXHIBITION_SLUG_404", NOT_FOUND, "해당 slug의 전시회를 찾을 수 없습니다.");
 
     private final String code;
     private final int httpStatus;

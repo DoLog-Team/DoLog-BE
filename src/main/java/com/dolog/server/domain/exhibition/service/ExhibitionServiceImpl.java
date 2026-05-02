@@ -210,6 +210,14 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ExhibitionResolveResponse resolveSlug(String slug) {
+        Exhibition exhibition = exhibitionRepository.findBySlug(slug)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_NOT_FOUND));
+        return ExhibitionResolveResponse.of(exhibition.getId());
+    }
+
+    @Override
     public ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request) {
         Exhibition exhibition = Exhibition.builder()
                 .account(null) //TODO: JWT -> v2 에서 연동함

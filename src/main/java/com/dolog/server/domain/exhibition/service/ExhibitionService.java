@@ -14,6 +14,7 @@ public interface ExhibitionService {
 
     // 전시 조회
     ExhibitionMainResponse getMainExhibitions(String sort);
+    ExhibitionResolveResponse resolveSlug(String slug);
     List<ExhibitionListItemResponse> getExhibitions(Boolean isPublic, String univName, String search);
     ExhibitionIntegratedResponse getExhibitionDetails(UUID exhibitionId);
     ExhibitionFooterResponse getFooterInfo(UUID exhibitionId);
