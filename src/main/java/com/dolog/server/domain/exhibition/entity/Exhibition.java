@@ -44,19 +44,19 @@ public class Exhibition extends BaseEntity {
     @OneToOne(mappedBy = "exhibition", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ExhibitionDetail exhibitionDetail;
 
-    public void updateBasicInfo(String univName, String deptName, Boolean isPublic) {
+    public void updateBasicInfo(String univName, String deptName, String slug, Boolean isPublic) {
         if (univName != null) {
             this.univName = univName;
         }
         if (deptName != null) {
             this.deptName = deptName;
         }
+        if (slug != null) {
+            this.slug = slug;
+        }
         if (isPublic != null) {
             this.isPublic = isPublic;
         }
     }
 
-    public void updateSlug(String slug) {
-        this.slug = slug;
-    }
 }

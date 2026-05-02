@@ -7,6 +7,7 @@ import com.dolog.server.global.exception.jwt.JwtUnsupportedException;
 import com.dolog.server.global.response.ErrorResponse;
 import com.dolog.server.global.response.code.GlobalErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -75,6 +76,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(error.getHttpStatus()).body(error);
     }
 
+
+    /* DB unique 제약 위반 (동시 요청 경합 등) */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    private ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("DataIntegrityViolationException Error", e);
+        ErrorResponse error = ErrorResponse.of(GlobalErrorCode.CONFLICT_ERROR);
+        return ResponseEntity.status(error.getHttpStatus()).body(error);
+    }
 
     /* 비지니스 로직 에러 */
     @ExceptionHandler(BaseException.class)
