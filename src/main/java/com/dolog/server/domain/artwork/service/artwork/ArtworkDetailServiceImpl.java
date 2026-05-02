@@ -58,6 +58,7 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                 .material(artwork.getMaterial())
                 .size(artwork.getSize())
                 .description(artwork.getDescription())
+                .youtubeUrl(artwork.getYoutubeUrl())
                 .purchaseUrl(artwork.getPurchaseUrl())
                 .mainImage(artwork.getMainImg())
                 .locationMap(artwork.getLocationMap())

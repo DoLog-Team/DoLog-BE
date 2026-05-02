@@ -121,7 +121,6 @@ public class ArtworkServiceImpl implements ArtworkService {
             throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
         }
 
-        // ArtworkServiceImpl.java
         Artwork artwork = Artwork.builder()
                 .exhibition(profile.getExhibition())
                 .exhibitionZone(exhibitionZone)
@@ -132,6 +131,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                 .description(request.getDescription())
                 .mainImg(mainImgUrl)
                 .locationMap(locationMapUrl)
+                .youtubeUrl(request.getYoutubeUrl())
                 .purchaseUrl(request.getPurchaseUrl())
                 .build();
 

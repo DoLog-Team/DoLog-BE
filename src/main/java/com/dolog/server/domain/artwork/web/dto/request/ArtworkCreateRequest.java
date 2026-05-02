@@ -35,6 +35,8 @@ public class ArtworkCreateRequest {
 
     private String purchaseUrl;
 
+    private String youtubeUrl;
+
     private Integer orderIndex;
 
     private String artistRole;

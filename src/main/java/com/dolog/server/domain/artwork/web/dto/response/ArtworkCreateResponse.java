@@ -19,6 +19,7 @@ public class ArtworkCreateResponse {
     private String size;
     private String description;
     private String mainImage;
+    private String youtubeUrl;
     private String purchaseUrl;
     private Integer orderIndex;
 
@@ -26,7 +27,6 @@ public class ArtworkCreateResponse {
     private String artistName;
     private String locationMap;
 
-    // Static Factory Method
     public static ArtworkCreateResponse of(Artwork artwork, String artistName) {
         return ArtworkCreateResponse.builder()
                 .id(artwork.getId())
@@ -36,6 +36,7 @@ public class ArtworkCreateResponse {
                 .size(artwork.getSize())
                 .description(artwork.getDescription())
                 .mainImage(artwork.getMainImg())
+                .youtubeUrl(artwork.getYoutubeUrl())
                 .purchaseUrl(artwork.getPurchaseUrl())
                 .orderIndex(artwork.getOrderIndex())
                 .exhibitionId(artwork.getExhibition().getId())

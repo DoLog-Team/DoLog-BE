@@ -63,6 +63,9 @@ public class Artwork extends BaseEntity implements Orderable {
     @Column(name = "purchase_url")
     private String purchaseUrl;
 
+    @Column(name = "youtube_url")
+    private String youtubeUrl;
+
     @Column(name = "order_index")
     private Integer orderIndex;
 
@@ -72,13 +75,22 @@ public class Artwork extends BaseEntity implements Orderable {
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 
 
-    public void updateBasicInfo(String title, String intro, String description, String purchaseUrl) {
+    /**
+     * 기본 정보 업데이트
+     */
+    public void updateBasicInfo(String title, String description, String purchaseUrl, String youtubeUrl) {
         if (title != null) this.title = title;
         if (description != null) this.description = description;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
+        if (youtubeUrl != null) this.youtubeUrl = youtubeUrl;
     }
 
-    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone, String material, String size, String mainImg, String locationMap,String purchaseUrl) {
+    /**
+     * 모든 정보 업데이트
+     */
+    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone,
+                              String material, String size, String mainImg, String locationMap,
+                              String purchaseUrl, String youtubeUrl) {
         if (title != null) this.title = title;
         if (description != null) this.description = description;
         if (category != null) this.category = category;
@@ -88,6 +100,7 @@ public class Artwork extends BaseEntity implements Orderable {
         if (mainImg != null) this.mainImg = mainImg;
         if (locationMap != null) this.locationMap = locationMap;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
+        if (youtubeUrl != null) this.youtubeUrl = youtubeUrl;
     }
 
 
