@@ -9,5 +9,6 @@ public class ExhibitionUpdateRequest {
 
     private String univName;
     private String deptName;
+    private String slug;
     private Boolean isPublic;
 }
