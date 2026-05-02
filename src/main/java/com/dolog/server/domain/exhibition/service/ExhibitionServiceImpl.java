@@ -215,6 +215,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .account(null) //TODO: JWT -> v2 에서 연동함
                 .univName(request.getUnivName())
                 .deptName(request.getDeptName())
+                .slug(request.getSlug())
                 .isPublic(request.getIsPublic() != null ? request.getIsPublic() : true)
                 .build();
 
@@ -222,6 +223,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
         return ExhibitionCreateResponse.builder()
                 .id(saved.getId().toString())
+                .slug(saved.getSlug())
                 .message("전시회가 성공적으로 등록되었습니다.")
                 .build();
     }

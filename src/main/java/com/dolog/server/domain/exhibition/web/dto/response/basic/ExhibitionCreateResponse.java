@@ -8,5 +8,6 @@ import lombok.Getter;
 public class ExhibitionCreateResponse {
 
     private String id;
+    private String slug;
     private String message;
 }
