@@ -59,7 +59,4 @@ public class Exhibition extends BaseEntity {
         }
     }
 
-    public void updateSlug(String slug) {
-        this.slug = slug;
-    }
 }
