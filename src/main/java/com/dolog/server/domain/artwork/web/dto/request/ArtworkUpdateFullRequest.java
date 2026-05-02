@@ -21,6 +21,7 @@ public class ArtworkUpdateFullRequest {
     private Integer prevOrder;
     private Integer nextOrder;
 
+    private String youtubeUrl;
     private String purchaseUrl;
     private List<UUID> artistIds = new ArrayList<>();
     private List<ImageUpdateDto> images = new ArrayList<>();

@@ -17,8 +17,9 @@ public class ArtworkDetailResponse {
     private String size;
     private String description;
     private String purchaseUrl;
+    private String youtubeUrl;
     private String mainImage;
-    private String locationMap; // ✨ 추가: 작품별 개별 위치 지도 URL
+    private String locationMap;
     private List<DetailImageInfo> detailImages;
     private List<ParticipantInfo> participants;
     private List<RelatedBtsInfo> relatedBts;
@@ -62,6 +63,6 @@ public class ArtworkDetailResponse {
         private UUID id;
         private String title;
         private String category;
-        private String artistName; // "홍길동, 김철수" 형태로 반환
+        private String artistName;
     }
 }

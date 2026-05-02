@@ -17,6 +17,7 @@ public class ArtworkUpdateRequest {
     private String material;
     private String size;
     private String description;
+    private String youtubeUrl;
     private String purchaseUrl;
     private Integer orderIndex;
 

@@ -82,7 +82,8 @@ public class ArtworkUpdateServiceImpl implements ArtworkUpdateService {
                 request.getSize(),
                 mainImgUrl,
                 locationMapUrl,
-                request.getPurchaseUrl()
+                request.getPurchaseUrl(),
+                request.getYoutubeUrl()
         );
 
         return ArtworkCreateResponse.of(artwork, artistName);
@@ -111,7 +112,8 @@ public class ArtworkUpdateServiceImpl implements ArtworkUpdateService {
                 artwork.getSize(),
                 artwork.getMainImg(),
                 artwork.getLocationMap(),
-                request.getPurchaseUrl()
+                request.getPurchaseUrl(),
+                request.getYoutubeUrl()
         );
 
         artworkArtistService.updateArtworkArtists(artwork, request.getArtistIds());
