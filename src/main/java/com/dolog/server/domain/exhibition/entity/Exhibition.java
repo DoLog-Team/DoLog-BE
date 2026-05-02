@@ -32,7 +32,7 @@ public class Exhibition extends BaseEntity {
     @Column(name = "dept_name", length = 100)
     private String deptName;
 
-    @Column(name = "slug", length = 100, unique = true)
+    @Column(name = "slug", length = 100, unique = true, nullable = false)
     private String slug;
 
     @Column(name = "is_public", nullable = false)
