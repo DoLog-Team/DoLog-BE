@@ -33,11 +33,11 @@ public class BannerController {
     }
 
     @Operation(summary = "메인 배너 이미지 등록/교체")
-    @PutMapping("/mainbanner/{id}")
+    @PutMapping(value = "/mainbanner/{id}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public ResponseEntity<SuccessResponse<MainBannerResponse>> updateMainBanner(
             @PathVariable Long id,
-            @Valid @RequestBody MainBannerUpdateRequest request) {
+            @Valid @ModelAttribute MainBannerUpdateRequest request) {
         MainBannerResponse response = mainBannerService.updateMainBanner(id, request);
         return ResponseEntity.ok(SuccessResponse.ok(response));
     }
