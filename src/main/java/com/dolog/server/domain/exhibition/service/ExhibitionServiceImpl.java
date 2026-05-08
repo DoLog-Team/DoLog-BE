@@ -326,11 +326,15 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         // 로고 이미지 처리
         String logoImgUrl = null;
         if (request.getLogoImg() != null && !request.getLogoImg().isEmpty()) {
-            String newLogoUrl = fileService.uploadFile(request.getLogoImg(), "logos");
-            if (!isNew && exhibitionDetail.getLogoImg() != null) {
-                fileService.deleteFile(exhibitionDetail.getLogoImg());
+            try {
+                String newLogoUrl = fileService.uploadFile(request.getLogoImg(), "logos");
+                if (!isNew && exhibitionDetail.getLogoImg() != null) {
+                    fileService.deleteFile(exhibitionDetail.getLogoImg());
+                }
+                logoImgUrl = newLogoUrl;
+            } catch (IllegalArgumentException e) {
+                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
             }
-            logoImgUrl = newLogoUrl;
         }
 
         // 5. 업데이트
