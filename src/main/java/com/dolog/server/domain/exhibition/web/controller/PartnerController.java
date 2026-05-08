@@ -13,6 +13,7 @@ import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -54,24 +55,49 @@ public class PartnerController {
     // 멤버 등록
     @Operation(summary = "도움을 주신 분들 멤버 등록")
     @PreAuthorize("hasRole('DEVELOPER')")
-    @PostMapping("/parts/{partId}/members")
+    @PostMapping(
+            value = "/parts/{partId}/members",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<SuccessResponse<PartnerMemberResponse>> createMember(
             @PathVariable UUID partId,
-            @Valid @RequestBody PartnerMemberCreateRequest request
+            @Valid @ModelAttribute PartnerMemberCreateRequest request
     ) {
-        PartnerMemberResponse data = exhibitionPartnerService.createMember(partId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data));
+        PartnerMemberResponse data =
+                exhibitionPartnerService.createMember(partId, request);
+
+        System.out.println("REQUEST = " + request);
+
+        System.out.println("memberName = " + request.getMemberName());
+        System.out.println("memberNameEn = " + request.getMemberNameEn());
+        System.out.println("memberEmail = " + request.getMemberEmail());
+        System.out.println("memberImage = " + request.getMemberImage());
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(data));
     }
 
     // 멤버 수정
     @Operation(summary = "도움을 주신 분들 멤버 수정")
     @PreAuthorize("hasRole('DEVELOPER')")
-    @PatchMapping("/members/{memberId}")
+    @PatchMapping(
+            value = "/members/{memberId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public SuccessResponse<PartnerMemberResponse> updateMember(
             @PathVariable UUID memberId,
-            @RequestBody PartnerMemberUpdateRequest request
+            @ModelAttribute PartnerMemberUpdateRequest request
     ) {
-        PartnerMemberResponse data = exhibitionPartnerService.updateMember(memberId, request);
+
+        System.out.println("memberName = " + request.getMemberName());
+        System.out.println("memberNameEn = " + request.getMemberNameEn());
+        System.out.println("memberEmail = " + request.getMemberEmail());
+        System.out.println("memberImage = " + request.getMemberImage());
+
+        PartnerMemberResponse data =
+                exhibitionPartnerService.updateMember(memberId, request);
+
         return SuccessResponse.ok(data, "멤버 정보가 성공적으로 수정되었습니다.");
     }
 
