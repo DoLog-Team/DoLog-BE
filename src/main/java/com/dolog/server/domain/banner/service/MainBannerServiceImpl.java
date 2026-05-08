@@ -41,12 +41,13 @@ public class MainBannerServiceImpl implements MainBannerService {
         String imageUrl = banner.getImageUrl();
         if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
             try {
+                String newImageUrl = fileService.uploadFile(request.getImageFile(), "banners");
                 if (imageUrl != null) {
                     fileService.deleteFile(imageUrl);
                 }
-                imageUrl = fileService.uploadFile(request.getImageFile(), "banners");
+                imageUrl = newImageUrl;
             } catch (IOException e) {
-                throw new RuntimeException("배너 이미지 업로드 중 오류가 발생했습니다.");
+                throw new BannerException(BannerErrorCode.BANNER_IMAGE_UPLOAD_FAILED);
             }
         }
 
@@ -61,6 +62,9 @@ public class MainBannerServiceImpl implements MainBannerService {
         MainBanner banner = mainBannerRepository.findById(id)
                 .orElseThrow(() -> new BannerException(BannerErrorCode.BANNER_NOT_FOUND));
 
+        if (banner.getImageUrl() != null) {
+            fileService.deleteFile(banner.getImageUrl());
+        }
         mainBannerRepository.delete(banner);
 
         return BannerMessageResponse.builder()
