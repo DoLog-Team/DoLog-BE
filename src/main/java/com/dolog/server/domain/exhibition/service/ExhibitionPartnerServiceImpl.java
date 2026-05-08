@@ -15,10 +15,12 @@ import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCre
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartResponse;
+import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,6 +32,7 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
     private final ExhibitionRepository exhibitionRepository;
     private final PartnerRepository partnerRepository;
     private final PartnerMemberRepository partnerMemberRepository;
+    private final FileService fileService;
 
     @Override
     @Transactional(readOnly = true)
@@ -84,15 +87,27 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
     @Override
     public PartnerMemberResponse createMember(UUID partId, PartnerMemberCreateRequest request) {
+
         Partner partner = partnerRepository.findById(partId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
+
+        String imageUrl = null;
+
+        try {
+            imageUrl = fileService.uploadFile(
+                    request.getMemberImage(),
+                    "partners"
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         PartnerMember member = PartnerMember.builder()
                 .partner(partner)
                 .name(request.getMemberName())
                 .nameEn(request.getMemberNameEn())
-                .imageUrl(request.getMemberImageUrl())
                 .email(request.getMemberEmail())
+                .imageUrl(imageUrl)
                 .build();
 
         partnerMemberRepository.save(member);
@@ -102,10 +117,32 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
     @Override
     public PartnerMemberResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request) {
+
         PartnerMember member = partnerMemberRepository.findById(memberId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND));
 
-        member.update(request.getMemberName(), request.getMemberNameEn(), request.getMemberEmail(), request.getMemberImageUrl());
+        String imageUrl = member.getImageUrl();
+
+        try {
+            if (request.getMemberImage() != null && !request.getMemberImage().isEmpty()) {
+
+                fileService.deleteFile(member.getImageUrl());
+
+                imageUrl = fileService.uploadFile(
+                        request.getMemberImage(),
+                        "partners"
+                );
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        member.update(
+                request.getMemberName(),
+                request.getMemberNameEn(),
+                request.getMemberEmail(),
+                imageUrl
+        );
 
         return PartnerMemberResponse.from(member);
     }
