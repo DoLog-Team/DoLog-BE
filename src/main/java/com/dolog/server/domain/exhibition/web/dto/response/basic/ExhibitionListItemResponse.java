@@ -46,7 +46,7 @@ public class ExhibitionListItemResponse {
                 .imageUrl(detail != null ? detail.getExhibitionImg() : null)
                 .startDate(detail != null && detail.getStartDate() != null ? detail.getStartDate().toString() : null)
                 .endDate(detail != null && detail.getEndDate() != null ? detail.getEndDate().toString() : null)
-                .address(detail != null ? detail.getAddress() : null)
+                .address(exhibition.getExhibitionMap() != null ? exhibition.getExhibitionMap().getAddress() : null)
                 .dDay(dDay)
                 .build();
     }
