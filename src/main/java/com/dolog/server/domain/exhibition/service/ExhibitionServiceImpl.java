@@ -323,6 +323,16 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
         }
 
+        // 로고 이미지 처리
+        String logoImgUrl = null;
+        if (request.getLogoImg() != null && !request.getLogoImg().isEmpty()) {
+            String newLogoUrl = fileService.uploadFile(request.getLogoImg(), "logos");
+            if (!isNew && exhibitionDetail.getLogoImg() != null) {
+                fileService.deleteFile(exhibitionDetail.getLogoImg());
+            }
+            logoImgUrl = newLogoUrl;
+        }
+
         // 5. 업데이트
         exhibitionDetail.updateBasicInfo(
                 request.getTitle() != null ? request.getTitle() : exhibitionDetail.getTitle(),
@@ -332,7 +342,8 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 request.getEndDate() != null ? request.getEndDate() : exhibitionDetail.getEndDate(),
                 request.getDateInfo() != null ? request.getDateInfo() : exhibitionDetail.getDateInfo(),
                 request.getEmail() != null ? request.getEmail() : exhibitionDetail.getEmail(),
-                request.getLocationDescription() != null ? request.getLocationDescription() : exhibitionDetail.getLocationDescription()
+                request.getLocationDescription() != null ? request.getLocationDescription() : exhibitionDetail.getLocationDescription(),
+                logoImgUrl
         );
 
         // 6. 저장
