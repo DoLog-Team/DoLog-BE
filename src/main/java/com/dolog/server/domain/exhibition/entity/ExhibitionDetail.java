@@ -26,19 +26,19 @@ public class ExhibitionDetail extends BaseEntity {
     @JoinColumn(name = "exhibition_id", nullable = false, unique = true)
     private Exhibition exhibition;
 
-    @Column(length = 255)
+    @Column(length = 255, nullable = false)
     private String title;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "exhibition_img")
+    @Column(name = "exhibition_img", nullable = false)
     private String exhibitionImg;
 
-    @Column(name = "start_date")
+    @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
 
-    @Column(name = "end_date")
+    @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
     @Column(name = "date_info", columnDefinition = "TEXT")

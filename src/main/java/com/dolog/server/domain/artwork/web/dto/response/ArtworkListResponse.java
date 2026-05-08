@@ -16,6 +16,7 @@ public class ArtworkListResponse {
     private String imageUrl;
 
     private UUID exhibitionId;
+    private String slug;
     private String exhibitionTitle;
     private String artistName;
 

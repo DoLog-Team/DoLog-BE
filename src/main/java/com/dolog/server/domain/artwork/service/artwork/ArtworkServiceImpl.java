@@ -265,6 +265,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                             .imageUrl(a.getMainImg())
 
                             .exhibitionId(exId)
+                            .slug(a.getExhibition().getSlug())
                             .exhibitionTitle(exTitle)
                             .artistName(artistMap.getOrDefault(a.getId(), "Unknown Artist"))
 
@@ -289,14 +290,16 @@ public class ArtworkServiceImpl implements ArtworkService {
         List<CategoryArtworkResponse> categoryResponses = groupedByCategory.entrySet().stream()
                 .map(entry -> {
                     String categoryName = entry.getKey();
-                    // orderIndex 기준 정렬 후 상위 3개 선택
+                    // orderIndex 기준 정렬 후 상위 4개 선택
                     List<CategoryArtworkResponse.SimpleArtworkResponse> simpleArtworks = entry.getValue().stream()
                             .sorted(Comparator.comparingInt(a -> a.getOrderIndex() != null ? a.getOrderIndex() : Integer.MAX_VALUE))
-                            .limit(3)
+                            .limit(4)
                             .map(a -> CategoryArtworkResponse.SimpleArtworkResponse.builder()
                                     .id(a.getId())
                                     .title(a.getTitle())
                                     .imageUrl(a.getMainImg())
+                                    .exhibitionId(a.getExhibition().getId())
+                                    .slug(a.getExhibition().getSlug())
                                     .exhibitionTitle(exhibitionDetailMap.getOrDefault(a.getExhibition().getId(), "Unknown Exhibition"))
                                     .artistName(artistMap.getOrDefault(a.getId(), "Unknown Artist"))
                                     .build())

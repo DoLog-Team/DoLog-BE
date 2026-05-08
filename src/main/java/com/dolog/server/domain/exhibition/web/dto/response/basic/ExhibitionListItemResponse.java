@@ -21,6 +21,7 @@ public class ExhibitionListItemResponse {
     private String imageUrl;
     private String startDate;
     private String endDate;
+    private String address;
 
     private Long dDay;
 
@@ -45,6 +46,7 @@ public class ExhibitionListItemResponse {
                 .imageUrl(detail != null ? detail.getExhibitionImg() : null)
                 .startDate(detail != null && detail.getStartDate() != null ? detail.getStartDate().toString() : null)
                 .endDate(detail != null && detail.getEndDate() != null ? detail.getEndDate().toString() : null)
+                .address(exhibition.getExhibitionMap() != null ? exhibition.getExhibitionMap().getAddress() : null)
                 .dDay(dDay)
                 .build();
     }
