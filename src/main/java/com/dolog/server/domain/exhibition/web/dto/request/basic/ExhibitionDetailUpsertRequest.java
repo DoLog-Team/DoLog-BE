@@ -37,4 +37,6 @@ public class ExhibitionDetailUpsertRequest {
 
     //@NotBlank(message = "전시회 설명은 필수 입력 항목입니다.")
     private String description;
+
+    private MultipartFile logoImg;
 }
