@@ -290,7 +290,7 @@ public class ArtworkServiceImpl implements ArtworkService {
         List<CategoryArtworkResponse> categoryResponses = groupedByCategory.entrySet().stream()
                 .map(entry -> {
                     String categoryName = entry.getKey();
-                    // orderIndex 기준 정렬 후 상위 3개 선택
+                    // orderIndex 기준 정렬 후 상위 4개 선택
                     List<CategoryArtworkResponse.SimpleArtworkResponse> simpleArtworks = entry.getValue().stream()
                             .sorted(Comparator.comparingInt(a -> a.getOrderIndex() != null ? a.getOrderIndex() : Integer.MAX_VALUE))
                             .limit(4)

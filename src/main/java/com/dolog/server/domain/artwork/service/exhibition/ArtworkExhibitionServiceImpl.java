@@ -111,7 +111,9 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
                 .id(a.getId())
                 .title(a.getTitle())
                 .imageUrl(a.getMainImg())
-                .exhibitionTitle(exhibitionTitle) // 빨간 불 해결!
+                .exhibitionId(a.getExhibition() != null ? a.getExhibition().getId() : null)
+                .slug(a.getExhibition() != null ? a.getExhibition().getSlug() : null)
+                .exhibitionTitle(exhibitionTitle)
                 .artistName(artistNames)
                 .build();
     }
