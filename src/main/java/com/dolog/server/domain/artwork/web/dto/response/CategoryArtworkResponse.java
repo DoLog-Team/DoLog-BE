@@ -21,6 +21,8 @@ public class CategoryArtworkResponse {
         private UUID id;
         private String title;
         private String imageUrl;
+        private UUID exhibitionId;
+        private String slug;
         private String exhibitionTitle;
         private String artistName;
     }
