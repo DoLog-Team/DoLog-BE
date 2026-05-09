@@ -8,4 +8,4 @@ WORKDIR /app
 COPY build/libs/*.jar /app/app.jar
 
 # 실행
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]
