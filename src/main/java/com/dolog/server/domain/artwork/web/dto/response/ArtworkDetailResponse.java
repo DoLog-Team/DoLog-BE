@@ -56,6 +56,7 @@ public class ArtworkDetailResponse {
         private UUID id;
         private String title;
         private String mainImg;
+        private String author;
     }
 
     @Getter @Builder

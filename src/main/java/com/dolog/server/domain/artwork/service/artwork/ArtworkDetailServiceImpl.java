@@ -37,11 +37,18 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
 
         // 2. 해당 작품과 연관된 BTS 콘텐츠 조회
         List<ArtworkDetailResponse.RelatedBtsInfo> relatedBts = btsRepository.findAllByArtworkId(artworkId).stream()
-                .map(bts -> ArtworkDetailResponse.RelatedBtsInfo.builder()
-                        .id(bts.getId())
-                        .title(bts.getTitle())
-                        .mainImg(bts.getMainImg())
-                        .build())
+                .map(bts -> {
+                    String authorName = (bts.getArtistProfile() != null)
+                            ? bts.getArtistProfile().getNameKo()
+                            : "작가 미상";
+
+                    return ArtworkDetailResponse.RelatedBtsInfo.builder()
+                            .id(bts.getId())
+                            .title(bts.getTitle())
+                            .mainImg(bts.getMainImg())
+                            .author(authorName)
+                            .build();
+                })
                 .toList();
 
         // 2. 동일 카테고리 인근 작품 2개 조회
