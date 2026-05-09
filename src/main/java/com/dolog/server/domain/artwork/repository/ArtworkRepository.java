@@ -81,6 +81,30 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             UUID exhibitionId,
             UUID zoneId
     );
+
+    // 현재 작품 제목보다 사전순으로 작은 작품 중 가장 마지막 것 1개
+    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId AND a.title < :title ORDER BY a.title DESC LIMIT 1")
+    Optional<Artwork> findPrevByTitle(@Param("exhibitionId") UUID exhibitionId, @Param("title") String title);
+
+    // 현재 작품 제목보다 사전순으로 큰 작품 중 가장 처음 것 1개
+    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId AND a.title > :title ORDER BY a.title ASC LIMIT 1")
+    Optional<Artwork> findNextByTitle(@Param("exhibitionId") UUID exhibitionId, @Param("title") String title);
+
+    // 현재 작품 ID보다 작은 ID 중 가장 큰 것 1개 (이전 작품)
+    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId " +
+            "AND a.category = :category AND a.id < :id " +
+            "ORDER BY a.id DESC LIMIT 1")
+    Optional<Artwork> findPrevByCategory(@Param("exhibitionId") UUID exhibitionId,
+                                         @Param("category") String category,
+                                         @Param("id") UUID id);
+
+    // 현재 작품 ID보다 큰 ID 중 가장 작은 것 1개 (다음 작품)
+    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId " +
+            "AND a.category = :category AND a.id > :id " +
+            "ORDER BY a.id ASC LIMIT 1")
+    Optional<Artwork> findNextByCategory(@Param("exhibitionId") UUID exhibitionId,
+                                         @Param("category") String category,
+                                         @Param("id") UUID id);
 }
 
 
