@@ -46,7 +46,7 @@ jobs:
               -v /etc/localtime:/etc/localtime:ro \
               -v /etc/timezone:/etc/timezone:ro \
               -e TZ=Asia/Seoul \
-              -e JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseSerialGC -XX:MaxRAMPercentage=75"
+              -e JAVA_OPTS="-Xms128m -Xmx384m -XX:+UseSerialGC -XX:MaxRAMPercentage=75" \
               -p 8080:8080 \
               ${{ env.IMAGE }}:latest
             
