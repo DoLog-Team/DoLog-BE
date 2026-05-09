@@ -1,9 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.artist.entity.Artist;
-import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
-import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
@@ -91,7 +89,12 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         }
 
         // 기본: 가나다순
-        artists.sort(Comparator.comparing(ExhibitionArtistListResponse::getNameKo));
+        artists.sort(
+                Comparator.comparing(
+                        ExhibitionArtistListResponse::getNameKo,
+                        Comparator.nullsLast(String::compareTo)
+                )
+        );
 
         return artists;
     }

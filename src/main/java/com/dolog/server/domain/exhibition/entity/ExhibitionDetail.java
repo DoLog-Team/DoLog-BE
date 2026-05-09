@@ -1,7 +1,6 @@
 package com.dolog.server.domain.exhibition.entity;
 
 import com.dolog.server.domain.exhibition.entity.enums.SortType;
-import com.dolog.server.domain.exhibition.entity.enums.ThemeType;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -50,14 +49,13 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "address_detail", columnDefinition = "TEXT")
     private String addressDetail;
 
+    @Column(name = "location_description", columnDefinition = "TEXT")
+    private String locationDescription;
+
     @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(name = "sort_type", nullable = false)
     private SortType sortType = SortType.ABC;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "theme_type")
-    private ThemeType themeType;
 
     @Column(name = "splash_img")
     private String splashImg;
@@ -68,9 +66,6 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(length = 255)
     private String email;
 
-    @Column(name = "location_description", columnDefinition = "TEXT")
-    private String locationDescription;
-
     @Column(length = 255)
     private String copyright;
 
@@ -78,53 +73,65 @@ public class ExhibitionDetail extends BaseEntity {
         this.splashImg = splashImg;
     }
 
-    public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                                String dateInfo, String email, String locationDescription, String logoImg) {
-        this.title = title;
-        this.description = description;
-        this.exhibitionImg = exhibitionImg;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.dateInfo = dateInfo;
-        this.email = email;
-        this.locationDescription = locationDescription;
-        if (logoImg != null) {
-            this.logoImg = logoImg;
+    public void update(
+            String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
+            String dateInfo, String address, String addressDetail, SortType sortType,
+            String splashImg, String email, String copyright, String locationDescription, String logoImg
+    ) {
+        if (title != null) {
+            this.title = title;
         }
-    }
 
-    public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                       String dateInfo, String address, String addressDetail, SortType sortType, ThemeType themeType, String splashImg,
-                       String email, String copyright) {
-        this.title = title;
-        this.description = description;
-        this.exhibitionImg = exhibitionImg;
-        this.startDate = startDate;
-        this.endDate = endDate;
+        if (description != null) {
+            this.description = description;
+        }
+
+        if (exhibitionImg != null) {
+            this.exhibitionImg = exhibitionImg;
+        }
+
+        if (startDate != null) {
+            this.startDate = startDate;
+        }
+
+        if (endDate != null) {
+            this.endDate = endDate;
+        }
 
         if (dateInfo != null) {
             this.dateInfo = dateInfo;
         }
+
         if (address != null) {
             this.address = address;
         }
+
         if (addressDetail != null) {
             this.addressDetail = addressDetail;
         }
+
         if (sortType != null) {
             this.sortType = sortType;
         }
-        if (themeType != null) {
-            this.themeType = themeType;
-        }
+
         if (splashImg != null) {
             this.splashImg = splashImg;
         }
+
         if (email != null) {
             this.email = email;
         }
+
         if (copyright != null) {
             this.copyright = copyright;
+        }
+
+        if (locationDescription != null) {
+            this.locationDescription = locationDescription;
+        }
+
+        if (logoImg != null) {
+            this.logoImg = logoImg;
         }
     }
 }

@@ -22,6 +22,9 @@ public class ExhibitionDetailUpsertRequest {
     //@NotNull(message = "전시회 이미지는 필수 입력 항목입니다.")
     private MultipartFile exhibitionImg;
 
+    //@NotBlank(message = "전시회 설명은 필수 입력 항목입니다.")
+    private String description;
+
     //@NotNull(message = "시작일은 필수 입력 항목입니다.")
     private LocalDate startDate;
 
@@ -33,10 +36,13 @@ public class ExhibitionDetailUpsertRequest {
     //@NotBlank(message = "주최 기관 이메일은 필수 입력 항목입니다.")
     private String email;
 
+    private String address;
+
+    private String addressDetail;
+
     private String locationDescription;
 
-    //@NotBlank(message = "전시회 설명은 필수 입력 항목입니다.")
-    private String description;
-
     private MultipartFile logoImg;
+
+    private String copyright;
 }
