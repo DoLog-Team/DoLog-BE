@@ -65,5 +65,6 @@ public class ArtworkDetailResponse {
         private String title;
         private String category;
         private String artistName;
+        private String mainImage;
     }
 }
