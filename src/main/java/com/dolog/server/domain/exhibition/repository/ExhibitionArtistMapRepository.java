@@ -18,6 +18,7 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
 
     @Query("""
         SELECT new com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse(
+            a.id,
             p.id,
             a.nameKo,
             a.nameEn,
