@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+#  mysql:
+#    image: mysql:8
+#    container_name: local-mysql
+#    environment:
+#      MYSQL_ROOT_PASSWORD: root
+#      MYSQL_DATABASE: dolog
+#    ports:
+#      - "3306:3306"
+#    volumes:
+#      - mysql-data:/var/lib/mysql
+
+  localstack:
+    image: localstack/localstack
+    container_name: localstack
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+    ports:
+      - "4566:4566"
+
+volumes:
+  mysql-data:
