@@ -19,7 +19,6 @@ import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,7 +29,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -72,7 +70,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                             .limit(3)
                             .toList();
         }
-        // ✅ DEFAULT (핵심 로직)
         else {
 
             List<Exhibition> list =
@@ -86,24 +83,20 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         boolean ongoing1 = !s1.isAfter(today);
                         boolean ongoing2 = !s2.isAfter(today);
 
-                        // 1️⃣ 진행중 먼저
                         if (ongoing1 != ongoing2) {
                             return ongoing1 ? -1 : 1;
                         }
 
-                        // 2️⃣ 둘 다 진행중 → startDate DESC (-2 먼저)
                         if (ongoing1) {
                             return s2.compareTo(s1);
                         }
 
-                        // 3️⃣ 둘 다 예정 → startDate ASC (1 먼저)
                         return s1.compareTo(s2);
                     })
                     .limit(3)
                     .toList();
         }
 
-        // ✅ DTO 변환 + D-day
         List<ExhibitionListItemResponse> items = exhibitions.stream()
                 .map(e -> {
                     ExhibitionDetail d = e.getExhibitionDetail();
@@ -160,7 +153,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
 
         ExhibitionMap map = exhibitionMapRepository.findByExhibitionId(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+                .orElse(null);
 
         return ExhibitionIntegratedResponse.of(detail, map);
     }
@@ -344,12 +337,33 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         // 5. 업데이트
         exhibitionDetail.updateBasicInfo(
                 request.getTitle() != null ? request.getTitle() : exhibitionDetail.getTitle(),
-                request.getDescription() != null ? request.getDescription() : exhibitionDetail.getDescription(),
+
+                request.getDescription() != null
+                        ? request.getDescription().replace("\\n", "\n")
+                        : exhibitionDetail.getDescription(),
+
                 imageUrl,
-                request.getStartDate() != null ? request.getStartDate() : exhibitionDetail.getStartDate(),
-                request.getEndDate() != null ? request.getEndDate() : exhibitionDetail.getEndDate(),
-                request.getDateInfo() != null ? request.getDateInfo() : exhibitionDetail.getDateInfo(),
-                request.getEmail() != null ? request.getEmail() : exhibitionDetail.getEmail(),
+
+                request.getStartDate() != null
+                        ? request.getStartDate()
+                        : exhibitionDetail.getStartDate(),
+
+                request.getEndDate() != null
+                        ? request.getEndDate()
+                        : exhibitionDetail.getEndDate(),
+
+                request.getDateInfo() != null
+                        ? request.getDateInfo().replace("\\n", "\n")
+                        : exhibitionDetail.getDateInfo(),
+
+                request.getEmail() != null
+                        ? request.getEmail()
+                        : exhibitionDetail.getEmail(),
+
+                request.getCopyright() != null
+                        ? request.getCopyright()
+                        : exhibitionDetail.getCopyright(),
+
                 logoImgUrl
         );
 

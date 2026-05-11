@@ -1,7 +1,6 @@
 package com.dolog.server.domain.exhibition.entity;
 
 import com.dolog.server.domain.exhibition.entity.enums.SortType;
-import com.dolog.server.domain.exhibition.entity.enums.ThemeType;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -49,10 +48,6 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "sort_type", nullable = false)
     private SortType sortType = SortType.ABC;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "theme_type")
-    private ThemeType themeType;
-
     @Column(name = "splash_img")
     private String splashImg;
 
@@ -70,7 +65,7 @@ public class ExhibitionDetail extends BaseEntity {
     }
 
     public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                                String dateInfo, String email, String logoImg) {
+                                String dateInfo, String email, String copyright, String logoImg) {
         this.title = title;
         this.description = description;
         this.exhibitionImg = exhibitionImg;
@@ -78,6 +73,9 @@ public class ExhibitionDetail extends BaseEntity {
         this.endDate = endDate;
         this.dateInfo = dateInfo;
         this.email = email;
+        if (copyright != null) {
+            this.copyright = copyright;
+        }
         if (logoImg != null) {
             this.logoImg = logoImg;
         }

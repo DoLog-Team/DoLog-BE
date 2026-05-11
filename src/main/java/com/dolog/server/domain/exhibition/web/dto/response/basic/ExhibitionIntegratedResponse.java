@@ -40,7 +40,7 @@ public class ExhibitionIntegratedResponse {
                 .endDate(detail.getEndDate())
                 .dateInfo(detail.getDateInfo())
                 .description(detail.getDescription())
-                .location(ExhibitionLocationResponse.from(map))
+                .location(map != null ? ExhibitionLocationResponse.from(map) : null)
                 .isPublic(detail.getExhibition().isPublic())
                 .build();
     }

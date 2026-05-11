@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -37,19 +38,39 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
 
         // 2. 해당 작품과 연관된 BTS 콘텐츠 조회
         List<ArtworkDetailResponse.RelatedBtsInfo> relatedBts = btsRepository.findAllByArtworkId(artworkId).stream()
-                .map(bts -> ArtworkDetailResponse.RelatedBtsInfo.builder()
-                        .id(bts.getId())
-                        .title(bts.getTitle())
-                        .mainImg(bts.getMainImg())
-                        .build())
+                .map(bts -> {
+                    String authorName = (bts.getArtistProfile() != null)
+                            ? bts.getArtistProfile().getNameKo()
+                            : "작가 미상";
+
+                    return ArtworkDetailResponse.RelatedBtsInfo.builder()
+                            .id(bts.getId())
+                            .title(bts.getTitle())
+                            .mainImg(bts.getMainImg())
+                            .author(authorName)
+                            .build();
+                })
                 .toList();
 
-        // 2. 동일 카테고리 인근 작품 2개 조회
-        List<Artwork> sameCatList = artworkRepository.findRelatedByCategory(
-                exhibitionId, artwork.getCategory(), artworkId, artwork.getOrderIndex(), PageRequest.of(0, 2));
+        // 2. 동일 카테고리 인근 작품 조회 (단순 UUID 기준 앞뒤)
+        List<Artwork> sameCatList = new ArrayList<>();
 
-        // 3. 가나다순 작품 2개 조회
-        List<Artwork> alphaList = artworkRepository.findTopAlphabetical(exhibitionId, PageRequest.of(0, 2));
+        artworkRepository.findPrevByCategory(exhibitionId, artwork.getCategory(), artworkId)
+                .ifPresent(sameCatList::add);
+
+        artworkRepository.findNextByCategory(exhibitionId, artwork.getCategory(), artworkId)
+                .ifPresent(sameCatList::add);
+
+        // 3. 가나다순 작품 앞뒤 1개씩 조회
+        List<Artwork> alphaList = new ArrayList<>();
+
+        // 이전 작품이 있으면 리스트에 추가
+        artworkRepository.findPrevByTitle(exhibitionId, artwork.getTitle())
+                .ifPresent(alphaList::add);
+
+        // 다음 작품이 있으면 리스트에 추가
+        artworkRepository.findNextByTitle(exhibitionId, artwork.getTitle())
+                .ifPresent(alphaList::add);
 
         // 4. 최종 DTO 조립
         return ArtworkDetailResponse.builder()
@@ -72,8 +93,12 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                         .map(this::convertToParticipantInfo)
                         .toList())
                 .relatedBts(relatedBts)
-                .sameCategoryArtworks(sameCatList.stream().map(this::convertToRelatedInfo).toList())
-                .alphabeticalArtworks(alphaList.stream().map(this::convertToRelatedInfo).toList())
+                .sameCategoryArtworks(sameCatList.stream()
+                        .map(this::convertToRelatedInfo)
+                        .toList())
+                .alphabeticalArtworks(alphaList.stream()
+                        .map(this::convertToRelatedInfo) // 여기서 아까 추가한 mainImage도 함께 변환됨
+                        .toList())
                 .build();
     }
 
@@ -93,6 +118,7 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                 .title(artwork.getTitle())
                 .category(artwork.getCategory())
                 .artistName(combinedArtistNames)
+                .mainImage(artwork.getMainImg())
                 .build();
     }
 
