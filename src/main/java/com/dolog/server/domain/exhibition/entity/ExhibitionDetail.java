@@ -44,12 +44,6 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "date_info", columnDefinition = "TEXT")
     private String dateInfo;
 
-    @Column(columnDefinition = "TEXT")
-    private String address;
-
-    @Column(name = "address_detail", columnDefinition = "TEXT")
-    private String addressDetail;
-
     @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(name = "sort_type", nullable = false)
@@ -68,9 +62,6 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(length = 255)
     private String email;
 
-    @Column(name = "location_description", columnDefinition = "TEXT")
-    private String locationDescription;
-
     @Column(length = 255)
     private String copyright;
 
@@ -79,7 +70,7 @@ public class ExhibitionDetail extends BaseEntity {
     }
 
     public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                                String dateInfo, String email, String locationDescription, String logoImg) {
+                                String dateInfo, String email, String logoImg) {
         this.title = title;
         this.description = description;
         this.exhibitionImg = exhibitionImg;
@@ -87,44 +78,8 @@ public class ExhibitionDetail extends BaseEntity {
         this.endDate = endDate;
         this.dateInfo = dateInfo;
         this.email = email;
-        this.locationDescription = locationDescription;
         if (logoImg != null) {
             this.logoImg = logoImg;
-        }
-    }
-
-    public void update(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                       String dateInfo, String address, String addressDetail, SortType sortType, ThemeType themeType, String splashImg,
-                       String email, String copyright) {
-        this.title = title;
-        this.description = description;
-        this.exhibitionImg = exhibitionImg;
-        this.startDate = startDate;
-        this.endDate = endDate;
-
-        if (dateInfo != null) {
-            this.dateInfo = dateInfo;
-        }
-        if (address != null) {
-            this.address = address;
-        }
-        if (addressDetail != null) {
-            this.addressDetail = addressDetail;
-        }
-        if (sortType != null) {
-            this.sortType = sortType;
-        }
-        if (themeType != null) {
-            this.themeType = themeType;
-        }
-        if (splashImg != null) {
-            this.splashImg = splashImg;
-        }
-        if (email != null) {
-            this.email = email;
-        }
-        if (copyright != null) {
-            this.copyright = copyright;
         }
     }
 }

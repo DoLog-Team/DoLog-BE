@@ -19,12 +19,16 @@ public class ExhibitionLocationResponse {
     private String latitude;
     private String longitude;
 
+    @JsonProperty("location_description")
+    private String locationDescription;
+
     public static ExhibitionLocationResponse from(ExhibitionMap map) {
         return ExhibitionLocationResponse.builder()
                 .address(map.getAddress())
                 .detailLocation(map.getDetailLocation())
                 .latitude(map.getLatitude())
                 .longitude(map.getLongitude())
+                .locationDescription(map.getLocationDescription())
                 .build();
     }
 }

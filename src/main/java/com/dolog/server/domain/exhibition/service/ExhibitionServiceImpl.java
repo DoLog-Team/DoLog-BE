@@ -168,14 +168,18 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     @Transactional(readOnly = true)
     public ExhibitionFooterResponse getFooterInfo(UUID exhibitionId) {
-        Optional<ExhibitionDetail> detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
-        if (detail.isPresent()) {
-            return ExhibitionFooterResponse.from(detail.get());
-        }
-        if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
-        }
-        throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND);
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> {
+                    if (!exhibitionRepository.existsById(exhibitionId)) {
+                        return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+                    }
+                    return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND);
+                });
+
+        ExhibitionMap map = exhibitionMapRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+
+        return ExhibitionFooterResponse.from(detail, map);
     }
 
     @Override
@@ -346,7 +350,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 request.getEndDate() != null ? request.getEndDate() : exhibitionDetail.getEndDate(),
                 request.getDateInfo() != null ? request.getDateInfo() : exhibitionDetail.getDateInfo(),
                 request.getEmail() != null ? request.getEmail() : exhibitionDetail.getEmail(),
-                request.getLocationDescription() != null ? request.getLocationDescription() : exhibitionDetail.getLocationDescription(),
                 logoImgUrl
         );
 

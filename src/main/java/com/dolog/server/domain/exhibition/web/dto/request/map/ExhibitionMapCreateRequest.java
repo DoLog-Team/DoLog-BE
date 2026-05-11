@@ -20,4 +20,7 @@ public class ExhibitionMapCreateRequest {
 
     @NotBlank(message = "필수 값이 누락되었습니다.")
     private String longitude;
+
+    @JsonProperty("location_description")
+    private String locationDescription;
 }
