@@ -153,7 +153,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
 
         ExhibitionMap map = exhibitionMapRepository.findByExhibitionId(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+                .orElse(null);
 
         return ExhibitionIntegratedResponse.of(detail, map);
     }
