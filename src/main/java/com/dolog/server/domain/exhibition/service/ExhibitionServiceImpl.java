@@ -335,7 +335,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 request.getTitle() != null ? request.getTitle() : exhibitionDetail.getTitle(),
 
                 request.getDescription() != null
-                        ? request.getDescription()
+                        ? request.getDescription().replace("\\n", "\n")
                         : exhibitionDetail.getDescription(),
 
                 imageUrl,
@@ -349,7 +349,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         : exhibitionDetail.getEndDate(),
 
                 request.getDateInfo() != null
-                        ? request.getDateInfo()
+                        ? request.getDateInfo().replace("\\n", "\n")
                         : exhibitionDetail.getDateInfo(),
 
                 request.getAddress() != null

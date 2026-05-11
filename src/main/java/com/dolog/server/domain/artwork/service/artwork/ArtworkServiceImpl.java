@@ -128,7 +128,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                 .category(request.getCategory())
                 .material(request.getMaterial())
                 .size(request.getSize())
-                .description(request.getDescription())
+                .description(request.getDescription() != null ? request.getDescription().replace("\\n", "\n") : null)
                 .mainImg(mainImgUrl)
                 .locationMap(locationMapUrl)
                 .youtubeUrl(request.getYoutubeUrl())
