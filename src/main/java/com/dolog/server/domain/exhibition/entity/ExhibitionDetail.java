@@ -43,15 +43,6 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "date_info", columnDefinition = "TEXT")
     private String dateInfo;
 
-    @Column(columnDefinition = "TEXT")
-    private String address;
-
-    @Column(name = "address_detail", columnDefinition = "TEXT")
-    private String addressDetail;
-
-    @Column(name = "location_description", columnDefinition = "TEXT")
-    private String locationDescription;
-
     @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(name = "sort_type", nullable = false)
@@ -73,63 +64,18 @@ public class ExhibitionDetail extends BaseEntity {
         this.splashImg = splashImg;
     }
 
-    public void update(
-            String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-            String dateInfo, String address, String addressDetail, SortType sortType,
-            String splashImg, String email, String copyright, String locationDescription, String logoImg
-    ) {
-        if (title != null) {
-            this.title = title;
-        }
-
-        if (description != null) {
-            this.description = description;
-        }
-
-        if (exhibitionImg != null) {
-            this.exhibitionImg = exhibitionImg;
-        }
-
-        if (startDate != null) {
-            this.startDate = startDate;
-        }
-
-        if (endDate != null) {
-            this.endDate = endDate;
-        }
-
-        if (dateInfo != null) {
-            this.dateInfo = dateInfo;
-        }
-
-        if (address != null) {
-            this.address = address;
-        }
-
-        if (addressDetail != null) {
-            this.addressDetail = addressDetail;
-        }
-
-        if (sortType != null) {
-            this.sortType = sortType;
-        }
-
-        if (splashImg != null) {
-            this.splashImg = splashImg;
-        }
-
-        if (email != null) {
-            this.email = email;
-        }
-
+    public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
+                                String dateInfo, String email, String copyright, String logoImg) {
+        this.title = title;
+        this.description = description;
+        this.exhibitionImg = exhibitionImg;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.dateInfo = dateInfo;
+        this.email = email;
         if (copyright != null) {
             this.copyright = copyright;
         }
-
-        if (locationDescription != null) {
-            this.locationDescription = locationDescription;
-        }
-
         if (logoImg != null) {
             this.logoImg = logoImg;
         }

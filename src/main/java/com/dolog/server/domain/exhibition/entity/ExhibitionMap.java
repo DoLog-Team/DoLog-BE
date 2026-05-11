@@ -35,7 +35,10 @@ public class ExhibitionMap extends BaseEntity {
     @Column(name = "longitude", nullable = false)
     private String longitude;
 
-    public void update(String address, String detailLocation, String latitude, String longitude) {
+    @Column(name = "location_description", columnDefinition = "TEXT")
+    private String locationDescription;
+
+    public void update(String address, String detailLocation, String latitude, String longitude, String locationDescription) {
         if (address != null) {
             this.address = address;
         }
@@ -47,6 +50,9 @@ public class ExhibitionMap extends BaseEntity {
         }
         if (longitude != null) {
             this.longitude = longitude;
+        }
+        if (locationDescription != null) {
+            this.locationDescription = locationDescription;
         }
     }
 }

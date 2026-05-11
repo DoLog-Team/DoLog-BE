@@ -16,4 +16,7 @@ public class ExhibitionMapUpdateRequest {
     private String latitude;
 
     private String longitude;
+
+    @JsonProperty("location_description")
+    private String locationDescription;
 }

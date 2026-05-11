@@ -40,6 +40,7 @@ public class ExhibitionMapServiceImpl implements ExhibitionMapService {
                 .detailLocation(request.getDetailLocation())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
+                .locationDescription(request.getLocationDescription())
                 .build();
 
         ExhibitionMap saved = exhibitionMapRepository.save(exhibitionMap);
@@ -65,7 +66,8 @@ public class ExhibitionMapServiceImpl implements ExhibitionMapService {
                 request.getAddress(),
                 request.getDetailLocation(),
                 request.getLatitude(),
-                request.getLongitude()
+                request.getLongitude(),
+                request.getLocationDescription()
         );
 
         return ExhibitionMapUpdateResponse.builder()

@@ -161,14 +161,18 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     @Transactional(readOnly = true)
     public ExhibitionFooterResponse getFooterInfo(UUID exhibitionId) {
-        Optional<ExhibitionDetail> detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId);
-        if (detail.isPresent()) {
-            return ExhibitionFooterResponse.from(detail.get());
-        }
-        if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
-        }
-        throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND);
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> {
+                    if (!exhibitionRepository.existsById(exhibitionId)) {
+                        return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+                    }
+                    return new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND);
+                });
+
+        ExhibitionMap map = exhibitionMapRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_MAP_NOT_FOUND));
+
+        return ExhibitionFooterResponse.from(detail, map);
     }
 
     @Override
@@ -331,7 +335,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         }
 
         // 5. 업데이트
-        exhibitionDetail.update(
+        exhibitionDetail.updateBasicInfo(
                 request.getTitle() != null ? request.getTitle() : exhibitionDetail.getTitle(),
 
                 request.getDescription() != null
@@ -352,17 +356,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         ? request.getDateInfo().replace("\\n", "\n")
                         : exhibitionDetail.getDateInfo(),
 
-                request.getAddress() != null
-                        ? request.getAddress()
-                        : exhibitionDetail.getAddress(),
-
-                request.getAddressDetail() != null
-                        ? request.getAddressDetail()
-                        : exhibitionDetail.getAddressDetail(),
-
-                null, // sortType
-                        null, // splashImg
-
                 request.getEmail() != null
                         ? request.getEmail()
                         : exhibitionDetail.getEmail(),
@@ -370,10 +363,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 request.getCopyright() != null
                         ? request.getCopyright()
                         : exhibitionDetail.getCopyright(),
-
-                request.getLocationDescription() != null
-                        ? request.getLocationDescription()
-                        : exhibitionDetail.getLocationDescription(),
 
                 logoImgUrl
         );
