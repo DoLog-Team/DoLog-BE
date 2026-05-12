@@ -96,9 +96,10 @@ public class ArtistProfileController {
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
             @PathVariable String profileId,
-            @ModelAttribute ArtistProfileCreateRequest request
+            @ModelAttribute ArtistProfileCreateRequest request,
+            @RequestPart(value = "profileImg", required = false) MultipartFile profileImg
     ) throws Exception {
-        // 서비스 로직에서 null/blank 체크를 통해 전달된 필드만 수정하도록 구현됨
+        request.setProfileImg(profileImg);
         ArtistProfileResponse response = artistProfileService.updateArtistProfile(profileId, request);
         return SuccessResponse.ok(response, "작가 프로필 수정 성공");
     }
