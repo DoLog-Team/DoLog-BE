@@ -21,7 +21,7 @@ public class ExhibitionMetaResponse {
                 .id(exhibition.getId().toString())
                 .title(detail.getTitle())
                 .description(detail.getDescription())
-                .image(detail.getExhibitionImg())
+                .image(detail.getOgImage() != null ? detail.getOgImage() : detail.getExhibitionImg())
                 .build();
     }
 }

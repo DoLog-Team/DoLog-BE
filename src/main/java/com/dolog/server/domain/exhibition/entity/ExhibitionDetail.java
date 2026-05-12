@@ -54,6 +54,9 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "logo_img")
     private String logoImg;
 
+    @Column(name = "og_image")
+    private String ogImage;
+
     @Column(length = 255)
     private String email;
 
@@ -79,5 +82,9 @@ public class ExhibitionDetail extends BaseEntity {
         if (logoImg != null) {
             this.logoImg = logoImg;
         }
+    }
+
+    public void updateOgImage(String ogImage) {
+        this.ogImage = ogImage;
     }
 }

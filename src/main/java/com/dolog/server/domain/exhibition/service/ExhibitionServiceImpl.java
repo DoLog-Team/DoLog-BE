@@ -367,6 +367,15 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 logoImgUrl
         );
 
+        // ogImage 처리
+        if (request.getOgImage() != null && !request.getOgImage().isEmpty()) {
+            String newOgImageUrl = fileService.uploadFile(request.getOgImage(), "og-images");
+            if (exhibitionDetail.getOgImage() != null) {
+                fileService.deleteFile(exhibitionDetail.getOgImage());
+            }
+            exhibitionDetail.updateOgImage(newOgImageUrl);
+        }
+
         // 6. 저장
         exhibitionDetailRepository.save(exhibitionDetail);
 
