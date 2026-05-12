@@ -68,13 +68,13 @@ public class ArtistProfile extends BaseEntity {
         if (nameKo != null && !nameKo.isBlank()) {
             this.nameKo = nameKo;
         }
-        if (nameEn != null && !nameEn.isBlank()) {
+        if (nameEn != null) {
             this.nameEn = nameEn;
         }
-        if (bio != null && !bio.isBlank()) {
+        if (bio != null) {
             this.bio = bio;
         }
-        if (email != null && !email.isBlank()) {
+        if (email != null) {
             this.email = email;
         }
         if (profileImg != null && !profileImg.isBlank()) {
