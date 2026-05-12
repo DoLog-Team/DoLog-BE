@@ -52,25 +52,19 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                 })
                 .toList();
 
-        // 2. 동일 카테고리 인근 작품 조회 (단순 UUID 기준 앞뒤)
-        List<Artwork> sameCatList = new ArrayList<>();
-
+        // 3. 동일 카테고리 인근 작품 조회 (개별 변환 필요)
+        List<ArtworkDetailResponse.RelatedArtworkInfo> sameCatList = new ArrayList<>();
         artworkRepository.findPrevByCategory(exhibitionId, artwork.getCategory(), artworkId)
-                .ifPresent(sameCatList::add);
-
+                .ifPresent(prev -> sameCatList.add(convertToRelatedInfo(prev, "prev")));
         artworkRepository.findNextByCategory(exhibitionId, artwork.getCategory(), artworkId)
-                .ifPresent(sameCatList::add);
+                .ifPresent(next -> sameCatList.add(convertToRelatedInfo(next, "next")));
 
-        // 3. 가나다순 작품 앞뒤 1개씩 조회
-        List<Artwork> alphaList = new ArrayList<>();
-
-        // 이전 작품이 있으면 리스트에 추가
+        // 4. 가나다순 작품 앞뒤 조회 (개별 변환 필요)
+        List<ArtworkDetailResponse.RelatedArtworkInfo> alphaList = new ArrayList<>();
         artworkRepository.findPrevByTitle(exhibitionId, artwork.getTitle())
-                .ifPresent(alphaList::add);
-
-        // 다음 작품이 있으면 리스트에 추가
+                .ifPresent(prev -> alphaList.add(convertToRelatedInfo(prev, "prev")));
         artworkRepository.findNextByTitle(exhibitionId, artwork.getTitle())
-                .ifPresent(alphaList::add);
+                .ifPresent(next -> alphaList.add(convertToRelatedInfo(next, "next")));
 
         // 4. 최종 DTO 조립
         return ArtworkDetailResponse.builder()
@@ -93,16 +87,12 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                         .map(this::convertToParticipantInfo)
                         .toList())
                 .relatedBts(relatedBts)
-                .sameCategoryArtworks(sameCatList.stream()
-                        .map(this::convertToRelatedInfo)
-                        .toList())
-                .alphabeticalArtworks(alphaList.stream()
-                        .map(this::convertToRelatedInfo) // 여기서 아까 추가한 mainImage도 함께 변환됨
-                        .toList())
+                .sameCategoryArtworks(sameCatList) // 이미 변환된 리스트 주입
+                .alphabeticalArtworks(alphaList)   // 이미 변환된 리스트 주입
                 .build();
     }
 
-    private ArtworkDetailResponse.RelatedArtworkInfo convertToRelatedInfo(Artwork artwork) {
+    private ArtworkDetailResponse.RelatedArtworkInfo convertToRelatedInfo(Artwork artwork, String type) {
 
         String combinedArtistNames = artwork.getArtworkArtistMaps().stream()
                 .map(aam -> {
@@ -119,6 +109,7 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                 .category(artwork.getCategory())
                 .artistName(combinedArtistNames)
                 .mainImage(artwork.getMainImg())
+                .type(type)
                 .build();
     }
 
