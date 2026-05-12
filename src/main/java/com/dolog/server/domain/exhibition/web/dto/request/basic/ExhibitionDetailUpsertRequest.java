@@ -39,4 +39,6 @@ public class ExhibitionDetailUpsertRequest {
     private MultipartFile logoImg;
 
     private String copyright;
+
+    private MultipartFile ogImage;
 }
