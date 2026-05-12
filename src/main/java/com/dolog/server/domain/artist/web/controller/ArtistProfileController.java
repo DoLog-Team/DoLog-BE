@@ -92,7 +92,7 @@ public class ArtistProfileController {
 
     // 프로필 수정
     @Operation(summary = "전시 작가 프로필 수정")
-    @PatchMapping("/{profileId}")
+    @PatchMapping(value = "/{profileId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
             @PathVariable String profileId,
