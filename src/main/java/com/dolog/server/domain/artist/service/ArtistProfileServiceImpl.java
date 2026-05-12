@@ -78,7 +78,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         ArtistProfile profile = ArtistProfile.builder()
                 .artist(artist).exhibition(exhibition)
                 .nameKo(request.getNameKo()).nameEn(request.getNameEn())
-                .bio(request.getBio()).email(request.getEmail())
+                .bio(request.getBio() != null ? request.getBio().replace("\\n", "\n") : null).email(request.getEmail())
                 .profileImg(dbImageUrl).isPublic(true).build();
 
         profile.fillDefaultInfoFromArtist();
@@ -110,7 +110,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         profile.updateProfile(
                 request.getNameKo(),
                 request.getNameEn(),
-                request.getBio(),
+                request.getBio() != null ? request.getBio().replace("\\n", "\n") : null,
                 request.getEmail(),
                 newImageUrl
         );
