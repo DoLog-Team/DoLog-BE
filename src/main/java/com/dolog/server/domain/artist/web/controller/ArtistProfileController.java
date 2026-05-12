@@ -97,9 +97,17 @@ public class ArtistProfileController {
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
             @PathVariable String profileId,
-            @ModelAttribute ArtistProfileCreateRequest request,
+            @RequestParam(required = false) String nameKo,
+            @RequestParam(required = false) String nameEn,
+            @RequestParam(required = false) String bio,
+            @RequestParam(required = false) String email,
             @RequestPart(value = "profileImg", required = false) MultipartFile profileImg
     ) throws Exception {
+        ArtistProfileCreateRequest request = new ArtistProfileCreateRequest();
+        request.setNameKo(nameKo);
+        request.setNameEn(nameEn);
+        request.setBio(bio);
+        request.setEmail(email);
         request.setProfileImg(profileImg);
         ArtistProfileResponse response = artistProfileService.updateArtistProfile(profileId, request);
         return SuccessResponse.ok(response, "작가 프로필 수정 성공");
