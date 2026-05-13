@@ -114,11 +114,16 @@ public class ArtworkServiceImpl implements ArtworkService {
         // 4. S3 업로드
         String mainImgUrl = null;
         String locationMapUrl = null;
-        try {
-            mainImgUrl = fileService.uploadFile(request.getMainImageFile(), "artworks/main");
-            locationMapUrl = fileService.uploadFile(request.getLocationMapFile(), "artworks/maps");
+        try {// 메인 이미지: 파일이 있을 때만 업로드 시도
+            if (request.getMainImageFile() != null && !request.getMainImageFile().isEmpty()) {
+                mainImgUrl = fileService.uploadFile(request.getMainImageFile(), "artworks/main");
+            }
+            // 위치 지도: 파일이 있을 때만 업로드 시도
+            if (request.getLocationMapFile() != null && !request.getLocationMapFile().isEmpty()) {
+                locationMapUrl = fileService.uploadFile(request.getLocationMapFile(), "artworks/maps");
+            }
         } catch (IOException e) {
-            throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
+            throw new RuntimeException("파일 업로드 중 오류가 발생했습니다: " + e.getMessage());
         }
 
         Artwork artwork = Artwork.builder()
