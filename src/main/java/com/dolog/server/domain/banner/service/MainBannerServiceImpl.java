@@ -4,6 +4,7 @@ import com.dolog.server.domain.banner.entity.MainBanner;
 import com.dolog.server.domain.banner.exception.BannerErrorCode;
 import com.dolog.server.domain.banner.exception.BannerException;
 import com.dolog.server.domain.banner.repository.MainBannerRepository;
+import com.dolog.server.domain.banner.web.dto.request.MainBannerCreateRequest;
 import com.dolog.server.domain.banner.web.dto.request.MainBannerUpdateRequest;
 import com.dolog.server.domain.banner.web.dto.response.BannerMessageResponse;
 import com.dolog.server.domain.banner.web.dto.response.MainBannerResponse;
@@ -30,6 +31,23 @@ public class MainBannerServiceImpl implements MainBannerService {
                 .stream()
                 .map(MainBannerResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public MainBannerResponse createMainBanner(MainBannerCreateRequest request) {
+        try {
+            String imageUrl = fileService.uploadFile(request.getImageFile(), "banners");
+            MainBanner banner = MainBanner.builder()
+                    .imageUrl(imageUrl)
+                    .linkUrl(request.getLinkUrl())
+                    .orderIndex(request.getOrderIndex())
+                    .isVisible(true)
+                    .build();
+            return MainBannerResponse.from(mainBannerRepository.save(banner));
+        } catch (IOException e) {
+            throw new BannerException(BannerErrorCode.BANNER_IMAGE_UPLOAD_FAILED);
+        }
     }
 
     @Override
