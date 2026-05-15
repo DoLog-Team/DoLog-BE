@@ -98,8 +98,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
     private CategoryArtworkResponse.SimpleArtworkResponse mapToSimpleArtwork(Artwork a) {
         // 작가가 여러 명일 수 있으므로 쉼표로 연결
         String artistNames = a.getArtworkArtistMaps().stream()
-                .filter(map -> map.getArtist() != null)
-                .map(map -> map.getArtist().getNameKo() != null ? map.getArtist().getNameKo() : "")
+                .map(map -> map.getArtist().getNameKo())
                 .collect(Collectors.joining(", "));
 
         // 2. 전시회 제목 가져오기 (ExhibitionDetail이 @OneToOne이므로 바로 접근)
