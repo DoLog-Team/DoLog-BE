@@ -9,7 +9,10 @@ public enum ExhibitionType {
 
     @JsonCreator
     public static ExhibitionType from(String value) {
-        return ExhibitionType.valueOf(value.toUpperCase());
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return ExhibitionType.valueOf(value.toUpperCase(java.util.Locale.ROOT));
     }
 
     @JsonValue
