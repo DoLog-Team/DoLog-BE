@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.web.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.service.ExhibitionService;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
@@ -34,8 +35,9 @@ public class ExhibitionController {
     public ResponseEntity<SuccessResponse<List<ExhibitionListItemResponse>>> getExhibitions(
             @RequestParam(name = "is_public", required = false) Boolean isPublic,
             @RequestParam(name = "univ_name", required = false) String univName,
+            @RequestParam(name = "exhibition_type", required = false) ExhibitionType exhibitionType,
             @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getExhibitions(isPublic, univName, search)));
+        return ResponseEntity.ok(SuccessResponse.ok(exhibitionService.getExhibitions(isPublic, univName, exhibitionType, search)));
     }
 
     // slug로 uuid 조회

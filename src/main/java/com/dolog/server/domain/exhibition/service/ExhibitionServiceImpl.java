@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.entity.ExhibitionCustomTheme;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -123,12 +124,13 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     public List<ExhibitionListItemResponse> getExhibitions(
             Boolean isPublic,
             String univName,
+            ExhibitionType exhibitionType,
             String search
     ) {
         LocalDate today = LocalDate.now();
 
         List<Exhibition> exhibitions =
-                exhibitionRepository.findExhibitions(isPublic, univName, search);
+                exhibitionRepository.findExhibitions(isPublic, univName, exhibitionType, search);
 
         return exhibitions.stream()
                 .map(e -> ExhibitionListItemResponse.of(
@@ -224,6 +226,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .account(null) //TODO: JWT -> v2 에서 연동함
                 .univName(request.getUnivName())
                 .deptName(request.getDeptName())
+                .exhibitionType(request.getExhibitionType())
                 .slug(request.getSlug())
                 .isPublic(request.getIsPublic() != null ? request.getIsPublic() : true)
                 .build();
@@ -252,7 +255,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             }
         }
 
-        exhibition.updateBasicInfo(request.getUnivName(), request.getDeptName(), request.getSlug(), request.getIsPublic());
+        exhibition.updateBasicInfo(request.getUnivName(), request.getDeptName(), request.getExhibitionType(), request.getSlug(), request.getIsPublic());
 
         return ExhibitionMessageResponse.builder()
                 .message("기본 정보가 성공적으로 수정되었습니다.")

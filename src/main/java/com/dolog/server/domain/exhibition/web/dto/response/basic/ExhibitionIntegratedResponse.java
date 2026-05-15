@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.web.dto.response.basic;
 
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,7 @@ public class ExhibitionIntegratedResponse {
     private UUID exhibitionId;
     private String univName;
     private String deptName;
+    private ExhibitionType exhibitionType;
     private String title;
     private String exhibitionImg;
     private LocalDate startDate;
@@ -34,6 +36,7 @@ public class ExhibitionIntegratedResponse {
                 .exhibitionId(detail.getExhibition().getId())
                 .univName(detail.getExhibition().getUnivName())
                 .deptName(detail.getExhibition().getDeptName())
+                .exhibitionType(detail.getExhibition().getExhibitionType())
                 .title(detail.getTitle())
                 .exhibitionImg(detail.getExhibitionImg())
                 .startDate(detail.getStartDate())

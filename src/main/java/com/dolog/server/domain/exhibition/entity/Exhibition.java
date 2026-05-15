@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.entity;
 
 import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,6 +32,10 @@ public class Exhibition extends BaseEntity {
     @Column(name = "dept_name", length = 100, nullable = false)
     private String deptName;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "exhibition_type", length = 50)
+    private ExhibitionType exhibitionType;
+
     @Column(name = "slug", length = 100, unique = true, nullable = false)
     private String slug;
 
@@ -43,12 +48,15 @@ public class Exhibition extends BaseEntity {
     @OneToOne(mappedBy = "exhibition", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ExhibitionDetail exhibitionDetail;
 
-    public void updateBasicInfo(String univName, String deptName, String slug, Boolean isPublic) {
+    public void updateBasicInfo(String univName, String deptName, ExhibitionType exhibitionType, String slug, Boolean isPublic) {
         if (univName != null) {
             this.univName = univName;
         }
         if (deptName != null) {
             this.deptName = deptName;
+        }
+        if (exhibitionType != null) {
+            this.exhibitionType = exhibitionType;
         }
         if (slug != null) {
             this.slug = slug;
