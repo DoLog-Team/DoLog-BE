@@ -147,7 +147,7 @@ public class ArtworkServiceImpl implements ArtworkService {
                 .artwork(artwork)
                 .artist(profile.getArtist())
                 .artistProfile(profile)
-                .artistRole(request.getArtistRole() != null ? request.getArtistRole() : "Artist")
+                .artistRole(request.getArtistRole() != null ? request.getArtistRole() : "")
                 .build();
 
         artwork.getArtworkArtistMaps().add(artistMap);
