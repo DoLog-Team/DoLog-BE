@@ -383,6 +383,19 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             }
         }
 
+        // faviconImg 처리
+        if (request.getFaviconImg() != null && !request.getFaviconImg().isEmpty()) {
+            try {
+                String newFaviconUrl = fileService.uploadFile(request.getFaviconImg(), "favicons");
+                if (exhibitionDetail.getFaviconImg() != null) {
+                    fileService.deleteFile(exhibitionDetail.getFaviconImg());
+                }
+                exhibitionDetail.updateFaviconImg(newFaviconUrl);
+            } catch (IllegalArgumentException e) {
+                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
+            }
+        }
+
         // 6. 저장
         exhibitionDetailRepository.save(exhibitionDetail);
 

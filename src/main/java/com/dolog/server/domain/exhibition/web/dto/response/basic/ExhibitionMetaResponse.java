@@ -15,6 +15,7 @@ public class ExhibitionMetaResponse {
     private String title;
     private String description;
     private String image;
+    private String favicon;
 
     public static ExhibitionMetaResponse of(Exhibition exhibition, ExhibitionDetail detail) {
         return ExhibitionMetaResponse.builder()
@@ -22,6 +23,7 @@ public class ExhibitionMetaResponse {
                 .title(detail.getTitle())
                 .description(detail.getDescription())
                 .image(detail.getOgImage() != null ? detail.getOgImage() : detail.getExhibitionImg())
+                .favicon(detail.getFaviconImg())
                 .build();
     }
 }

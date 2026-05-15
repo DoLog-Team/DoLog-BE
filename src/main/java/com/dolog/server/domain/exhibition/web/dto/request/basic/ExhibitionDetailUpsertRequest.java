@@ -41,4 +41,6 @@ public class ExhibitionDetailUpsertRequest {
     private String copyright;
 
     private MultipartFile ogImage;
+
+    private MultipartFile faviconImg;
 }
