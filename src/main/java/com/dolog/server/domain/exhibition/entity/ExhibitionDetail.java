@@ -57,6 +57,9 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(name = "og_image")
     private String ogImage;
 
+    @Column(name = "favicon_img")
+    private String faviconImg;
+
     @Column(length = 255)
     private String email;
 
@@ -86,5 +89,9 @@ public class ExhibitionDetail extends BaseEntity {
 
     public void updateOgImage(String ogImage) {
         this.ogImage = ogImage;
+    }
+
+    public void updateFaviconImg(String faviconImg) {
+        this.faviconImg = faviconImg;
     }
 }
