@@ -72,6 +72,13 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(error.getHttpStatus()).body(error);
         }
 
+        // @JsonCreator 사용 시 잘못된 Enum 값은 ValueInstantiationException으로 발생
+        if (e.getCause() instanceof com.fasterxml.jackson.databind.exc.ValueInstantiationException vie
+                && vie.getCause() instanceof IllegalArgumentException) {
+            ErrorResponse error = ErrorResponse.of(GlobalErrorCode.GLOBAL_INVALID_ENUM);
+            return ResponseEntity.status(error.getHttpStatus()).body(error);
+        }
+
         ErrorResponse error = ErrorResponse.of(GlobalErrorCode.BAD_REQUEST_ERROR);
         return ResponseEntity.status(error.getHttpStatus()).body(error);
     }
