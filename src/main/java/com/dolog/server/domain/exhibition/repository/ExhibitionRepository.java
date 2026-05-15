@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.repository;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,10 +17,12 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
     @Query("SELECT e FROM Exhibition e LEFT JOIN FETCH e.exhibitionDetail d " +
             "WHERE (:isPublic IS NULL OR e.isPublic = :isPublic) " +
             "AND (:univName IS NULL OR e.univName = :univName) " +
+            "AND (:exhibitionType IS NULL OR e.exhibitionType = :exhibitionType) " +
             "AND (:search IS NULL OR d.title LIKE CONCAT('%', :search, '%'))")
     List<Exhibition> findExhibitions(
             @Param("isPublic") Boolean isPublic,
             @Param("univName") String univName,
+            @Param("exhibitionType") ExhibitionType exhibitionType,
             @Param("search") String search);
 
     // 진행 + 진행 예정

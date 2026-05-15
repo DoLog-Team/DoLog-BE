@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.web.dto.response.basic;
 
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +19,7 @@ public class ExhibitionListItemResponse {
     private String title;
     private String univName;
     private String deptName;
+    private ExhibitionType exhibitionType;
     private String imageUrl;
     private String startDate;
     private String endDate;
@@ -41,6 +43,7 @@ public class ExhibitionListItemResponse {
                 .slug(exhibition.getSlug())
                 .univName(exhibition.getUnivName())
                 .deptName(exhibition.getDeptName())
+                .exhibitionType(exhibition.getExhibitionType())
 
                 // 상세 정보가 있으면 그 값을, 없으면 기본 문구나 null 반환
                 .title(detail != null ? detail.getTitle() : "")
