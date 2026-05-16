@@ -9,10 +9,12 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepositor
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.guideMap.ExhibitionGuideMapCreateRequest;
+import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +26,7 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
     private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
+    private final FileService fileService;
 
     @Override
     public void createGuideMaps(UUID exhibitionId, List<ExhibitionGuideMapCreateRequest> requests) {
@@ -32,14 +35,25 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
 
         List<ExhibitionGuideMap> guideMaps = requests.stream()
                 .map(req -> {
-                    // zoneId를 사용해 해당 구역이 존재하는지 바로 확인
-                    ExhibitionZone zone = exhibitionZoneRepository.findById(req.getZoneId())
-                            .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+                    // 구역 조회
+                    ExhibitionZone zone = null;
+
+                    if (req.getZoneId() != null) {
+                        zone = exhibitionZoneRepository.findById(req.getZoneId())
+                                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+                    }
+
+                    String imageUrl = null;
+                    try {
+                        imageUrl = fileService.uploadFile(req.getImage(), "guide-maps");
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
 
                     return ExhibitionGuideMap.builder()
                             .exhibition(exhibition)
                             .zone(zone)
-                            .imageUrl(req.getImageUrl())
+                            .imageUrl(imageUrl)
                             .description(req.getDescription())
                             .build();
                 })

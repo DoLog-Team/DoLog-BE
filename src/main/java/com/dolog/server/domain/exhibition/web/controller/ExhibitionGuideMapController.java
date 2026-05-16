@@ -28,7 +28,7 @@ public class ExhibitionGuideMapController {
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<Void> createGuideMaps(
             @PathVariable UUID exhibitionId,
-            @RequestBody List<ExhibitionGuideMapCreateRequest> requests) {
+            @ModelAttribute List<ExhibitionGuideMapCreateRequest> requests) {
 
         exhibitionGuideMapService.createGuideMaps(exhibitionId, requests);
         return SuccessResponse.ok(null, "관람 안내 지도가 성공적으로 등록되었습니다.");
