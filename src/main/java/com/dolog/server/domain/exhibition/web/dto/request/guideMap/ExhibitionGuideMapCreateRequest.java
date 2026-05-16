@@ -6,10 +6,20 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 public class ExhibitionGuideMapCreateRequest {
-    private UUID zoneId;
-    private MultipartFile image;
-    private String description;
+
+    private List<GuideMapRequest> requests;
+
+    @Getter
+    @NoArgsConstructor
+    public static class GuideMapRequest {
+
+        private UUID zoneId;
+        private MultipartFile image;
+        private String description;
+    }
 }

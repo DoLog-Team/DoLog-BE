@@ -29,7 +29,7 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
     private final FileService fileService;
 
     @Override
-    public void createGuideMaps(UUID exhibitionId, List<ExhibitionGuideMapCreateRequest> requests) {
+    public void createGuideMaps(UUID exhibitionId, List<ExhibitionGuideMapCreateRequest.GuideMapRequest> requests) {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 

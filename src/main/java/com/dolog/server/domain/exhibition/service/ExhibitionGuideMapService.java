@@ -5,5 +5,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ExhibitionGuideMapService {
-    void createGuideMaps(UUID exhibitionId, List<ExhibitionGuideMapCreateRequest> requests);
+    void createGuideMaps(UUID exhibitionId, List<ExhibitionGuideMapCreateRequest.GuideMapRequest> requests);
 }
