@@ -9,7 +9,10 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 public class ExhibitionGuideMapCreateRequest {
+
     private UUID zoneId;
+
     private MultipartFile image;
+
     private String description;
 }
