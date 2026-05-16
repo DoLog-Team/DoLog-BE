@@ -22,9 +22,9 @@ public class ExhibitionGuideMapController {
 
     private final ExhibitionGuideMapService exhibitionGuideMapService;
 
-    @Operation(summary = "전시 구역 지도 일괄 등록")
+    @Operation(summary = "전시 구역 지도 등록")
     @PostMapping(
-            "/{exhibitionId}/guide-maps",
+            value = "/{exhibitionId}/guide-maps",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     @PreAuthorize("hasRole('DEVELOPER')")
