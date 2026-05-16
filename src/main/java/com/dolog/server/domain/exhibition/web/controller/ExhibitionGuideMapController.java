@@ -24,14 +24,14 @@ public class ExhibitionGuideMapController {
     @Operation(summary = "전시 구역 지도 일괄 등록")
     @PostMapping("/{exhibitionId}/guide-maps")
     @PreAuthorize("hasRole('DEVELOPER')")
-    public SuccessResponse<Void> createGuideMaps(
+    public SuccessResponse<Void> createGuideMap(
             @PathVariable UUID exhibitionId,
             @ModelAttribute ExhibitionGuideMapCreateRequest request
     ) {
 
-        exhibitionGuideMapService.createGuideMaps(
+        exhibitionGuideMapService.createGuideMap(
                 exhibitionId,
-                request.getRequests()
+                request
         );
 
         return SuccessResponse.ok(
