@@ -25,7 +25,7 @@ public class ArtworkOrderServiceImpl implements ArtworkOrderService {
     @Override
     @Transactional
     public void reorderArtworkIndices(UUID exhibitionId) {
-        // 1. 해당 전시회의 모든 작품 조회 (Specification 활용하여 Fetch Join 처리)
+        // 1. 해당 전시회의 모든 작품 조회
         Specification<Artwork> spec = Specification.where(ArtworkSpecification.withExhibitionFetch())
                 .and((root, query, cb) -> cb.equal(root.get("exhibition").get("id"), exhibitionId));
         List<Artwork> artworks = artworkRepository.findAll(spec);
@@ -54,8 +54,6 @@ public class ArtworkOrderServiceImpl implements ArtworkOrderService {
             // 10부터 시작해서 10씩 증가하며 orderIndex 재부여
             int newIndex = 10;
             for (Artwork artwork : zoneArtworks) {
-                // 엔티티에 기구현된 updateOrder(Integer) 메서드 호출
-                // 영속성 컨텍스트의 Dirty Checking으로 트랜잭션 종료 시 자동 DB 반영
                 artwork.updateOrder(newIndex);
                 newIndex += 10;
             }

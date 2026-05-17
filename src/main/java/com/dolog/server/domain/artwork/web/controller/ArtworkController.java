@@ -4,8 +4,8 @@ import com.dolog.server.domain.artwork.service.order.ArtworkOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.dolog.server.domain.artwork.service.artwork.ArtworkDetailService;
-import com.dolog.server.domain.artwork.service.artwork.ArtworkService;
+import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
+import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -25,7 +24,7 @@ import java.util.UUID;
 public class ArtworkController {
 
     private final ArtworkService artworkService;
-    private final ArtworkDetailService artworkDetailService;
+    private final ArtworkDetailQueryService artworkDetailService;
     private final ArtworkOrderService artworkOrderService;
 
     // 1. 작품 전체 목록 조회
@@ -34,9 +33,10 @@ public class ArtworkController {
     public SuccessResponse<Object> getArtworks(
             @RequestParam(required = false) Boolean main,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String search
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sort
     ) {
-        Object data = artworkService.getArtworks(main, category, search);
+        Object data = artworkService.getArtworks(main, category, search, sort);
         return SuccessResponse.ok(data);
     }
 

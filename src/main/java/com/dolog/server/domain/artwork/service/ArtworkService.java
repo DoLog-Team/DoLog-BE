@@ -1,4 +1,4 @@
-package com.dolog.server.domain.artwork.service.artwork;
+package com.dolog.server.domain.artwork.service;
 
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
@@ -8,9 +8,11 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ArtworkService {
-    Object getArtworks(Boolean main, String category, String search);
+    Object getArtworks(Boolean main, String category, String search, String sort);
 
     ArtworkCreateResponse createArtwork(ArtworkCreateRequest request);
+
+    ArtworkDetailResponse getArtworkDetail(UUID exhibitionId,UUID artworkId);
 
     ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests);
 
