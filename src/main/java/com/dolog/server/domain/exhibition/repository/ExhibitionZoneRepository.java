@@ -12,4 +12,8 @@ public interface ExhibitionZoneRepository extends JpaRepository<ExhibitionZone, 
     List<ExhibitionZone> findByExhibitionId(UUID exhibitionId);
 
     Optional<ExhibitionZone> findByIdAndExhibitionId(UUID id, UUID exhibitionId);
+
+
+    // 존 조회 (orderId 기준 오름차순)
+    List<ExhibitionZone> findByExhibitionIdOrderByOrderIdAsc(UUID exhibitionId);
 }

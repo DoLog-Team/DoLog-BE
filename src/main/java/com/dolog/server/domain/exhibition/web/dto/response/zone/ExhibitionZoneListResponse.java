@@ -30,15 +30,15 @@ public class ExhibitionZoneListResponse {
 
         private UUID id;
         private String name;
-
-        @JsonProperty("desc")
         private String description;
+        private Integer orderId;
 
         public static ZoneItem from(ExhibitionZone zone) {
             return ZoneItem.builder()
                     .id(zone.getId())
                     .name(zone.getName())
                     .description(zone.getDescription())
+                    .orderId(zone.getOrderId())
                     .build();
         }
     }

@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.web.controller;
 
+import com.dolog.server.domain.artwork.service.order.ArtworkOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,6 +26,7 @@ public class ArtworkController {
 
     private final ArtworkService artworkService;
     private final ArtworkDetailService artworkDetailService;
+    private final ArtworkOrderService artworkOrderService;
 
     // 1. 작품 전체 목록 조회
     @Operation(summary = "작품 전체 목록 조회")
@@ -172,5 +174,18 @@ public class ArtworkController {
             @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId) {
         return SuccessResponse.ok(artworkDetailService.getArtworkDetail(exhibitionId, artworkId), "작품 상세 조회 성공");
+    }
+
+    /* ---------------- [ 작품 순서 정렬 관련 API ] ---------------- */
+
+    // 12. 전시회 내 모든 작품 순서 일괄 재정렬 및 DB 저장 (PUT)
+    @Operation(summary = "전시회 내 전체 작품 순서 재정렬", description = "전시회 내의 작품들을 각 Zone별로 [1순위: 작가 가나다, 2순위: 작품명 가나다] 순서로 정렬하여 orderIndex(10, 20, 30...)를 DB에 일괄 갱신합니다.")
+    @PutMapping("/exhibitions/{exhibitionId}/artworks/reorder")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<Void> reorderExhibitionArtworks(
+            @PathVariable UUID exhibitionId) {
+
+        artworkOrderService.reorderArtworkIndices(exhibitionId);
+        return SuccessResponse.ok(null, "전시회 내 모든 작품의 순서가 성공적으로 재정렬되어 저장되었습니다.");
     }
 }
