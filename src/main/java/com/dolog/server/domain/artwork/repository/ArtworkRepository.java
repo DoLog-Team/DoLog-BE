@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.repository;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -12,6 +13,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
+
+    // ==============================================================================
+    // 메인 화면 랜덤 페이징 쿼리
+    // ==============================================================================
+    long count();
+    Page<Artwork> findAll(Pageable pageable);
+
+
     /**
      * 작품 목록 조회 (전시 + zone + 카테고리 필터)
      */
