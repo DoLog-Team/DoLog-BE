@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,7 +32,10 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        return ExhibitionZoneListResponse.from(exhibitionZoneRepository.findByExhibitionId(exhibitionId));
+        // orderId 순
+        List<ExhibitionZone> sortedZones = exhibitionZoneRepository.findByExhibitionIdOrderByOrderIdAsc(exhibitionId);
+
+        return ExhibitionZoneListResponse.from(sortedZones);
     }
 
     @Override
