@@ -22,8 +22,13 @@ public class ArtworkDetailResponse {
     private String locationMap;
     private List<DetailImageInfo> detailImages;
     private List<ParticipantInfo> participants;
+
     private List<RelatedBtsInfo> relatedBts;
+
+    // 동일 카테고리
     private List<RelatedArtworkInfo> sameCategoryArtworks;
+
+    // 작품 둘러보기
     private List<RelatedArtworkInfo> alphabeticalArtworks;
 
     @Getter @Builder
@@ -41,6 +46,7 @@ public class ArtworkDetailResponse {
         private String profileImg;
         private String role;
         private String bio;
+        private String email;
         private List<SnsInfo> sns;
     }
 
