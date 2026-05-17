@@ -8,17 +8,13 @@ import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.bts.repository.BtsRepository;
-import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,7 +24,6 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
 
     private final ArtworkRepository artworkRepository;
     private final BtsRepository btsRepository;
-    private final ExhibitionGuideMapRepository guideMapRepository;
 
     @Override
     public ArtworkDetailResponse getArtworkDetail(UUID exhibitionId, UUID artworkId) {
@@ -53,30 +48,25 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
                 .toList();
 
         // ==============================================================================
-        // 3. 동일 작가 작품 우선 (카테고리 무관) / 이후 동일 카테고리 내 랜덤 (2개)
+        // 3. 동일 작가 작품 우선 (카테고리 무관) / 이후 동일 카테고리 내 (2개)
         // ==============================================================================
         List<ArtworkDetailResponse.RelatedArtworkInfo> sameCatList = new ArrayList<>();
-        int maxCategoryItems = 2;
 
-        // 3-1. '동일 작가'의 다른 작품
-        List<Artwork> sameArtistArtworks = artworkRepository.findBySameArtists(exhibitionId, artworkId);
-        for (Artwork art : sameArtistArtworks) {
-            if (sameCatList.size() >= maxCategoryItems) {
-                break;
-            }
-            sameCatList.add(convertToRelatedInfo(art, "artist"));
-        }
+        List<Artwork> relatedArtworks = artworkRepository.findRelatedArtworks(
+                exhibitionId, artworkId, artwork.getCategory(), PageRequest.of(0, 2)
+        );
 
-        // 3-2. '동일 카테고리' 내 '다른 작가'의 작품 랜덤
-        if (sameCatList.size() < maxCategoryItems) {
-            int neededCount = maxCategoryItems - sameCatList.size();
+        Set<UUID> currentArtistIds = artwork.getArtworkArtistMaps().stream()
+                .map(map -> map.getArtist().getId())
+                .collect(Collectors.toSet());
 
-            List<Artwork> randomArtworks = artworkRepository.findSameCategoryRandom(
-                    exhibitionId, artwork.getCategory(), artworkId, PageRequest.of(0, neededCount)
-            );
-            for (Artwork art : randomArtworks) {
-                sameCatList.add(convertToRelatedInfo(art, "random"));
-            }
+        for (Artwork art : relatedArtworks) {
+            // 가져온 작품의 작가들 중 현재 작품의 작가 ID가 하나라도 포함되어 있는지 검증
+            boolean isSameArtist = art.getArtworkArtistMaps().stream()
+                    .anyMatch(map -> currentArtistIds.contains(map.getArtist().getId()));
+
+            String type = isSameArtist ? "artist" : "random";
+            sameCatList.add(convertToRelatedInfo(art, type));
         }
 
         // ==============================================================================
@@ -86,23 +76,33 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
 
         var currentZone = artwork.getExhibitionZone();
         UUID zoneId = currentZone != null ? currentZone.getId() : null;
-        Integer zoneOrderId = currentZone != null ? currentZone.getOrderId() : null; // 엔티티의 orderId 필드 추출
+        Integer zoneOrderId = currentZone != null ? currentZone.getOrderId() : null;
         Integer orderIndex = artwork.getOrderIndex();
 
         if (zoneId != null && zoneOrderId != null && orderIndex != null) {
+            PageRequest page = PageRequest.of(0, 1);
 
-            // 4-1. 이전
-            List<Artwork> prevArtworks = artworkRepository.findGlobalPrevArtwork(
-                    exhibitionId, zoneId, zoneOrderId, orderIndex, PageRequest.of(0, 1)
-            );
+            // 4-1. [이전 작품 조회]
+            // 같은 존
+            List<Artwork> prevArtworks = artworkRepository.findPrevInSameZone(exhibitionId, zoneId, orderIndex, page);
+
+            // 이전 존의 마지막
+            if (prevArtworks.isEmpty()) {
+                prevArtworks = artworkRepository.findPrevInPrevZone(exhibitionId, zoneOrderId, page);
+            }
             if (!prevArtworks.isEmpty()) {
                 alphaList.add(convertToRelatedInfo(prevArtworks.get(0), "prev"));
             }
 
-            // 4-2. 다음
-            List<Artwork> nextArtworks = artworkRepository.findGlobalNextArtwork(
-                    exhibitionId, zoneId, zoneOrderId, orderIndex, PageRequest.of(0, 1)
-            );
+
+            // 4-2. [다음 작품 조회]
+            // 같은 존
+            List<Artwork> nextArtworks = artworkRepository.findNextInSameZone(exhibitionId, zoneId, orderIndex, page);
+
+            // 다음 존
+            if (nextArtworks.isEmpty()) {
+                nextArtworks = artworkRepository.findNextInNextZone(exhibitionId, zoneOrderId, page);
+            }
             if (!nextArtworks.isEmpty()) {
                 alphaList.add(convertToRelatedInfo(nextArtworks.get(0), "next"));
             }
