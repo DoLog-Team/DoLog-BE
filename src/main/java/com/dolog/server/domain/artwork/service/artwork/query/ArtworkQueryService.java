@@ -1,13 +1,12 @@
 package com.dolog.server.domain.artwork.service.artwork.query;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
-import com.dolog.server.domain.artwork.service.artwork.query.mapper.ArtworkResponseMapper;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
+import com.dolog.server.domain.artwork.service.artwork.query.mapper.ArtworkResponseMapper;
 import com.dolog.server.domain.artwork.support.ArtworkMetaLoader;
 import com.dolog.server.domain.artwork.support.ArtworkSortProvider;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkListResponse;
-import com.dolog.server.domain.artwork.web.dto.response.MainCategoryResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +28,7 @@ public class ArtworkQueryService {
     private final ArtworkResponseMapper artworkResponseMapper;
     private final ArtworkSortProvider artworkSortProvider;
 
-    public Object getArtworks(
+    public List<ArtworkListResponse> getArtworks(
             Boolean main,
             String category,
             String search,
@@ -37,16 +36,21 @@ public class ArtworkQueryService {
     ) {
 
         if (Boolean.TRUE.equals(main)) {
-            return getMainArtworks(category, search, sort);
+            return getMainArtworks(category, search);
         }
 
         return getNormalArtworks(category, search, sort);
     }
 
-    private MainCategoryResponse getMainArtworks(
+    /*
+     * =========================================================
+     * Main Artwork
+     * =========================================================
+     */
+
+    private List<ArtworkListResponse> getMainArtworks(
             String category,
-            String search,
-            String sort
+            String search
     ) {
 
         Specification<Artwork> spec = Specification
@@ -56,9 +60,7 @@ public class ArtworkQueryService {
         long totalCount = artworkRepository.count(spec);
 
         if (totalCount == 0) {
-            return MainCategoryResponse.builder()
-                    .categories(Collections.emptyList())
-                    .build();
+            return Collections.emptyList();
         }
 
         int size = 4;
@@ -71,8 +73,7 @@ public class ArtworkQueryService {
 
         Pageable pageable = PageRequest.of(
                 randomOffset / size,
-                size,
-                artworkSortProvider.getSort(sort)
+                size
         );
 
         List<Artwork> artworks = artworkRepository
@@ -81,12 +82,18 @@ public class ArtworkQueryService {
 
         var meta = artworkMetaLoader.load(artworks);
 
-        return artworkResponseMapper.toMainCategoryResponse(
+        return artworkResponseMapper.toArtworkListResponses(
                 artworks,
                 meta.artistMap(),
                 meta.exhibitionMap()
         );
     }
+
+    /*
+     * =========================================================
+     * Artwork List
+     * =========================================================
+     */
 
     private List<ArtworkListResponse> getNormalArtworks(
             String category,

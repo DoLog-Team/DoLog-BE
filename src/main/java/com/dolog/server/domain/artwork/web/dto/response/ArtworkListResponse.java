@@ -12,13 +12,14 @@ import java.util.UUID;
 public class ArtworkListResponse {
     private UUID id;
     private String title;
+    private String artistName;
     private String category;
     private String imageUrl;
 
     private UUID exhibitionId;
-    private String slug;
     private String exhibitionTitle;
-    private String artistName;
+    private String slug;
+    private String deptName;
 
     private UUID zoneId;
     private String zoneName;

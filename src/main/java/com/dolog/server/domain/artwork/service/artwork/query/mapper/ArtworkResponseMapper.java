@@ -6,8 +6,6 @@ import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkListResponse;
-import com.dolog.server.domain.artwork.web.dto.response.CategoryArtworkResponse;
-import com.dolog.server.domain.artwork.web.dto.response.MainCategoryResponse;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -53,25 +51,16 @@ public class ArtworkResponseMapper {
         return ArtworkListResponse.builder()
                 .id(artwork.getId())
                 .title(artwork.getTitle())
+                .artistName(
+                        artistMap.get(artwork.getId())
+                )
                 .category(artwork.getCategory())
                 .imageUrl(artwork.getMainImg())
 
                 .exhibitionId(exhibitionId)
+                .exhibitionTitle(exhibitionDetailMap.get(exhibitionId))
+                .deptName(artwork.getExhibition().getDeptName())
                 .slug(artwork.getExhibition().getSlug())
-
-                .exhibitionTitle(
-                        exhibitionDetailMap.getOrDefault(
-                                exhibitionId,
-                                "Unknown Exhibition"
-                        )
-                )
-
-                .artistName(
-                        artistMap.getOrDefault(
-                                artwork.getId(),
-                                "Unknown Artist"
-                        )
-                )
 
                 .zoneId(
                         artwork.getExhibitionZone() != null
@@ -86,100 +75,6 @@ public class ArtworkResponseMapper {
                 )
 
                 .orderIndex(artwork.getOrderIndex())
-                .build();
-    }
-
-    /*
-     * =========================================================
-     * Main Artwork
-     * =========================================================
-     */
-
-    public MainCategoryResponse toMainCategoryResponse(
-            List<Artwork> artworks,
-            Map<UUID, String> artistMap,
-            Map<UUID, String> exhibitionDetailMap
-    ) {
-
-        Map<String, List<Artwork>> groupedByCategory =
-                artworks.stream()
-                        .collect(Collectors.groupingBy(
-                                artwork ->
-                                        artwork.getCategory() != null
-                                                ? artwork.getCategory()
-                                                : "Uncategorized"
-                        ));
-
-        List<CategoryArtworkResponse> categoryResponses =
-                groupedByCategory.entrySet().stream()
-                        .map(entry ->
-                                buildCategoryResponse(
-                                        entry,
-                                        artistMap,
-                                        exhibitionDetailMap
-                                )
-                        )
-                        .toList();
-
-        return MainCategoryResponse.builder()
-                .categories(categoryResponses)
-                .build();
-    }
-
-    private CategoryArtworkResponse buildCategoryResponse(
-            Map.Entry<String, List<Artwork>> entry,
-            Map<UUID, String> artistMap,
-            Map<UUID, String> exhibitionDetailMap
-    ) {
-
-        List<CategoryArtworkResponse.SimpleArtworkResponse> artworks =
-                entry.getValue().stream()
-                        .limit(4)
-                        .map(artwork ->
-                                toSimpleArtworkResponse(
-                                        artwork,
-                                        artistMap,
-                                        exhibitionDetailMap
-                                )
-                        )
-                        .toList();
-
-        return CategoryArtworkResponse.builder()
-                .categoryName(entry.getKey())
-                .artworks(artworks)
-                .build();
-    }
-
-    private CategoryArtworkResponse.SimpleArtworkResponse toSimpleArtworkResponse(
-            Artwork artwork,
-            Map<UUID, String> artistMap,
-            Map<UUID, String> exhibitionDetailMap
-    ) {
-
-        UUID exhibitionId = artwork.getExhibition().getId();
-
-        return CategoryArtworkResponse.SimpleArtworkResponse.builder()
-                .id(artwork.getId())
-                .title(artwork.getTitle())
-                .imageUrl(artwork.getMainImg())
-
-                .exhibitionId(exhibitionId)
-                .slug(artwork.getExhibition().getSlug())
-
-                .exhibitionTitle(
-                        exhibitionDetailMap.getOrDefault(
-                                exhibitionId,
-                                "Unknown Exhibition"
-                        )
-                )
-
-                .artistName(
-                        artistMap.getOrDefault(
-                                artwork.getId(),
-                                "Unknown Artist"
-                        )
-                )
-
                 .build();
     }
 

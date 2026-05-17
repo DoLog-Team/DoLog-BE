@@ -23,9 +23,6 @@ public class ArtworkSortProvider {
             case "title" ->
                     Sort.by(Sort.Direction.ASC, "title");
 
-            case "order" ->
-                    Sort.by(Sort.Direction.ASC, "orderIndex");
-
             default ->
                     Sort.by(Sort.Direction.ASC, "orderIndex");
         };
