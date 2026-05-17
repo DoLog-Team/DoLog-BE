@@ -30,7 +30,8 @@ public class ArtworkOrderProcessor {
         artworkOrderAdapter.reorder(
                 artwork,
                 prev,
-                next
+                next,
+                artwork.getExhibitionZone().getId()
         );
     }
 

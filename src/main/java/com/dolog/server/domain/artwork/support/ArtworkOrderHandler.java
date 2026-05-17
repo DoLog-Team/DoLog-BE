@@ -47,7 +47,8 @@ public class ArtworkOrderHandler {
             artworkOrderAdapter.reorder(
                     artwork,
                     prev,
-                    next
+                    next,
+                    artwork.getExhibitionZone().getId()
             );
         }
     }
