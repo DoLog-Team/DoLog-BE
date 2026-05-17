@@ -14,23 +14,35 @@ public class OrderProcessor {
         return items.get(items.size() - 1).getOrderIndex() + GAP;
     }
 
-    public int calculate(Integer prev, Integer next) {
+    /**
+     * 안전 계산 (절대 예외 안 던짐)
+     */
+    public Integer calculate(Integer prev, Integer next) {
         if (prev == null && next == null) {
-            throw new IllegalArgumentException("둘 다 null이면 안됨");
+            return null;
         }
 
         if (prev == null) return next - GAP;
         if (next == null) return prev + GAP;
 
+        // 공간 부족 → null 반환 (rebalance 필요)
         if (Math.abs(prev - next) <= 1) {
-            throw new IllegalStateException("REBALANCE_REQUIRED");
+            return null;
         }
 
         return (prev + next) / 2;
     }
 
+    public boolean needsRebalance(Integer prev, Integer next) {
+        return calculate(prev, next) == null;
+    }
+
+    /**
+     * 전체 재정렬 (항상 GAP 기준)
+     */
     public void rebalance(List<? extends Orderable> items) {
         int index = GAP;
+
         for (Orderable item : items) {
             item.updateOrder(index);
             index += GAP;
