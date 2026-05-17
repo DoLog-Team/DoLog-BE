@@ -8,7 +8,6 @@ import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.bts.repository.BtsRepository;
-import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -52,16 +51,44 @@ public class ArtworkDetailServiceImpl implements ArtworkDetailService {
         // ==============================================================================
         List<ArtworkDetailResponse.RelatedArtworkInfo> sameCatList = new ArrayList<>();
 
-        List<Artwork> relatedArtworks = artworkRepository.findRelatedArtworks(
-                exhibitionId, artworkId, artwork.getCategory(), PageRequest.of(0, 2)
+        // 1. 랜덤 후보군 상위 15개를 인덱스로 조회
+        List<Artwork> relatedArtworksCandidates = artworkRepository.findRelatedArtworks(
+                exhibitionId, artworkId, artwork.getCategory(), PageRequest.of(0, 10)
         );
+
+        List<Artwork> sameArtistList = new ArrayList<>();
+        List<Artwork> sameCategoryList = new ArrayList<>();
 
         Set<UUID> currentArtistIds = artwork.getArtworkArtistMaps().stream()
                 .map(map -> map.getArtist().getId())
                 .collect(Collectors.toSet());
 
-        for (Artwork art : relatedArtworks) {
-            // 가져온 작품의 작가들 중 현재 작품의 작가 ID가 하나라도 포함되어 있는지 검증
+        // 후보군 돌면서 작가 작품인지, 카테고리 작품인지 분류
+        for (Artwork art : relatedArtworksCandidates) {
+            boolean isSameArtist = art.getArtworkArtistMaps().stream()
+                    .anyMatch(map -> currentArtistIds.contains(map.getArtist().getId()));
+
+            if (isSameArtist) {
+                sameArtistList.add(art);
+            } else {
+                sameCategoryList.add(art);
+            }
+        }
+
+        // 다른 작가의 카테고리만 자바 메모리에서 섞기
+        Collections.shuffle(sameCategoryList);
+
+        // 우선순위대로 재조립
+        List<Artwork> finalCombinedList = new ArrayList<>();
+        finalCombinedList.addAll(sameArtistList);
+        finalCombinedList.addAll(sameCategoryList);
+
+        // 6. 2개만
+        List<Artwork> finalTop2Result = finalCombinedList.stream()
+                .limit(2)
+                .toList();
+
+        for (Artwork art : finalTop2Result) {
             boolean isSameArtist = art.getArtworkArtistMaps().stream()
                     .anyMatch(map -> currentArtistIds.contains(map.getArtist().getId()));
 
