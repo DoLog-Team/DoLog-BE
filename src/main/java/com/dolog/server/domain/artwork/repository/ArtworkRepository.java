@@ -49,30 +49,90 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     List<Artwork> findArtworksBySearch(@Param("exhibitionId") UUID exhibitionId,
                                        @Param("search") String search);
 
+
+
+    // ==============================================================================
+    // 3. 동일 카테고리 내 작가 기준 조회
+    // ==============================================================================
+
     /**
-     * 동일 카테고리 내 인근 작품
+     * 3-1. 동일 작가 다른 작품 조회
      */
-    @Query("SELECT a FROM Artwork a " +
+    @Query("SELECT DISTINCT a FROM Artwork a " +
+            "JOIN a.artworkArtistMaps map " +
+            "WHERE a.exhibition.id = :exhibitionId " +
+            "AND a.id != :artworkId " +
+            "AND map.artist.id IN (" +
+            "    SELECT currentMap.artist.id FROM ArtworkArtistMap currentMap WHERE currentMap.artwork.id = :artworkId" +
+            ")")
+    List<Artwork> findBySameArtists(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("artworkId") UUID artworkId
+    );
+
+    /**
+     * 3-2. 동일 카테고리 내에서 '현재 작품의 작가들'이 참여하지 않은 다른 작품들을 랜덤하게 조회
+     */
+    @Query("SELECT DISTINCT a FROM Artwork a " +
+            "JOIN a.artworkArtistMaps map " +
             "WHERE a.exhibition.id = :exhibitionId " +
             "AND a.category = :category " +
-            "AND a.id != :artworkId " +
-            "ORDER BY ABS(a.orderIndex - :currentOrder) ASC, a.id ASC")
-    List<Artwork> findRelatedByCategory(
+            "AND map.artist.id NOT IN (" +
+            "    SELECT currentMap.artist.id FROM ArtworkArtistMap currentMap WHERE currentMap.artwork.id = :artworkId" +
+            ") " +
+            "ORDER BY FUNCTION('RAND')")
+    List<Artwork> findSameCategoryRandom(
             @Param("exhibitionId") UUID exhibitionId,
             @Param("category") String category,
             @Param("artworkId") UUID artworkId,
-            @Param("currentOrder") Integer currentOrder,
-            Pageable pageable);
+            Pageable pageable
+    );
+
+
+    // ==============================================================================
+    // 4. 전시 전체 동선(Zone 순서[orderId] -> Artwork 순서[orderIndex]) 기준 이전 / 다음 조회
+    // ==============================================================================
 
     /**
-     * 가나다순 상위 작품
+     * 4-1. '이전' 동선에 있는 작품 조회
+     * 조건 1: 같은 존 안에서 나보다 orderIndex가 작거나
+     * 조건 2: 나보다 존의 순서(zone.orderId)가 작은 전체 존의 작품
      */
     @Query("SELECT a FROM Artwork a " +
+            "JOIN a.exhibitionZone z " +
             "WHERE a.exhibition.id = :exhibitionId " +
-            "ORDER BY a.title ASC, a.id ASC")
-    List<Artwork> findTopAlphabetical(
+            "AND (" +
+            "  (z.id = :zoneId AND a.orderIndex < :currentOrderIndex) " +
+            "  OR (z.orderId < :zoneOrderId)" +
+            ") " +
+            "ORDER BY z.orderId DESC, a.orderIndex DESC")
+    List<Artwork> findGlobalPrevArtwork(
             @Param("exhibitionId") UUID exhibitionId,
-            Pageable pageable);
+            @Param("zoneId") UUID zoneId,
+            @Param("zoneOrderId") Integer zoneOrderId,
+            @Param("currentOrderIndex") Integer currentOrderIndex,
+            Pageable pageable
+    );
+
+    /**
+     * 4-2. '다음' 동선에 있는 작품 조회
+     */
+    @Query("SELECT a FROM Artwork a " +
+            "JOIN a.exhibitionZone z " +
+            "WHERE a.exhibition.id = :exhibitionId " +
+            "AND (" +
+            "  (z.id = :zoneId AND a.orderIndex > :currentOrderIndex) " +
+            "  OR (z.orderId > :zoneOrderId)" +
+            ") " +
+            "ORDER BY z.orderId ASC, a.orderIndex ASC")
+    List<Artwork> findGlobalNextArtwork(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("zoneId") UUID zoneId,
+            @Param("zoneOrderId") Integer zoneOrderId,
+            @Param("currentOrderIndex") Integer currentOrderIndex,
+            Pageable pageable
+    );
+
 
     /**
      * exhibition + zone 기준 정렬
@@ -81,30 +141,6 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             UUID exhibitionId,
             UUID zoneId
     );
-
-    // 현재 작품 제목보다 사전순으로 작은 작품 중 가장 마지막 것 1개
-    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId AND a.title < :title ORDER BY a.title DESC LIMIT 1")
-    Optional<Artwork> findPrevByTitle(@Param("exhibitionId") UUID exhibitionId, @Param("title") String title);
-
-    // 현재 작품 제목보다 사전순으로 큰 작품 중 가장 처음 것 1개
-    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId AND a.title > :title ORDER BY a.title ASC LIMIT 1")
-    Optional<Artwork> findNextByTitle(@Param("exhibitionId") UUID exhibitionId, @Param("title") String title);
-
-    // 현재 작품 ID보다 작은 ID 중 가장 큰 것 1개 (이전 작품)
-    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId " +
-            "AND a.category = :category AND a.id < :id " +
-            "ORDER BY a.id DESC LIMIT 1")
-    Optional<Artwork> findPrevByCategory(@Param("exhibitionId") UUID exhibitionId,
-                                         @Param("category") String category,
-                                         @Param("id") UUID id);
-
-    // 현재 작품 ID보다 큰 ID 중 가장 작은 것 1개 (다음 작품)
-    @Query("SELECT a FROM Artwork a WHERE a.exhibition.id = :exhibitionId " +
-            "AND a.category = :category AND a.id > :id " +
-            "ORDER BY a.id ASC LIMIT 1")
-    Optional<Artwork> findNextByCategory(@Param("exhibitionId") UUID exhibitionId,
-                                         @Param("category") String category,
-                                         @Param("id") UUID id);
 }
 
 

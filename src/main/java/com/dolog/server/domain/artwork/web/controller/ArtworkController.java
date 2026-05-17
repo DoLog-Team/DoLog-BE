@@ -166,7 +166,6 @@ public class ArtworkController {
         return SuccessResponse.ok(data, "작품 정보 및 연관 데이터가 성공적으로 동기화되었습니다.");
     }
 
-    // 상세 조회 API만 신규 서비스를 타게 합니다.
     @Operation(summary = "작품 상세 조회")
     @GetMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
     public SuccessResponse<ArtworkDetailResponse> getArtworkDetail(
