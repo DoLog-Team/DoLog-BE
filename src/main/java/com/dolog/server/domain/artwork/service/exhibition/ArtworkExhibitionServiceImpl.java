@@ -5,6 +5,8 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.web.dto.response.CategoryArtworkResponse;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
@@ -13,10 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,9 +96,10 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
 
     private CategoryArtworkResponse.SimpleArtworkResponse mapToSimpleArtwork(Artwork a) {
         // 작가가 여러 명일 수 있으므로 쉼표로 연결
-        String artistNames = a.getArtworkArtistMaps().stream()
-                .map(map -> map.getArtist().getNameKo())
-                .collect(Collectors.joining(", "));
+        // 프로필 이름 기준
+        String artistNames = String.join(", ",
+                artworkRepository.findArtistNames(a.getId())
+        );
 
         // 2. 전시회 제목 가져오기 (ExhibitionDetail이 @OneToOne이므로 바로 접근)
         String exhibitionTitle = "";

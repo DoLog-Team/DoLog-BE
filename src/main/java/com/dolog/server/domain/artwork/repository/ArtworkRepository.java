@@ -151,6 +151,14 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             UUID exhibitionId,
             UUID zoneId
     );
+
+    @Query("""
+        select ap.nameKo
+        from ArtworkArtistMap m
+        join m.artistProfile ap
+        where m.artwork.id = :artworkId
+        """)
+    List<String> findArtistNames(UUID artworkId);
 }
 
 
