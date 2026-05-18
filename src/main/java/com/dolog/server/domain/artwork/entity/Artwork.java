@@ -45,6 +45,7 @@ public class Artwork extends BaseEntity implements Orderable {
     @Column(length = 100)
     private String category;
 
+    @Column(length = 1000)
     private String material;
 
     private String size;
