@@ -37,6 +37,7 @@ public class Artwork extends BaseEntity implements Orderable {
     @Builder.Default
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
     private List<ArtworkImg> artworkImg = new ArrayList<>();
 
     @Column(length = 255)

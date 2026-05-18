@@ -13,11 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -66,6 +62,7 @@ public class ArtworkDetailQueryService {
                         artwork.getArtworkImg().stream()
                                 .map(img ->
                                         ArtworkDetailResponse.DetailImageInfo.builder()
+                                                .imageId(img.getId())
                                                 .imageUrl(img.getImageUrl())
                                                 .description(img.getDescription())
                                                 .build()
