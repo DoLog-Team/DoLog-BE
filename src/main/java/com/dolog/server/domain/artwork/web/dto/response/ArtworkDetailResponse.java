@@ -33,6 +33,7 @@ public class ArtworkDetailResponse {
 
     @Getter @Builder
     public static class DetailImageInfo {
+        private UUID imageId;
         private String imageUrl;
         private String description;
     }
