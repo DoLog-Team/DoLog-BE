@@ -76,18 +76,10 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
         ExhibitionGuideMap guideMap = exhibitionGuideMapRepository.findById(guideMapId)
                 .orElseThrow(() -> new RuntimeException("가이드맵을 찾을 수 없습니다.")); // 프로젝트 예외 클래스로 변경 가능
 
-        // 2. 이미지 처리 로직 (플래그 기반으로 세분화)
+        // 2. 이미지 처리 로직
         String newImageUrl = guideMap.getImageUrl(); // 기본값은 기존 이미지 유지
 
-        // 삭제 플래그가 true -> 삭제
-        if (Boolean.TRUE.equals(request.getIsDeleteImg())) {
-            if (guideMap.getImageUrl() != null) {
-                fileService.deleteFile(guideMap.getImageUrl()); // 실제 스토리지 파일 삭제
-            }
-            newImageUrl = null;
-        }
-        // 새 파일 -> 파일 교체
-        else if (request.getImage() != null && !request.getImage().isEmpty()) {
+        if (request.getImage() != null && !request.getImage().isEmpty()) {
             try {
                 if (guideMap.getImageUrl() != null) {
                     fileService.deleteFile(guideMap.getImageUrl());
@@ -97,7 +89,6 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
                 throw new RuntimeException("가이드맵 파일 수정 실패", e);
             }
         }
-        // 둘 다 아니면 -> 유지
 
         // 3. Zone 정보 수정 (선택적)
         ExhibitionZone zone = guideMap.getZone();
