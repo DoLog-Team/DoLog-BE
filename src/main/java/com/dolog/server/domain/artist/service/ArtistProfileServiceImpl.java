@@ -102,23 +102,21 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         // 2. 이미지 처리 로직
         String newImageUrl = profile.getProfileImg(); // 기본값은 기존 이미지 유지
 
-        if (request.getProfileImg() == null) {
-            // [케이스 1] null -> 이미지 유지
-
-        } else if (request.getProfileImg().isEmpty()) {
-            // [케이스 2] 빈 값 -> 이미지 삭제 처리
+        // 이미지 삭제 플래그가 true
+        if (Boolean.TRUE.equals(request.getIsDeleteImg())) {
             if (profile.getProfileImg() != null) {
-                fileService.deleteFile(profile.getProfileImg()); // 실제 파일 삭제
+                fileService.deleteFile(profile.getProfileImg());
             }
             newImageUrl = null;
-
-        } else {
-            // [케이스 3] 새 파일 -> 파일 교체
-            if (profile.getProfileImg() != null) {
-                fileService.deleteFile(profile.getProfileImg()); // 기존 파일 삭제
-            }
-            newImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles"); // 새 파일 업로드
         }
+        // 새 파일 (교체)
+        else if (request.getProfileImg() != null && !request.getProfileImg().isEmpty()) {
+            if (profile.getProfileImg() != null) {
+                fileService.deleteFile(profile.getProfileImg());
+            }
+            newImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles");
+        }
+        // 둘 다 아니면 -> 유지
 
         // 3. 엔티티 업데이트
         profile.updateProfile(

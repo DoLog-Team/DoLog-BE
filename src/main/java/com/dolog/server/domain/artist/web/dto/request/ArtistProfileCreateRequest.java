@@ -17,4 +17,5 @@ public class ArtistProfileCreateRequest {
     private String bio;
     private String email;
     private MultipartFile profileImg;
+    private Boolean isDeleteImg;
 }
