@@ -118,12 +118,12 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         }
         // 둘 다 아니면 -> 유지
 
-        // 3. 엔티티 업데이트
+        // 3. 엔티티 업데이트 (선택적 필드 업데이트 방어 코드 적용)
         profile.updateProfile(
-                request.getNameKo(),
-                request.getNameEn(),
-                request.getBio() != null ? request.getBio().replace("\\n", "\n") : null,
-                request.getEmail(),
+                request.getNameKo() != null ? request.getNameKo() : profile.getNameKo(),
+                request.getNameEn() != null ? request.getNameEn() : profile.getNameEn(),
+                request.getBio() != null ? request.getBio().replace("\\n", "\n") : profile.getBio(),
+                request.getEmail() != null ? request.getEmail() : profile.getEmail(),
                 newImageUrl
         );
 
