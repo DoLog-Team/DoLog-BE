@@ -43,4 +43,40 @@ public class ExhibitionGuideMapController {
                 "관람 안내 지도가 성공적으로 등록되었습니다."
         );
     }
+
+
+    @Operation(summary = "전시 구역 지도 수정")
+    @PatchMapping(
+            value = "/guide-maps/{guideMapId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<Void> updateGuideMap(
+            @PathVariable UUID guideMapId,
+            @ModelAttribute ExhibitionGuideMapCreateRequest request
+    ) {
+        exhibitionGuideMapService.updateGuideMap(
+                guideMapId,
+                request
+        );
+
+        return SuccessResponse.ok(
+                null,
+                "관람 안내 지도가 성공적으로 수정되었습니다."
+        );
+    }
+
+    @Operation(summary = "전시 구역 지도 삭제")
+    @DeleteMapping("/guide-maps/{guideMapId}")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    public SuccessResponse<Void> deleteGuideMap(
+            @PathVariable UUID guideMapId
+    ) {
+        exhibitionGuideMapService.deleteGuideMap(guideMapId);
+
+        return SuccessResponse.ok(
+                null,
+                "관람 안내 지도가 성공적으로 삭제되었습니다."
+        );
+    }
 }

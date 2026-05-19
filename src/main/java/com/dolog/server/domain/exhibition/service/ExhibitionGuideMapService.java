@@ -8,4 +8,8 @@ public interface ExhibitionGuideMapService {
             UUID exhibitionId,
             ExhibitionGuideMapCreateRequest request
     );
+
+    void updateGuideMap(UUID guideMapId, ExhibitionGuideMapCreateRequest request);
+
+    void deleteGuideMap(UUID guideMapId);
 }

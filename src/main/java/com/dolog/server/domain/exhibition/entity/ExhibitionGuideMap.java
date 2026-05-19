@@ -32,4 +32,10 @@ public class ExhibitionGuideMap extends BaseEntity {
 
     @Column(name = "description")
     private String description;
+
+    public void updateGuideMap(ExhibitionZone zone, String imageUrl, String description) {
+        this.zone = zone;
+        this.imageUrl = imageUrl;
+        this.description = description;
+    }
 }
