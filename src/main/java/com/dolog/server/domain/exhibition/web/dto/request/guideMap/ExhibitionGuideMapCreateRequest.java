@@ -19,6 +19,4 @@ public class ExhibitionGuideMapCreateRequest {
     private MultipartFile image;
 
     private String description;
-
-    private Boolean isDeleteImg;
 }
