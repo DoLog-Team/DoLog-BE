@@ -99,14 +99,28 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        // 2. 이미지 및 필드 업데이트
-        String newImageUrl = null;
-        if (request.getProfileImg() != null && !request.getProfileImg().isEmpty()) {
-            fileService.deleteFile(profile.getProfileImg()); // 기존 파일 삭제
-            newImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles"); // 새 파일 저장
+        // 2. 이미지 처리 로직
+        String newImageUrl = profile.getProfileImg(); // 기본값은 기존 이미지 유지
+
+        if (request.getProfileImg() == null) {
+            // [케이스 1] null -> 이미지 유지
+
+        } else if (request.getProfileImg().isEmpty()) {
+            // [케이스 2] 빈 값 -> 이미지 삭제 처리
+            if (profile.getProfileImg() != null) {
+                fileService.deleteFile(profile.getProfileImg()); // 실제 파일 삭제
+            }
+            newImageUrl = null;
+
+        } else {
+            // [케이스 3] 새 파일 -> 파일 교체
+            if (profile.getProfileImg() != null) {
+                fileService.deleteFile(profile.getProfileImg()); // 기존 파일 삭제
+            }
+            newImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles"); // 새 파일 업로드
         }
 
-        // 2. 엔티티 업데이트
+        // 3. 엔티티 업데이트
         profile.updateProfile(
                 request.getNameKo(),
                 request.getNameEn(),
