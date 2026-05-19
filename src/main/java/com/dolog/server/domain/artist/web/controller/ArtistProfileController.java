@@ -80,11 +80,14 @@ public class ArtistProfileController {
 
     // 프로필 생성
     @Operation(summary = "전시 작가 프로필 생성")
-    @PostMapping
+    @PostMapping(
+            consumes = "multipart/form-data"
+    )
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> createArtistProfile(
             @ModelAttribute ArtistProfileCreateRequest request
     ) throws Exception {
+
         ArtistProfileResponse response = artistProfileService.createArtistProfile(
                 request.getExhibitionId(), request
         );
@@ -97,18 +100,8 @@ public class ArtistProfileController {
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
             @PathVariable String profileId,
-            @RequestParam(required = false) String nameKo,
-            @RequestParam(required = false) String nameEn,
-            @RequestParam(required = false) String bio,
-            @RequestParam(required = false) String email,
-            @RequestPart(value = "profileImg", required = false) MultipartFile profileImg
+            @ModelAttribute ArtistProfileCreateRequest request
     ) throws Exception {
-        ArtistProfileCreateRequest request = new ArtistProfileCreateRequest();
-        request.setNameKo(nameKo);
-        request.setNameEn(nameEn);
-        request.setBio(bio);
-        request.setEmail(email);
-        request.setProfileImg(profileImg);
         ArtistProfileResponse response = artistProfileService.updateArtistProfile(profileId, request);
         return SuccessResponse.ok(response, "작가 프로필 수정 성공");
     }
