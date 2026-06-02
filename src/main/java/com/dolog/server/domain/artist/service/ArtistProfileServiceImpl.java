@@ -167,7 +167,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
         // 3. BTS 리스트 변환
         List<ArtistProfileDetailResponse.BtsSummary> btsResponses = btsRepository
-                .findAllByArtistProfileIdAndExhibitionId(profile.getArtist().getId(), profile.getExhibition().getId())
+                .findAllByArtistProfileIdAndExhibitionId(profile.getId(), profile.getExhibition().getId())
                 .stream()
                 .map(bts -> ArtistProfileDetailResponse.BtsSummary.builder()
                         .btsId(bts.getId())
