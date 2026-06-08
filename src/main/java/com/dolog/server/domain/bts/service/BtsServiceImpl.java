@@ -105,9 +105,12 @@ public class BtsServiceImpl implements BtsService {
 //    2. 수정
     @Override
     @Transactional
-    public BtsCreateResponse updateBts(UUID btsId, BtsUpdateRequest request) {
+    public BtsCreateResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request) {
         Bts bts = btsRepository.findById(btsId)
                 .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
+        if(!bts.getExhibition().getId().equals(exhibitionId)) {
+            throw new BtsException(BtsErrorCode.BTS_EXHIBITION_MISMATCH);
+        }
 
         // 2. 작가 프로필 업데이트 로직
         ArtistProfile artistProfile = bts.getArtistProfile();
@@ -139,9 +142,12 @@ public class BtsServiceImpl implements BtsService {
 
     @Override
     @Transactional
-    public void deleteBts(UUID btsId) {
+    public void deleteBts(UUID exhibitionId, UUID btsId) {
         Bts bts = btsRepository.findById(btsId)
                 .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
+        if(!bts.getExhibition().getId().equals(exhibitionId)) {
+            throw new BtsException(BtsErrorCode.BTS_EXHIBITION_MISMATCH);
+        }
 
         // cascade = ALL 설정에 의해 bts_artwork_map도 같이 삭제됨
         btsRepository.delete(bts);
@@ -167,10 +173,13 @@ public class BtsServiceImpl implements BtsService {
      */
     @Override
     @Transactional(readOnly = true)
-    public BtsDetailResponse getBtsDetail(UUID btsId) {
+    public BtsDetailResponse getBtsDetail(UUID exhibitionId, UUID btsId) {
         // 1. BTS 본체 조회 (정의하신 BtsException 사용)
         Bts bts = btsRepository.findById(btsId)
                 .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
+        if(!bts.getExhibition().getId().equals(exhibitionId)) {
+            throw new BtsException(BtsErrorCode.BTS_EXHIBITION_MISMATCH);
+        }
 
         // 2. 작가 프로필 정보 매핑 (Bts -> ArtistProfile)
         ArtistProfile profile = bts.getArtistProfile();

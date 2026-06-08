@@ -14,9 +14,9 @@ import java.util.UUID;
 
 public interface BtsService {
     BtsCreateResponse createBts(BtsCreateRequest request) throws IOException;
-    BtsCreateResponse updateBts(UUID btsId, BtsUpdateRequest request);
-    void deleteBts(UUID btsId);
+    BtsCreateResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request);
+    void deleteBts(UUID exhibitionId, UUID btsId);
     List<BtsListResponse> getExhibitionBtsList(UUID exhibitionId);
     BtsMappingUpdateResponse syncBtsMapping(UUID exhibitionId, UUID btsId, BtsMappingUpdateRequest request);
-    BtsDetailResponse getBtsDetail(UUID btsId);
+    BtsDetailResponse getBtsDetail(UUID exhibitionId, UUID btsId);
 }

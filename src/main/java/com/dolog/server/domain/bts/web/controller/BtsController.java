@@ -37,9 +37,10 @@ public class BtsController {
 
     // 등록 (POST)
     @Operation(summary = "BTS 등록")
-    @PostMapping("/bts")
+    @PostMapping("/{exhibitionId}/bts")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsCreateResponse> createBts(
+            @PathVariable UUID exhibitionId,
             @ModelAttribute BtsCreateRequest request
     ) throws IOException {
         BtsCreateResponse response = btsService.createBts(request);
@@ -48,22 +49,23 @@ public class BtsController {
 
     // 수정 (PATCH)
     @Operation(summary = "BTS 수정")
-    @PatchMapping("/bts/{btsId}")
+    @PatchMapping("/{exhibitionId}/bts/{btsId}")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsCreateResponse> updateBts(
+            @PathVariable UUID exhibitionId,
             @PathVariable UUID btsId,
             @Valid @RequestBody BtsUpdateRequest request) {
 
-        BtsCreateResponse data = btsService.updateBts(btsId, request);
+        BtsCreateResponse data = btsService.updateBts(exhibitionId, btsId, request);
         return SuccessResponse.ok(data, "BTS 정보가 성공적으로 수정되었습니다.");
     }
 
     // 삭제 (DELETE)
     @Operation(summary = "BTS 삭제")
-    @DeleteMapping("/bts/{btsId}")
+    @DeleteMapping("/{exhibitionId}/bts/{btsId}")
     @PreAuthorize("hasRole('DEVELOPER')")
-    public SuccessResponse<Void> deleteBts(@PathVariable UUID btsId) {
-        btsService.deleteBts(btsId);
+    public SuccessResponse<Void> deleteBts(@PathVariable UUID exhibitionId, @PathVariable UUID btsId) {
+        btsService.deleteBts(exhibitionId, btsId);
         return SuccessResponse.ok(null, "BTS 콘텐츠가 성공적으로 삭제되었습니다.");
     }
 
@@ -85,12 +87,13 @@ public class BtsController {
 
     // 상세 조회 (GET)
     @Operation(summary = "BTS 상세 조회")
-    @GetMapping("/bts/{btsId}")
+    @GetMapping("/{exhibitionId}/bts/{btsId}")
     public SuccessResponse<BtsDetailResponse> getBtsDetail(
+            @PathVariable UUID exhibitionId,
             @PathVariable(value = "btsId") UUID btsId
     ) {
         // 서비스 호출하여 상세 데이터(작가 프로필, 연관 작품, 추천 BTS 포함) 수신
-        BtsDetailResponse response = btsService.getBtsDetail(btsId);
+        BtsDetailResponse response = btsService.getBtsDetail(exhibitionId, btsId);
 
         return SuccessResponse.ok(response, "BTS 상세 조회 성공");
     }
