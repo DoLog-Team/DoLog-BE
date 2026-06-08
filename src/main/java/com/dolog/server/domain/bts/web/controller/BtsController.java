@@ -10,6 +10,7 @@ import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.response.BtsCreateResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsDetailResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
+import com.dolog.server.domain.bts.web.dto.response.BtsListWrapperResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
@@ -21,9 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -75,15 +74,9 @@ public class BtsController {
     // 조회 (GET)
     @Operation(summary = "BTS 목록 조회")
     @GetMapping("/{exhibitionId}/bts")
-    public SuccessResponse<Map<String, Object>> getBtsList(@PathVariable UUID exhibitionId) {
+    public SuccessResponse<BtsListWrapperResponse> getBtsList(@PathVariable UUID exhibitionId) {
         List<BtsListResponse> btsList = btsService.getExhibitionBtsList(exhibitionId);
-
-        // 요청하신 JSON 형식대로 "content" 키에 담아 반환
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", btsList);
-        response.put("totalElements", btsList.size());
-
-        return SuccessResponse.ok(response, "BTS 목록을 조회했습니다.");
+        return SuccessResponse.ok(new BtsListWrapperResponse(btsList, btsList.size()), "BTS 목록을 조회했습니다.");
     }
 
 
