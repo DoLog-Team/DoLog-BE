@@ -8,13 +8,15 @@ import com.dolog.server.domain.bts.web.dto.response.BtsDetailResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
 public interface BtsService {
-    BtsCreateResponse createBts(BtsCreateRequest request) throws IOException;
-    BtsCreateResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request);
+    BtsCreateResponse createBts(BtsCreateRequest request, MultipartFile mainImg) throws IOException;
+    BtsCreateResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request, MultipartFile mainImg) throws IOException;
     void deleteBts(UUID exhibitionId, UUID btsId);
     List<BtsListResponse> getExhibitionBtsList(UUID exhibitionId);
     BtsMappingUpdateResponse syncBtsMapping(UUID exhibitionId, UUID btsId, BtsMappingUpdateRequest request);

@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.dolog.server.global.util.FileService;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.io.IOException;
@@ -59,7 +60,7 @@ public class BtsServiceImpl implements BtsService {
 //    1. 생성
     @Transactional
     @Override
-    public BtsCreateResponse createBts(BtsCreateRequest request) throws IOException {
+    public BtsCreateResponse createBts(BtsCreateRequest request, MultipartFile mainImg) throws IOException {
         // 1. 작품들 조회
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
         if (artworks.isEmpty()) throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND);
@@ -77,8 +78,10 @@ public class BtsServiceImpl implements BtsService {
         ArtistProfile artistProfile = artistProfileRepository.findByArtistAndExhibition(artist, exhibition)
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        // 4. 파일 업로드
-        String dbImageUrl = fileService.uploadFile(request.getMainImg(), "bts");
+        // 4. 파일 업로드 (선택)
+        String dbImageUrl = (mainImg != null && !mainImg.isEmpty())
+                ? fileService.uploadFile(mainImg, "bts")
+                : null;
 
         // 5. BTS 엔티티 생성 (ArtistProfile 저장)
         Bts bts = Bts.builder()
@@ -105,7 +108,7 @@ public class BtsServiceImpl implements BtsService {
 //    2. 수정
     @Override
     @Transactional
-    public BtsCreateResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request) {
+    public BtsCreateResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request, MultipartFile mainImg) throws IOException {
         Bts bts = btsRepository.findById(btsId)
                 .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
         if(!bts.getExhibition().getId().equals(exhibitionId)) {
@@ -122,7 +125,10 @@ public class BtsServiceImpl implements BtsService {
         }
 
         // 3. 업데이트 수행
-        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), request.getMainImg(), artistProfile);
+        String mainImgUrl = (mainImg != null && !mainImg.isEmpty())
+                ? fileService.uploadFile(mainImg, "bts")
+                : null;
+        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), mainImgUrl, artistProfile);
 
         // 4. 연결된 작품 목록 업데이트 (기존 로직 동일)
         if (request.getArtworkIds() != null) {

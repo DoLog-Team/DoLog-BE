@@ -37,26 +37,28 @@ public class BtsController {
 
     // 등록 (POST)
     @Operation(summary = "BTS 등록")
-    @PostMapping("/{exhibitionId}/bts")
+    @PostMapping(value = "/{exhibitionId}/bts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsCreateResponse> createBts(
             @PathVariable UUID exhibitionId,
-            @ModelAttribute BtsCreateRequest request
+            @Valid @ModelAttribute BtsCreateRequest request,
+            @RequestParam(required = false) MultipartFile mainImg
     ) throws IOException {
-        BtsCreateResponse response = btsService.createBts(request);
+        BtsCreateResponse response = btsService.createBts(request, mainImg);
         return SuccessResponse.ok(response, "BTS 콘텐츠 등록 성공");
     }
 
     // 수정 (PATCH)
     @Operation(summary = "BTS 수정")
-    @PatchMapping("/{exhibitionId}/bts/{btsId}")
+    @PatchMapping(value = "/{exhibitionId}/bts/{btsId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<BtsCreateResponse> updateBts(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID btsId,
-            @Valid @RequestBody BtsUpdateRequest request) {
+            @ModelAttribute BtsUpdateRequest request,
+            @RequestParam(required = false) MultipartFile mainImg) throws IOException {
 
-        BtsCreateResponse data = btsService.updateBts(exhibitionId, btsId, request);
+        BtsCreateResponse data = btsService.updateBts(exhibitionId, btsId, request, mainImg);
         return SuccessResponse.ok(data, "BTS 정보가 성공적으로 수정되었습니다.");
     }
 
