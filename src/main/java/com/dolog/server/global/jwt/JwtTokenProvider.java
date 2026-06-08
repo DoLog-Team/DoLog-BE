@@ -6,6 +6,7 @@ import com.dolog.server.global.exception.jwt.JwtMalformedException;
 import com.dolog.server.global.exception.jwt.JwtUnsupportedException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -16,14 +17,16 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    // 비밀키
-    private static final String SECRET_KEY = "AymkFsUli6txMdsB2QvIAJAY+gcoQNDYQGEkPcWlj+o=";
-
     // 토큰 유효기간
     private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 60;       // 1시간
     private static final long REFRESH_TOKEN_EXPIRATION = 1000 * 60 * 60 * 24 * 7; // 7일
 
-    private final Key key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    private final Key key;
+
+    // 생성자를 통해 스프링이 yml에서 값을 읽어와 주입해 주고, 안전하게 Key 객체를 생성합니다.
+    public JwtTokenProvider(@Value("${jwt.secret}") String secretKey) {
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
 
     /** 1. 토큰 생성 */
     /** Access Token */
