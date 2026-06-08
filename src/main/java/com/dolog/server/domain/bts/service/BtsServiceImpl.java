@@ -62,7 +62,7 @@ public class BtsServiceImpl implements BtsService {
     public BtsCreateResponse createBts(BtsCreateRequest request) throws IOException {
         // 1. 작품들 조회
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
-        if (artworks.isEmpty()) throw new RuntimeException("작품을 찾을 수 없습니다.");
+        if (artworks.isEmpty()) throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND);
 
         Artwork representativeArtwork = artworks.get(0);
         Exhibition exhibition = representativeArtwork.getExhibition();
@@ -71,11 +71,11 @@ public class BtsServiceImpl implements BtsService {
         Artist artist = representativeArtwork.getArtworkArtistMaps().stream()
                 .findFirst()
                 .map(ArtworkArtistMap::getArtist)
-                .orElseThrow(() -> new RuntimeException("작가를 찾을 수 없습니다."));
+                .orElseThrow(ArtistProfileNotFoundException::new);
 
         // 3. 해당 전시의 작가 프로필(ArtistProfile) 찾기 (중요!)
         ArtistProfile artistProfile = artistProfileRepository.findByArtistAndExhibition(artist, exhibition)
-                .orElseThrow(() -> new RuntimeException("해당 전시의 작가 프로필이 존재하지 않습니다."));
+                .orElseThrow(ArtistProfileNotFoundException::new);
 
         // 4. 파일 업로드
         String dbImageUrl = fileService.uploadFile(request.getMainImg(), "bts");
@@ -107,7 +107,7 @@ public class BtsServiceImpl implements BtsService {
     @Transactional
     public BtsCreateResponse updateBts(UUID btsId, BtsUpdateRequest request) {
         Bts bts = btsRepository.findById(btsId)
-                .orElseThrow(() -> new RuntimeException("BTS content not found"));
+                .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
 
         // 2. 작가 프로필 업데이트 로직
         ArtistProfile artistProfile = bts.getArtistProfile();
@@ -115,7 +115,7 @@ public class BtsServiceImpl implements BtsService {
         // DTO 필드명을 바꿨으므로 getArtistProfileId() 호출 가능!
         if (request.getArtistProfileId() != null) {
             artistProfile = artistProfileRepository.findById(request.getArtistProfileId())
-                    .orElseThrow(() -> new RuntimeException("Artist Profile not found"));
+                    .orElseThrow(ArtistProfileNotFoundException::new);
         }
 
         // 3. 업데이트 수행
@@ -141,7 +141,7 @@ public class BtsServiceImpl implements BtsService {
     @Transactional
     public void deleteBts(UUID btsId) {
         Bts bts = btsRepository.findById(btsId)
-                .orElseThrow(() -> new RuntimeException("BTS content not found"));
+                .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
 
         // cascade = ALL 설정에 의해 bts_artwork_map도 같이 삭제됨
         btsRepository.delete(bts);
