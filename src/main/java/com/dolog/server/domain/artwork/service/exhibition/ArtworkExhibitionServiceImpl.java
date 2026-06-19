@@ -9,6 +9,8 @@ import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
+import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
+import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +34,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
     public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search) {
         // 1. 전시회 존재 여부 확인
         if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new RuntimeException("해당 전시회를 찾을 수 없습니다.");
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
         }
 
         // 2. 안내 지도 리스트 조회

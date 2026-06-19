@@ -81,7 +81,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request) {
         // profileId를 기반으로 매핑 데이터 조회
         ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
 
         // 역할 수정
         map.updateRole(request.getArtistRole());
@@ -92,23 +92,32 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     @Override
     public void deleteArtistMapping(UUID artworkId, UUID artistProfileId) {
         ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
 
         artworkArtistMapRepository.delete(map);
     }
 
     @Override
     public void updateArtworkArtists(Artwork artwork, List<UUID> artistIds) {
+        // 기존 매핑의 역할 보존 (artistId → role)
+        Map<UUID, String> existingRoles = artwork.getArtworkArtistMaps().stream()
+                .collect(Collectors.toMap(
+                        map -> map.getArtist().getId(),
+                        ArtworkArtistMap::getArtistRole,
+                        (existing, duplicate) -> existing
+                ));
+
         // 기존 매핑 비우기
         artwork.getArtworkArtistMaps().clear();
 
-        // 새로 받은 ID들로 매핑 다시 만들기
+        // 새로 받은 ID들로 매핑 다시 만들기 (기존 역할 유지, 없으면 빈 문자열)
         List<Artist> artists = artistRepository.findAllById(artistIds);
         artists.forEach(artist -> {
+            String role = existingRoles.getOrDefault(artist.getId(), "");
             artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                     .artwork(artwork)
                     .artist(artist)
-                    .artistRole("Artist")
+                    .artistRole(role)
                     .build());
         });
     }

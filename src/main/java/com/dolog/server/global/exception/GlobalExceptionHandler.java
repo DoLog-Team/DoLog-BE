@@ -95,8 +95,7 @@ public class GlobalExceptionHandler {
     /* 비지니스 로직 에러 */
     @ExceptionHandler(BaseException.class)
     private ResponseEntity<ErrorResponse> handleBusinessException(BaseException e) {
-        log.error("BusinessError ");
-        log.error(e.getErrorCode().getMessage());
+        log.error("BusinessError: {}", e.getErrorCode().getMessage(), e);
         ErrorResponse error = ErrorResponse.of(e.getErrorCode());
         return ResponseEntity.status(error.getHttpStatus()).body(error);
     }
