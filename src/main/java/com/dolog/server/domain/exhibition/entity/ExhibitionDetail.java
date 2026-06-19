@@ -72,19 +72,15 @@ public class ExhibitionDetail extends BaseEntity {
 
     public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
                                 String dateInfo, String email, String copyright, String logoImg) {
-        this.title = title;
-        this.description = description;
-        this.exhibitionImg = exhibitionImg;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.dateInfo = dateInfo;
-        this.email = email;
-        if (copyright != null) {
-            this.copyright = copyright;
-        }
-        if (logoImg != null) {
-            this.logoImg = logoImg;
-        }
+        if (title != null) this.title = title;
+        if (description != null) this.description = description;
+        if (exhibitionImg != null) this.exhibitionImg = exhibitionImg;
+        if (startDate != null) this.startDate = startDate;
+        if (endDate != null) this.endDate = endDate;
+        if (dateInfo != null) this.dateInfo = dateInfo;
+        if (email != null) this.email = email;
+        if (copyright != null) this.copyright = copyright;
+        if (logoImg != null) this.logoImg = logoImg;
     }
 
     public void updateOgImage(String ogImage) {

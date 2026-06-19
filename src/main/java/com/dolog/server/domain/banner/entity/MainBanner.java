@@ -29,8 +29,8 @@ public class MainBanner extends BaseEntity {
     private Boolean isVisible;
 
     public void update(String imageUrl, String linkUrl, Integer orderIndex) {
-        this.imageUrl = imageUrl;
-        this.linkUrl = linkUrl;
-        this.orderIndex = orderIndex;
+        if (imageUrl != null) this.imageUrl = imageUrl;
+        if (linkUrl != null) this.linkUrl = linkUrl;
+        if (orderIndex != null) this.orderIndex = orderIndex;
     }
 }
