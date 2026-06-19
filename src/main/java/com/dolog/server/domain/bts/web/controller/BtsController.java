@@ -3,11 +3,12 @@ package com.dolog.server.domain.bts.web.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import com.dolog.server.domain.bts.service.BtsService;
 import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsMappingUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
-import com.dolog.server.domain.bts.web.dto.response.BtsCreateResponse;
+import com.dolog.server.domain.bts.web.dto.response.BtsResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsDetailResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListWrapperResponse;
@@ -38,12 +39,12 @@ public class BtsController {
     @Operation(summary = "BTS 등록")
     @PostMapping(value = "/{exhibitionId}/bts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('DEVELOPER')")
-    public SuccessResponse<BtsCreateResponse> createBts(
+    public SuccessResponse<BtsResponse> createBts(
             @PathVariable UUID exhibitionId,
-            @Valid @ModelAttribute BtsCreateRequest request,
+            @Valid @ParameterObject @ModelAttribute BtsCreateRequest request,
             @RequestParam(required = false) MultipartFile mainImg
     ) throws IOException {
-        BtsCreateResponse response = btsService.createBts(request, mainImg);
+        BtsResponse response = btsService.createBts(request, mainImg);
         return SuccessResponse.ok(response, "BTS 콘텐츠 등록 성공");
     }
 
@@ -51,13 +52,13 @@ public class BtsController {
     @Operation(summary = "BTS 수정")
     @PatchMapping(value = "/{exhibitionId}/bts/{btsId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('DEVELOPER')")
-    public SuccessResponse<BtsCreateResponse> updateBts(
+    public SuccessResponse<BtsResponse> updateBts(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID btsId,
-            @ModelAttribute BtsUpdateRequest request,
+            @ParameterObject @ModelAttribute BtsUpdateRequest request,
             @RequestParam(required = false) MultipartFile mainImg) throws IOException {
 
-        BtsCreateResponse data = btsService.updateBts(exhibitionId, btsId, request, mainImg);
+        BtsResponse data = btsService.updateBts(exhibitionId, btsId, request, mainImg);
         return SuccessResponse.ok(data, "BTS 정보가 성공적으로 수정되었습니다.");
     }
 

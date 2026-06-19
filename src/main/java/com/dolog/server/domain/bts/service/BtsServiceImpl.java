@@ -18,7 +18,7 @@ import com.dolog.server.domain.bts.exception.BtsException;
 import com.dolog.server.domain.bts.web.dto.request.BtsCreateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsMappingUpdateRequest;
 import com.dolog.server.domain.bts.web.dto.request.BtsUpdateRequest;
-import com.dolog.server.domain.bts.web.dto.response.BtsCreateResponse;
+import com.dolog.server.domain.bts.web.dto.response.BtsResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsDetailResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
@@ -60,7 +60,7 @@ public class BtsServiceImpl implements BtsService {
 //    1. 생성
     @Transactional
     @Override
-    public BtsCreateResponse createBts(BtsCreateRequest request, MultipartFile mainImg) throws IOException {
+    public BtsResponse createBts(BtsCreateRequest request, MultipartFile mainImg) throws IOException {
         // 1. 작품들 조회
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
         if (artworks.isEmpty()) throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND);
@@ -86,10 +86,11 @@ public class BtsServiceImpl implements BtsService {
         // 5. BTS 엔티티 생성 (ArtistProfile 저장)
         Bts bts = Bts.builder()
                 .exhibition(exhibition)
-                .artistProfile(artistProfile) // 프로필 직접 매핑
+                .artistProfile(artistProfile)
                 .title(request.getTitle())
-                .mainImg(dbImageUrl)
                 .contentUrl(request.getContentUrl())
+                .content(request.getContent())
+                .mainImg(dbImageUrl)
                 .build();
 
         // 5. 모든 작품을 BTS와 매핑 (N:M 처리)
@@ -102,13 +103,13 @@ public class BtsServiceImpl implements BtsService {
         }
 
         Bts savedBts = btsRepository.save(bts);
-        return BtsCreateResponse.of(savedBts);
+        return BtsResponse.of(savedBts);
     }
 
 //    2. 수정
     @Override
     @Transactional
-    public BtsCreateResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request, MultipartFile mainImg) throws IOException {
+    public BtsResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request, MultipartFile mainImg) throws IOException {
         Bts bts = btsRepository.findById(btsId)
                 .orElseThrow(() -> new BtsException(BtsErrorCode.BTS_NOT_FOUND));
         if(!bts.getExhibition().getId().equals(exhibitionId)) {
@@ -128,7 +129,7 @@ public class BtsServiceImpl implements BtsService {
         String mainImgUrl = (mainImg != null && !mainImg.isEmpty())
                 ? fileService.uploadFile(mainImg, "bts")
                 : null;
-        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), mainImgUrl, artistProfile);
+        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), request.getContent(), mainImgUrl, artistProfile);
 
         // 4. 연결된 작품 목록 업데이트 (기존 로직 동일)
         if (request.getArtworkIds() != null) {
@@ -143,7 +144,7 @@ public class BtsServiceImpl implements BtsService {
             }
         }
 
-        return BtsCreateResponse.of(bts);
+        return BtsResponse.of(bts);
     }
 
     @Override
@@ -225,6 +226,7 @@ public class BtsServiceImpl implements BtsService {
                 .btsId(bts.getId())
                 .title(bts.getTitle())
                 .contentUrl(bts.getContentUrl())
+                .content(bts.getContent())
                 .mainImg(bts.getMainImg())
                 .artists(artists)
                 .relatedArtworks(relatedArtworks)
@@ -294,7 +296,7 @@ public class BtsServiceImpl implements BtsService {
         }
 
         // 4. BTS 기본 정보 업데이트 (title, content, artist)
-        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), null, artistProfile);
+        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), null, null, artistProfile);
 
         // 5. 작품 매핑 교체 - 조회 결과가 요청 개수와 다르면 일부 ID가 잘못된 것
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
