@@ -107,6 +107,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
             if (profile.getProfileImg() != null) {
                 fileService.deleteFile(profile.getProfileImg());
             }
+            profile.clearProfileImg();
             newImageUrl = null;
         }
         // 새 파일 (교체)
