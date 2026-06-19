@@ -51,9 +51,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // 프로필 생성
     @Transactional
     @Override
-    public ArtistProfileResponse createArtistProfile(String exhibitionIdStr, ArtistProfileCreateRequest request) throws IOException {
+    public ArtistProfileResponse createArtistProfile(UUID exhibitionId, ArtistProfileCreateRequest request) throws IOException {
 
-        UUID exhibitionId = UUID.fromString(exhibitionIdStr);
         UUID artistId = UUID.fromString(request.getArtistId());
 
         // 1. 전시 및 작가 존재 확인
@@ -92,10 +91,9 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // 프로필 수정
     @Transactional
     @Override
-    public ArtistProfileResponse updateArtistProfile(String profileIdStr, ArtistProfileCreateRequest request) throws IOException {
+    public ArtistProfileResponse updateArtistProfile(UUID profileId, ArtistProfileCreateRequest request) throws IOException {
 
         // 1. 기존 프로필 조회
-        UUID profileId = UUID.fromString(profileIdStr);
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
@@ -247,8 +245,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // SNS 추가
     @Transactional
     @Override
-    public ArtistSnsResponse addArtistSns(String profileIdStr, ArtistSnsRequest request) {
-        UUID profileId = UUID.fromString(profileIdStr);
+    public ArtistSnsResponse addArtistSns(UUID profileId, ArtistSnsRequest request) {
 
         // 1. 프로필 존재 확인
         ArtistProfile profile = profileRepository.findById(profileId)
@@ -291,8 +288,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // SNS 목록 조회
     @Transactional(readOnly = true)
     @Override
-    public List<ArtistSnsResponse> getArtistSnsList(String profileIdStr) {
-        UUID profileId = UUID.fromString(profileIdStr);
+    public List<ArtistSnsResponse> getArtistSnsList(UUID profileId) {
 
         // DB에서 해당 프로필 ID를 외래키로 가진 SNS들을 다 긁어옵니다.
         return artistSnsRepository.findByArtistProfileId(profileId)
