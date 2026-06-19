@@ -16,6 +16,7 @@ public class BtsDetailResponse {
     private String title;
     private String mainImg;
     private String contentUrl;
+    private String content;
     private List<BtsArtistProfileInfo> artists;
     private List<RelatedArtworkInfo> relatedArtworks;
     private List<RecommendedBtsInfo> recommendedBts;

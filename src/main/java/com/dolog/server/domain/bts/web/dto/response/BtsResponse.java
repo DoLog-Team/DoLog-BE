@@ -1,6 +1,5 @@
 package com.dolog.server.domain.bts.web.dto.response;
 
-import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.bts.entity.Bts;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,17 +12,16 @@ import java.util.stream.Collectors;
 @Getter
 @Builder
 @AllArgsConstructor
-public class BtsCreateResponse {
+public class BtsResponse {
     private UUID btsId;
     private String title;
     private String contentUrl;
+    private String content;
     private String mainImg;
 
-    // 연결된 전시 및 작가 정보
     private UUID exhibitionId;
     private ArtistProfileInfo artistProfile;
 
-    // 연결된 작품 목록
     private List<ArtworkInfo> artworks;
 
     @Getter
@@ -40,19 +38,19 @@ public class BtsCreateResponse {
         private String title;
     }
 
-    public static BtsCreateResponse of(Bts bts) {
-        // Artist -> ArtistProfile로 변경된 엔티티 구조 반영
+    public static BtsResponse of(Bts bts) {
         var profile = bts.getArtistProfile();
 
-        return BtsCreateResponse.builder()
+        return BtsResponse.builder()
                 .btsId(bts.getId())
                 .title(bts.getTitle())
                 .contentUrl(bts.getContentUrl())
+                .content(bts.getContent())
                 .mainImg(bts.getMainImg())
                 .exhibitionId(bts.getExhibition() != null ? bts.getExhibition().getId() : null)
                 .artistProfile(profile != null ? ArtistProfileInfo.builder()
-                        .id(profile.getId()) // ArtistProfile의 ID
-                        .name(profile.getNameKo()) // ArtistProfile의 한국어 이름
+                        .id(profile.getId())
+                        .name(profile.getNameKo())
                         .build() : null)
                 .artworks(bts.getArtworkMaps().stream()
                         .map(map -> ArtworkInfo.builder()
