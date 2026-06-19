@@ -2,7 +2,7 @@ package com.dolog.server.domain.artist.web.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.dolog.server.domain.artist.service.ArtistServiceImpl;
+import com.dolog.server.domain.artist.service.ArtistService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
@@ -20,7 +20,7 @@ import java.util.UUID;
 @RequestMapping("/admin/artists")
 public class AdminArtistController {
 
-    private final ArtistServiceImpl artistService;
+    private final ArtistService artistService;
 
     //작가 생성
     @Operation(summary = "작가 생성")
