@@ -38,6 +38,9 @@ public class Bts extends BaseEntity {
     @Column(name = "content_url", columnDefinition = "TEXT")
     private String contentUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String content;
+
     @Column(name = "main_img", columnDefinition = "TEXT")
     private String mainImg;
 
@@ -45,18 +48,11 @@ public class Bts extends BaseEntity {
     @OneToMany(mappedBy = "bts", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BtsArtworkMap> artworkMaps = new ArrayList<>();
 
-    public void updateBtsInfo(String title, String contentUrl, String mainImg, ArtistProfile artistProfile) {
-        if (title != null) {
-            this.title = title;
-        }
-        if (contentUrl != null) {
-            this.contentUrl = contentUrl;
-        }
-        if (mainImg != null) {
-            this.mainImg = mainImg;
-        }
-        if (artistProfile != null) {
-            this.artistProfile = artistProfile;
-        }
+    public void updateBtsInfo(String title, String contentUrl, String content, String mainImg, ArtistProfile artistProfile) {
+        if (title != null) this.title = title;
+        if (contentUrl != null) this.contentUrl = contentUrl;
+        if (content != null) this.content = content;
+        if (mainImg != null) this.mainImg = mainImg;
+        if (artistProfile != null) this.artistProfile = artistProfile;
     }
 }

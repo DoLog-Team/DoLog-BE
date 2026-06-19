@@ -13,6 +13,7 @@ import java.util.UUID;
 public class BtsUpdateRequest {
     private String title;
     private String contentUrl;
+    private String content;
     private UUID artistProfileId;
     private List<UUID> artworkIds;
 }
