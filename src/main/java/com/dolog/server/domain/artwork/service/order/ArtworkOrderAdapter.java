@@ -1,6 +1,8 @@
 package com.dolog.server.domain.artwork.service.order;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
+import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
