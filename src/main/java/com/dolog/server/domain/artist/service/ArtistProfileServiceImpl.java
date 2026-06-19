@@ -12,6 +12,7 @@ import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistSnsNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
@@ -274,7 +275,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     public List<ArtistSnsResponse> deleteArtistSns(UUID snsId) {
         // 1. 삭제할 SNS 조회 (프로필 ID를 알아내기 위해 먼저 조회)
         ArtistSns sns = artistSnsRepository.findById(snsId)
-                .orElseThrow(() -> new RuntimeException("해당 SNS 기록을 찾을 수 없습니다."));
+                .orElseThrow(ArtistSnsNotFoundException::new);
 
         UUID profileId = sns.getArtistProfile().getId();
 
