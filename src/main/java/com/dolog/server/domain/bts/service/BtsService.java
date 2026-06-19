@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface BtsService {
-    BtsResponse createBts(BtsCreateRequest request, MultipartFile mainImg) throws IOException;
+    BtsResponse createBts(UUID exhibitionId, BtsCreateRequest request, MultipartFile mainImg) throws IOException;
     BtsResponse updateBts(UUID exhibitionId, UUID btsId, BtsUpdateRequest request, MultipartFile mainImg) throws IOException;
     void deleteBts(UUID exhibitionId, UUID btsId);
     List<BtsListResponse> getExhibitionBtsList(UUID exhibitionId);

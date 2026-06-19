@@ -24,6 +24,7 @@ import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
+import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
@@ -60,19 +61,29 @@ public class BtsServiceImpl implements BtsService {
 //    1. 생성
     @Transactional
     @Override
-    public BtsResponse createBts(BtsCreateRequest request, MultipartFile mainImg) throws IOException {
-        // 1. 작품들 조회
+    public BtsResponse createBts(UUID exhibitionId, BtsCreateRequest request, MultipartFile mainImg) throws IOException {
+        // 1. 작품들 조회 - 요청 개수와 다르면 일부 ID가 잘못된 것
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());
-        if (artworks.isEmpty()) throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND);
+        if (artworks.size() != request.getArtworkIds().size())
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND);
 
         Artwork representativeArtwork = artworks.get(0);
         Exhibition exhibition = representativeArtwork.getExhibition();
+
+        // 1-1. URL의 exhibitionId와 작품의 전시 일치 검증
+        if (!Objects.equals(exhibition.getId(), exhibitionId))
+            throw new BtsException(BtsErrorCode.BTS_EXHIBITION_MISMATCH);
+
+        // 1-2. 모든 작품이 동일한 전시 소속인지 검증
+        boolean hasInvalidArtwork = artworks.stream()
+                .anyMatch(a -> !Objects.equals(a.getExhibition().getId(), exhibitionId));
+        if (hasInvalidArtwork) throw new BtsException(BtsErrorCode.ARTWORK_EXHIBITION_MISMATCH);
 
         // 2. 작품의 작가(Artist) 찾기
         Artist artist = representativeArtwork.getArtworkArtistMaps().stream()
                 .findFirst()
                 .map(ArtworkArtistMap::getArtist)
-                .orElseThrow(ArtistProfileNotFoundException::new);
+                .orElseThrow(ArtistNotFoundException::new);
 
         // 3. 해당 전시의 작가 프로필(ArtistProfile) 찾기 (중요!)
         ArtistProfile artistProfile = artistProfileRepository.findByArtistAndExhibition(artist, exhibition)
@@ -123,6 +134,9 @@ public class BtsServiceImpl implements BtsService {
         if (request.getArtistProfileId() != null) {
             artistProfile = artistProfileRepository.findById(request.getArtistProfileId())
                     .orElseThrow(ArtistProfileNotFoundException::new);
+            if (!Objects.equals(artistProfile.getExhibition().getId(), exhibitionId)) {
+                throw new BtsException(BtsErrorCode.ARTIST_PROFILE_EXHIBITION_MISMATCH);
+            }
         }
 
         // 3. 업데이트 수행

@@ -44,7 +44,7 @@ public class BtsController {
             @Valid @ParameterObject @ModelAttribute BtsCreateRequest request,
             @RequestParam(required = false) MultipartFile mainImg
     ) throws IOException {
-        BtsResponse response = btsService.createBts(request, mainImg);
+        BtsResponse response = btsService.createBts(exhibitionId, request, mainImg);
         return SuccessResponse.ok(response, "BTS 콘텐츠 등록 성공");
     }
 
