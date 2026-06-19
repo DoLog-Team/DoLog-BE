@@ -5,7 +5,6 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.web.dto.response.CategoryArtworkResponse;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
-import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -99,7 +98,8 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
         // 작가가 여러 명일 수 있으므로 쉼표로 연결 (1순위: ArtistProfile 이름, 2순위: Artist 기본 이름)
         String artistNames = a.getArtworkArtistMaps().stream()
                 .map(aam -> {
-                    if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null) {
+                    if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null
+                            && !aam.getArtistProfile().getNameKo().isBlank()) {
                         return aam.getArtistProfile().getNameKo();
                     }
                     return aam.getArtist().getNameKo();

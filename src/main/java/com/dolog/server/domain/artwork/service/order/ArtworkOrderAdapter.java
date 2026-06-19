@@ -61,6 +61,10 @@ public class ArtworkOrderAdapter {
             Integer newPrev = prevItem != null ? prevItem.getOrderIndex() : null;
             Integer newNext = nextItem != null ? nextItem.getOrderIndex() : null;
             newOrder = orderProcessor.calculate(newPrev, newNext);
+
+            if (newOrder == null) {
+                throw new ArtworkException(ArtworkErrorCode.INVALID_ORDER_REQUEST);
+            }
         }
 
         artwork.updateOrder(newOrder);
