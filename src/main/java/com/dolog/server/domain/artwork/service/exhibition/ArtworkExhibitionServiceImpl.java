@@ -5,8 +5,6 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.web.dto.response.CategoryArtworkResponse;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
-import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
-import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -97,11 +95,16 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
     }
 
     private CategoryArtworkResponse.SimpleArtworkResponse mapToSimpleArtwork(Artwork a) {
-        // 작가가 여러 명일 수 있으므로 쉼표로 연결
-        // 프로필 이름 기준
-        String artistNames = String.join(", ",
-                artworkRepository.findArtistNames(a.getId())
-        );
+        // 작가가 여러 명일 수 있으므로 쉼표로 연결 (1순위: ArtistProfile 이름, 2순위: Artist 기본 이름)
+        String artistNames = a.getArtworkArtistMaps().stream()
+                .map(aam -> {
+                    if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null
+                            && !aam.getArtistProfile().getNameKo().isBlank()) {
+                        return aam.getArtistProfile().getNameKo();
+                    }
+                    return aam.getArtist().getNameKo();
+                })
+                .collect(Collectors.joining(", "));
 
         // 2. 전시회 제목 가져오기 (ExhibitionDetail이 @OneToOne이므로 바로 접근)
         String exhibitionTitle = "";

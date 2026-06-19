@@ -1,6 +1,8 @@
 package com.dolog.server.domain.artwork.service.order;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
+import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
@@ -45,10 +47,26 @@ public class ArtworkOrderAdapter {
 
         Integer newOrder = orderProcessor.calculate(prev, next);
 
-        // 공간 부족 → rebalance 후 다시 계산
+        // 공간 부족 → rebalance 후 갱신된 orderIndex로 다시 계산
         if (newOrder == null) {
+            // rebalance 전에 prev/next에 해당하는 아이템 객체를 먼저 찾아둔다
+            Artwork prevItem = prev == null ? null : artworks.stream()
+                    .filter(a -> prev.equals(a.getOrderIndex()))
+                    .findFirst().orElse(null);
+            Artwork nextItem = next == null ? null : artworks.stream()
+                    .filter(a -> next.equals(a.getOrderIndex()))
+                    .findFirst().orElse(null);
+
             orderProcessor.rebalance(artworks);
-            newOrder = orderProcessor.calculate(prev, next);
+
+            // rebalance 후 갱신된 orderIndex로 재계산
+            Integer newPrev = prevItem != null ? prevItem.getOrderIndex() : null;
+            Integer newNext = nextItem != null ? nextItem.getOrderIndex() : null;
+            newOrder = orderProcessor.calculate(newPrev, newNext);
+
+            if (newOrder == null) {
+                throw new ArtworkException(ArtworkErrorCode.INVALID_ORDER_REQUEST);
+            }
         }
 
         artwork.updateOrder(newOrder);

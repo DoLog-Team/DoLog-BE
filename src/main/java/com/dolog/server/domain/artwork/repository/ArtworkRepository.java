@@ -28,6 +28,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             "LEFT JOIN FETCH a.exhibitionZone " +
             "LEFT JOIN FETCH a.artworkArtistMaps aam " +
             "LEFT JOIN FETCH aam.artist " +
+            "LEFT JOIN FETCH aam.artistProfile " +
             "WHERE a.exhibition.id = :exhibitionId " +
             "AND (:zone IS NULL OR a.exhibitionZone.name = :zone) " +
             "AND (:category IS NULL OR a.category = :category) " +
@@ -53,6 +54,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     @Query("SELECT DISTINCT a FROM Artwork a " +
             "LEFT JOIN FETCH a.artworkArtistMaps am " +
             "LEFT JOIN FETCH am.artist art " +
+            "LEFT JOIN FETCH am.artistProfile " +
             "WHERE (a.title LIKE %:search% OR art.nameKo LIKE %:search%) " +
             "AND a.exhibition.id = :exhibitionId")
     List<Artwork> findArtworksBySearch(@Param("exhibitionId") UUID exhibitionId,
@@ -152,13 +154,6 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             UUID zoneId
     );
 
-    @Query("""
-        select ap.nameKo
-        from ArtworkArtistMap m
-        join m.artistProfile ap
-        where m.artwork.id = :artworkId
-        """)
-    List<String> findArtistNames(UUID artworkId);
 }
 
 
