@@ -64,16 +64,9 @@ public class ArtistProfileController {
     @Operation(summary = "전시 작가 프로필 상세 조회")
     @GetMapping("/{profileId}")
     public SuccessResponse<ArtistProfileDetailResponse> getArtistProfileDetail(
-            @PathVariable(value = "profileId") String profileIdStr
+            @PathVariable UUID profileId
     ) {
-        // PathVariable도 "null" 문자열이 들어올 경우를 대비해 안전하게 처리
-        if (profileIdStr == null || profileIdStr.isBlank() || profileIdStr.equals("null")) {
-            throw new IllegalArgumentException("유효하지 않은 프로필 ID입니다.");
-        }
-
-        UUID profileId = UUID.fromString(profileIdStr);
         ArtistProfileDetailResponse response = artistProfileService.getArtistProfileDetail(profileId);
-
         return SuccessResponse.ok(response, "작가 프로필 상세 조회 성공");
     }
 
@@ -89,7 +82,7 @@ public class ArtistProfileController {
     ) throws Exception {
 
         ArtistProfileResponse response = artistProfileService.createArtistProfile(
-                request.getExhibitionId(), request
+                UUID.fromString(request.getExhibitionId()), request
         );
         return SuccessResponse.ok(response, "작가 프로필 등록 성공");
     }
@@ -99,7 +92,7 @@ public class ArtistProfileController {
     @PatchMapping(value = "/{profileId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
-            @PathVariable String profileId,
+            @PathVariable UUID profileId,
             @ModelAttribute ArtistProfileCreateRequest request
     ) throws Exception {
         ArtistProfileResponse response = artistProfileService.updateArtistProfile(profileId, request);
@@ -115,7 +108,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 추가")
     @PostMapping("/{profileId}/sns")
     public SuccessResponse<ArtistSnsResponse> addArtistSns(
-            @PathVariable String profileId,
+            @PathVariable UUID profileId,
             @RequestBody ArtistSnsRequest request) throws IOException {
 
         ArtistSnsResponse response = artistProfileService.addArtistSns(profileId, request);
@@ -139,7 +132,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 목록 조회")
     @GetMapping("/{profileId}/sns")
     public SuccessResponse<List<ArtistSnsResponse>> getArtistSnsList(
-            @PathVariable String profileId) {
+            @PathVariable UUID profileId) {
 
         List<ArtistSnsResponse> response = artistProfileService.getArtistSnsList(profileId);
 
