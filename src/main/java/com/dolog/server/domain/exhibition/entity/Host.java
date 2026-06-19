@@ -35,9 +35,9 @@ public class Host extends BaseEntity {
     private String email;
 
     public void update(String name, String img, String description, String email) {
-        this.name = name;
-        this.img = img;
-        this.description = description;
-        this.email = email;
+        if (name != null) this.name = name;
+        if (img != null) this.img = img;
+        if (description != null) this.description = description;
+        if (email != null) this.email = email;
     }
 }

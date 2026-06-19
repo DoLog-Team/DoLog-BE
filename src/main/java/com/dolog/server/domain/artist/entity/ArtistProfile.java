@@ -77,7 +77,13 @@ public class ArtistProfile extends BaseEntity {
         if (email != null) {
             this.email = email;
         }
-        this.profileImg = profileImg;
+        if (profileImg != null) {
+            this.profileImg = profileImg;
+        }
+    }
+
+    public void clearProfileImg() {
+        this.profileImg = null;
     }
 
     // 처음 등록할 때 Artist의 기본 정보를 자동으로 채워줌
