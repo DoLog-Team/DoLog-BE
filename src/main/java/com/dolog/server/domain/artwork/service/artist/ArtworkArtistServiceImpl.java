@@ -113,7 +113,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
         // 새로 받은 ID들로 매핑 다시 만들기 (기존 역할 유지, 없으면 "Artist")
         List<Artist> artists = artistRepository.findAllById(artistIds);
         artists.forEach(artist -> {
-            String role = existingRoles.getOrDefault(artist.getId(), "Artist");
+            String role = existingRoles.getOrDefault(artist.getId(), "");
             artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                     .artwork(artwork)
                     .artist(artist)
