@@ -14,7 +14,7 @@ public interface ArtistProfileService {
 
 //    프로필
     ArtistProfileResponse createArtistProfile(UUID exhibitionId, ArtistProfileCreateRequest request)
-            throws Exception;
+            throws IOException;
 
     ArtistProfileResponse updateArtistProfile(UUID profileId, ArtistProfileCreateRequest request)
             throws IOException;

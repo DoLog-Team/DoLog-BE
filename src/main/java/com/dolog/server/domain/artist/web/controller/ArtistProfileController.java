@@ -79,10 +79,10 @@ public class ArtistProfileController {
     @PreAuthorize("hasRole('DEVELOPER')")
     public SuccessResponse<ArtistProfileResponse> createArtistProfile(
             @ModelAttribute ArtistProfileCreateRequest request
-    ) throws Exception {
+    ) throws IOException {
 
         ArtistProfileResponse response = artistProfileService.createArtistProfile(
-                UUID.fromString(request.getExhibitionId()), request
+                request.getExhibitionId(), request
         );
         return SuccessResponse.ok(response, "작가 프로필 등록 성공");
     }
@@ -94,7 +94,7 @@ public class ArtistProfileController {
     public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
             @PathVariable UUID profileId,
             @ModelAttribute ArtistProfileCreateRequest request
-    ) throws Exception {
+    ) throws IOException {
         ArtistProfileResponse response = artistProfileService.updateArtistProfile(profileId, request);
         return SuccessResponse.ok(response, "작가 프로필 수정 성공");
     }
