@@ -46,7 +46,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final FileService fileService;
     private final ArtistSnsRepository artistSnsRepository;
-    private final ArtistProfileRepository artistProfileRepository;
     private final BtsRepository btsRepository;
 
     // 프로필 생성
