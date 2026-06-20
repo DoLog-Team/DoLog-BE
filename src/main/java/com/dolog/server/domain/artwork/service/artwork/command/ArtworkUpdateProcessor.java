@@ -107,7 +107,8 @@ public class ArtworkUpdateProcessor {
 
         artworkArtistService.updateArtworkArtists(
                 artwork,
-                request.getArtistIds()
+                request.getArtistIds(),
+                request.getArtistRoles()
         );
 
         artworkImageService.updateArtworkImages(

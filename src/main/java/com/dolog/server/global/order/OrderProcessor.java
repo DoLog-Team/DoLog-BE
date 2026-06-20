@@ -22,7 +22,12 @@ public class OrderProcessor {
             return null;
         }
 
-        if (prev == null) return next - GAP;
+        if (prev == null) {
+            int candidate = next - GAP;
+            if (candidate >= 1) return candidate;
+            candidate = next / 2;
+            return candidate >= 1 ? candidate : null;
+        }
         if (next == null) return prev + GAP;
 
         // 공간 부족 → null 반환 (rebalance 필요)
