@@ -22,10 +22,4 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowCredentials(true);
     }
 
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/uploads/**")
-                // 절대 경로를 지정하세요 (마지막에 / 필수)
-                .addResourceLocations("file:///C:/uploads/"); //TODO: 나중에 S3 경로로 수정
-    }
 }
