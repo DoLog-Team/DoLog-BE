@@ -12,7 +12,7 @@ public interface ArtworkArtistService {
     ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request);
     ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request);
     void deleteArtistMapping(UUID artworkId, UUID artistProfileId);
-    void updateArtworkArtists(Artwork artwork, List<UUID> artistIds);
+    void updateArtworkArtists(Artwork artwork, List<UUID> artistIds, Map<UUID, String> artistRoles);
 
     // N+1 방지를 위한 작가명 일괄 조회 (Map 반환)
     Map<UUID, String> fetchArtistMap(List<UUID> artworkIds);

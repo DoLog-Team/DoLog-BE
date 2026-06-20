@@ -6,7 +6,9 @@ import lombok.Setter;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter
@@ -24,6 +26,7 @@ public class ArtworkUpdateFullRequest {
     private String youtubeUrl;
     private String purchaseUrl;
     private List<UUID> artistIds = new ArrayList<>();
+    private Map<UUID, String> artistRoles = new HashMap<>(); // artistId → role (없으면 기존 역할 유지)
     private List<ImageUpdateDto> images = new ArrayList<>();
 
 
