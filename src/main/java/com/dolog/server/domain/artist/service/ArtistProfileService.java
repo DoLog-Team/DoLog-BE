@@ -13,10 +13,10 @@ import java.util.UUID;
 public interface ArtistProfileService {
 
 //    프로필
-    ArtistProfileResponse createArtistProfile(String exhibitionId, ArtistProfileCreateRequest request)
-            throws Exception;
+    ArtistProfileResponse createArtistProfile(UUID exhibitionId, ArtistProfileCreateRequest request)
+            throws IOException;
 
-    ArtistProfileResponse updateArtistProfile(String profileId, ArtistProfileCreateRequest request)
+    ArtistProfileResponse updateArtistProfile(UUID profileId, ArtistProfileCreateRequest request)
             throws IOException;
 
     List<ArtistProfileResponse> getArtistProfileList(UUID exhibitionId);
@@ -25,12 +25,12 @@ public interface ArtistProfileService {
 
 
 //    SNS
-    ArtistSnsResponse addArtistSns(String profileIdStr, ArtistSnsRequest request)
+    ArtistSnsResponse addArtistSns(UUID profileId, ArtistSnsRequest request)
             throws IOException;
 
     List<ArtistSnsResponse> deleteArtistSns(UUID snsId)
-            throws IOException;;
+            throws IOException;
 
-    List<ArtistSnsResponse> getArtistSnsList(String profileIdStr);
+    List<ArtistSnsResponse> getArtistSnsList(UUID profileId);
 
 }
