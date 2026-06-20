@@ -8,6 +8,7 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
@@ -15,6 +16,7 @@ import java.util.Date;
 
 //JWT 토큰 생성 / 검증 유틸리티
 @Component
+@Slf4j
 public class JwtTokenProvider {
 
     // 토큰 유효기간
@@ -59,23 +61,23 @@ public class JwtTokenProvider {
                     .parseSignedClaims(token);
             return true;
         }  catch (ExpiredJwtException e) {
-            System.err.println("❌ JWT 만료됨: " + e.getMessage());
+            log.warn("JWT 만료: {}", e.getMessage());
             throw new JwtExpiredException();
 
         } catch (UnsupportedJwtException e) {
-            System.err.println("❌ 지원되지 않는 JWT 형식: " + e.getMessage());
+            log.warn("❌ 지원되지 않는 JWT 형식: {}", e.getMessage());
             throw new JwtUnsupportedException();
 
         } catch (MalformedJwtException e) {
-            System.err.println("❌ JWT 구조 손상됨: " + e.getMessage());
+            log.warn("❌ JWT 구조 손상됨: {}", e.getMessage());
             throw new JwtMalformedException();
 
         } catch (SignatureException | IllegalArgumentException e) {
-            System.err.println("❌ JWT 서명 불일치 또는 잘못된 토큰: " + e.getMessage());
+            log.warn("❌ JWT 서명 불일치 또는 잘못된 토큰: {}", e.getMessage());
             throw new JwtInvalidException();
 
         } catch (JwtException e) {
-            System.err.println("❌ JWT 파싱 중 일반 예외: " + e.getMessage());
+            log.warn("❌ JWT 파싱 중 일반 예외: {}", e.getMessage());
             throw new JwtInvalidException();
         }
     }
@@ -90,10 +92,10 @@ public class JwtTokenProvider {
                     .getPayload()
                     .getSubject();
         } catch (ExpiredJwtException e) {
-            System.err.println("❌ Access Token 만료: " + e.getMessage());
+            log.warn("❌ Access Token 만료: {}", e.getMessage());
             throw new JwtExpiredException();
         } catch (JwtException e) {
-            System.err.println("❌ JWT 파싱 실패: " + e.getMessage());
+            log.warn("❌ JWT 파싱 실패: {}", e.getMessage());
             throw new JwtInvalidException();
         }
     }
