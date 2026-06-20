@@ -20,6 +20,7 @@ import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -99,6 +100,9 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
 
     @Override
     public void updateArtworkArtists(Artwork artwork, List<UUID> artistIds, Map<UUID, String> artistRoles) {
+        // null로 넘어올 경우 빈 Map으로 정규화
+        Map<UUID, String> roles = artistRoles != null ? artistRoles : new HashMap<>();
+
         // 기존 매핑의 역할 보존 (artistId → role)
         Map<UUID, String> existingRoles = artwork.getArtworkArtistMaps().stream()
                 .collect(Collectors.toMap(
@@ -110,11 +114,12 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
         // 기존 매핑 비우기
         artwork.getArtworkArtistMaps().clear();
 
-        // 우선순위: 요청의 artistRoles > 기존 역할 > 빈 문자열
+        // 우선순위: 요청의 artistRoles(non-null) > 기존 역할 > 빈 문자열
         List<Artist> artists = artistRepository.findAllById(artistIds);
         artists.forEach(artist -> {
-            String role = artistRoles.getOrDefault(artist.getId(),
-                    existingRoles.getOrDefault(artist.getId(), ""));
+            String requested = roles.get(artist.getId());
+            String role = (requested != null) ? requested
+                    : existingRoles.getOrDefault(artist.getId(), "");
             artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                     .artwork(artwork)
                     .artist(artist)
