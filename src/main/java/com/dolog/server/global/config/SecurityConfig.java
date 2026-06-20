@@ -4,6 +4,7 @@ import com.dolog.server.global.jwt.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -42,8 +43,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 // HTTP 요청에 대한 접근 권한 설정
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/**")
-                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
 

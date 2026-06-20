@@ -17,16 +17,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173", "https://localhost:5173", "https://dolog.vercel.app")
-                                                                                    //TODO: 프론트 주소 변경 필요
+                .allowedOrigins("http://localhost:5173", "https://dolog.kr", "https://www.dolog.kr")
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowCredentials(true);
     }
 
-    @Override
-    public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/uploads/**")
-                // 절대 경로를 지정하세요 (마지막에 / 필수)
-                .addResourceLocations("file:///C:/uploads/"); //TODO: 나중에 S3 경로로 수정
-    }
 }
