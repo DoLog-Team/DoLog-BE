@@ -1,13 +1,11 @@
 package com.dolog.server.domain.exhibition.service;
 
-import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.entity.ExhibitionCustomTheme;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
-import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionCustomThemeRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
@@ -40,8 +38,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final ExhibitionMapRepository exhibitionMapRepository;
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
-    private final ArtistRepository artistRepository;
-    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final FileService fileService;
 
     @Override
