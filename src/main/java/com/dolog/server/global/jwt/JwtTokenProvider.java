@@ -32,10 +32,10 @@ public class JwtTokenProvider {
 
     /** 1. 토큰 생성 */
     /** Access Token */
-    public String createAccessToken(String nickname) {
+    public String createAccessToken(String email) {
         Date now = new Date();
         return Jwts.builder()
-                .subject(nickname)
+                .subject(email)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION))
                 .signWith(key)
@@ -43,9 +43,10 @@ public class JwtTokenProvider {
     }
 
     /** Refresh Token */
-    public String createRefreshToken() {
+    public String createRefreshToken(String email) {
         Date now = new Date();
         return Jwts.builder()
+                .subject(email)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION))
                 .signWith(key)
