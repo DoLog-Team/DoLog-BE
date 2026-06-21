@@ -1,13 +1,11 @@
 package com.dolog.server.domain.exhibition.service;
 
-import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.entity.ExhibitionCustomTheme;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
-import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionCustomThemeRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
@@ -20,6 +18,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,8 +39,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final ExhibitionMapRepository exhibitionMapRepository;
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
-    private final ArtistRepository artistRepository;
-    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final FileService fileService;
 
     @Override
@@ -324,17 +321,11 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         }
 
         // 로고 이미지 처리
-        String logoImgUrl = null;
-        if (request.getLogoImg() != null && !request.getLogoImg().isEmpty()) {
-            try {
-                String newLogoUrl = fileService.uploadFile(request.getLogoImg(), "logos");
-                if (!isNew && exhibitionDetail.getLogoImg() != null) {
-                    fileService.deleteFile(exhibitionDetail.getLogoImg());
-                }
-                logoImgUrl = newLogoUrl;
-            } catch (IllegalArgumentException e) {
-                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
-            }
+        String logoImgUrl;
+        try {
+            logoImgUrl = replaceImage(request.getLogoImg(), isNew ? null : exhibitionDetail.getLogoImg(), "logos");
+        } catch (IllegalArgumentException e) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
         }
 
         // 5. 업데이트
@@ -371,29 +362,21 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         );
 
         // ogImage 처리
-        if (request.getOgImage() != null && !request.getOgImage().isEmpty()) {
-            try {
-                String newOgImageUrl = fileService.uploadFile(request.getOgImage(), "og-images");
-                if (exhibitionDetail.getOgImage() != null) {
-                    fileService.deleteFile(exhibitionDetail.getOgImage());
-                }
-                exhibitionDetail.updateOgImage(newOgImageUrl);
-            } catch (IllegalArgumentException e) {
-                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
-            }
+        try {
+            exhibitionDetail.updateOgImage(
+                    replaceImage(request.getOgImage(), exhibitionDetail.getOgImage(), "og-images")
+            );
+        } catch (IllegalArgumentException e) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
         }
 
         // faviconImg 처리
-        if (request.getFaviconImg() != null && !request.getFaviconImg().isEmpty()) {
-            try {
-                String newFaviconUrl = fileService.uploadFile(request.getFaviconImg(), "favicons");
-                if (exhibitionDetail.getFaviconImg() != null) {
-                    fileService.deleteFile(exhibitionDetail.getFaviconImg());
-                }
-                exhibitionDetail.updateFaviconImg(newFaviconUrl);
-            } catch (IllegalArgumentException e) {
-                throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
-            }
+        try {
+            exhibitionDetail.updateFaviconImg(
+                    replaceImage(request.getFaviconImg(), exhibitionDetail.getFaviconImg(), "favicons")
+            );
+        } catch (IllegalArgumentException e) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
         }
 
         // 6. 저장
@@ -408,5 +391,11 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .exhibitionId(exhibition.getId())
                 .message(message)
                 .build();
+    }
+
+    private String replaceImage(MultipartFile newFile, String oldUrl, String folder) throws IOException {
+        if (newFile == null || newFile.isEmpty()) return oldUrl;
+        if (oldUrl != null) fileService.deleteFile(oldUrl);
+        return fileService.uploadFile(newFile, folder);
     }
 }
