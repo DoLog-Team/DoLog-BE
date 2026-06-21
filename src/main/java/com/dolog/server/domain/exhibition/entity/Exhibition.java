@@ -29,6 +29,9 @@ public class Exhibition extends BaseEntity {
     @Column(name = "univ_name", length = 100, nullable = false)
     private String univName;
 
+    @Column(name = "college_name", length = 100)
+    private String collegeName;
+
     @Column(name = "dept_name", length = 100, nullable = false)
     private String deptName;
 
@@ -48,9 +51,12 @@ public class Exhibition extends BaseEntity {
     @OneToOne(mappedBy = "exhibition", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private ExhibitionDetail exhibitionDetail;
 
-    public void updateBasicInfo(String univName, String deptName, ExhibitionType exhibitionType, String slug, Boolean isPublic) {
+    public void updateBasicInfo(String univName, String collegeName, String deptName, ExhibitionType exhibitionType, String slug, Boolean isPublic) {
         if (univName != null) {
             this.univName = univName;
+        }
+        if (collegeName != null) {
+            this.collegeName = collegeName;
         }
         if (deptName != null) {
             this.deptName = deptName;

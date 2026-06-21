@@ -222,6 +222,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Exhibition exhibition = Exhibition.builder()
                 .account(null) //TODO: JWT -> v2 에서 연동함
                 .univName(request.getUnivName())
+                .collegeName(request.getCollegeName())
                 .deptName(request.getDeptName())
                 .exhibitionType(request.getExhibitionType())
                 .slug(request.getSlug())
@@ -252,7 +253,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             }
         }
 
-        exhibition.updateBasicInfo(request.getUnivName(), request.getDeptName(), request.getExhibitionType(), request.getSlug(), request.getIsPublic());
+        exhibition.updateBasicInfo(request.getUnivName(), request.getCollegeName(), request.getDeptName(), request.getExhibitionType(), request.getSlug(), request.getIsPublic());
 
         return ExhibitionMessageResponse.builder()
                 .message("기본 정보가 성공적으로 수정되었습니다.")

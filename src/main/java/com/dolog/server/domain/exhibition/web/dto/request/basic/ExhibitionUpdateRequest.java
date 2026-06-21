@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 public class ExhibitionUpdateRequest {
 
     private String univName;
+    private String collegeName;
     private String deptName;
     private ExhibitionType exhibitionType;
     private String slug;
