@@ -4,6 +4,7 @@ import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -28,4 +29,10 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
     List<ArtistProfile> findAllByExhibitionId(UUID exhibitionId);
 
     Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
+
+    @Query("SELECT p FROM ArtistProfile p WHERE p.exhibition.id = :exhibitionId AND p.nameKo < :nameKo ORDER BY p.nameKo DESC")
+    List<ArtistProfile> findPrevProfile(@Param("exhibitionId") UUID exhibitionId, @Param("nameKo") String nameKo, Pageable pageable);
+
+    @Query("SELECT p FROM ArtistProfile p WHERE p.exhibition.id = :exhibitionId AND p.nameKo > :nameKo ORDER BY p.nameKo ASC")
+    List<ArtistProfile> findNextProfile(@Param("exhibitionId") UUID exhibitionId, @Param("nameKo") String nameKo, Pageable pageable);
 }
