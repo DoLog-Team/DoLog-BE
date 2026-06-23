@@ -27,12 +27,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.io.IOException;
-import java.text.Collator;
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 @Service
@@ -185,27 +184,15 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .toList();
 
-        // 5. prev / next 계산
-        List<ArtistProfile> profiles =
-                profileRepository.findAllByExhibitionId(profile.getExhibition().getId());
+        // 5. prev / next 계산 (DB에서 직접 조회)
+        UUID exhibitionId = profile.getExhibition().getId();
+        String currentNameKo = profile.getNameKo();
 
-        // 가나다 정렬
-        profiles.sort(Comparator.comparing(
-                ArtistProfile::getNameKo,
-                Collator.getInstance(Locale.KOREAN)
-        ));
+        List<ArtistProfile> prevList = profileRepository.findPrevProfile(exhibitionId, currentNameKo, PageRequest.of(0, 1));
+        List<ArtistProfile> nextList = profileRepository.findNextProfile(exhibitionId, currentNameKo, PageRequest.of(0, 1));
 
-        int currentIndex = -1;
-
-        for (int i = 0; i < profiles.size(); i++) {
-            if (profiles.get(i).getId().equals(profileId)) {
-                currentIndex = i;
-                break;
-            }
-        }
-
-        ArtistProfile prev = currentIndex > 0 ? profiles.get(currentIndex - 1) : null;
-        ArtistProfile next = currentIndex < profiles.size() - 1 ? profiles.get(currentIndex + 1) : null;
+        ArtistProfile prev = prevList.isEmpty() ? null : prevList.get(0);
+        ArtistProfile next = nextList.isEmpty() ? null : nextList.get(0);
 
 
         // 6. 최종 DTO 조립

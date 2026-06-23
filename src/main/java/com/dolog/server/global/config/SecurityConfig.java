@@ -45,6 +45,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/artist-profiles", "/artist-profiles/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/artists", "/artists/**").permitAll()
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
