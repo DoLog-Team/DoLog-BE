@@ -144,10 +144,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        if (!exhibition.isPublic()) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_PUBLIC);
-        }
-
         ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
 
@@ -314,11 +310,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             }
 
             imageUrl = newImageUrl;
-        }
-
-        // 4. 신규 생성 시 필수값 체크
-        if (isNew && imageUrl == null) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
         }
 
         // 로고 이미지 처리

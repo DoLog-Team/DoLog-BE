@@ -13,7 +13,11 @@ import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.beans.PropertyEditorSupport;
 
 import java.util.List;
 import java.util.UUID;
@@ -26,6 +30,16 @@ import java.util.UUID;
 public class ExhibitionHostController {
 
     private final ExhibitionHostService exhibitionHostService;
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(MultipartFile.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) {
+                setValue(null);
+            }
+        });
+    }
 
     @Operation(summary = "주최기관 등록/교체")
     @PreAuthorize("hasRole('DEVELOPER')")
