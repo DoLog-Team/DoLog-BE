@@ -12,7 +12,8 @@ import java.util.UUID;
 @NoArgsConstructor
 public class BtsUpdateRequest {
     private String title;
-    private String contentUrl;
+    private String linkLabel;
+    private String linkUrl;
     private String content;
     private UUID artistProfileId;
     private List<UUID> artworkIds;

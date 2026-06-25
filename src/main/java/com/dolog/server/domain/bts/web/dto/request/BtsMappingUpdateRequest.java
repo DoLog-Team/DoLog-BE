@@ -19,9 +19,9 @@ public class BtsMappingUpdateRequest {
     @NotBlank
     private String title;
 
-    @JsonProperty("content")
-    @NotBlank
-    private String contentUrl;
+    private String linkLabel;
+
+    private String linkUrl;
 
     @NotNull
     private UUID artistProfileId;
