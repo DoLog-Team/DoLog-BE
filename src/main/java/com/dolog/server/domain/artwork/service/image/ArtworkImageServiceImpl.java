@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.service.image;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artwork.entity.ArtworkImg;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
@@ -44,7 +45,7 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
                         return ArtworkImg.builder()
                                 .artwork(artwork)
                                 .imageUrl(uploadedUrl)
-                                .description(req.getDescription())
+                                .description(TextUtils.normalizeNewlines(req.getDescription()))
                                 .orderIndex(req.getOrderIndex())
                                 .build();
                     } catch (IOException e) {
@@ -152,7 +153,7 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
                             if (imgDto.getImageFile() != null && !imgDto.getImageFile().isEmpty()) {
                                 fileService.deleteFile(img.getImageUrl());
                             }
-                            img.update(finalUrl, imgDto.getDescription(), imgDto.getOrderIndex());
+                            img.update(finalUrl, TextUtils.normalizeNewlines(imgDto.getDescription()), imgDto.getOrderIndex());
                         });
             } else {
                 if (finalUrl != null) {

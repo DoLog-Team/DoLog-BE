@@ -1,6 +1,7 @@
 package com.dolog.server.domain.bts.service;
 
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artwork.entity.Artwork;
@@ -101,7 +102,7 @@ public class BtsServiceImpl implements BtsService {
                 .title(request.getTitle())
                 .linkLabel(request.getLinkLabel())
                 .linkUrl(request.getLinkUrl())
-                .content(request.getContent())
+                .content(TextUtils.normalizeNewlines(request.getContent()))
                 .mainImg(dbImageUrl)
                 .build();
 
@@ -242,7 +243,7 @@ public class BtsServiceImpl implements BtsService {
                 .title(bts.getTitle())
                 .linkLabel(bts.getLinkLabel())
                 .linkUrl(bts.getLinkUrl())
-                .content(bts.getContent() != null ? bts.getContent().replace("\\n", "\n") : null)
+                .content(TextUtils.normalizeNewlines(bts.getContent()))
                 .mainImg(bts.getMainImg())
                 .artists(artists)
                 .relatedArtworks(relatedArtworks)

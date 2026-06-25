@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.exhibition.entity.Host;
 import com.dolog.server.domain.exhibition.entity.HostSns;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -60,7 +61,7 @@ public class ExhibitionHostServiceImpl implements ExhibitionHostService {
                     existingHost.update(
                             request.getName(),
                             imageUrl,
-                            request.getDescription(),
+                            TextUtils.normalizeNewlines(request.getDescription()),
                             request.getEmail()
                     );
                     return existingHost;
@@ -79,7 +80,7 @@ public class ExhibitionHostServiceImpl implements ExhibitionHostService {
                             .exhibition(exhibition)
                             .name(request.getName())
                             .img(imageUrl)
-                            .description(request.getDescription())
+                            .description(TextUtils.normalizeNewlines(request.getDescription()))
                             .email(request.getEmail())
                             .build();
                 });

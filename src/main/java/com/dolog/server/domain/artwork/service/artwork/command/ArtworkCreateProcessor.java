@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.service.artwork.command;
 
 import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
@@ -108,11 +109,6 @@ public class ArtworkCreateProcessor {
     }
 
     private String normalize(String description) {
-
-        if (description == null) {
-            return null;
-        }
-
-        return description.replace("\\n", "\n");
+        return TextUtils.normalizeNewlines(description);
     }
 }

@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -56,7 +57,7 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
                     .exhibition(exhibition)
                     .zone(zone)
                     .imageUrl(imageUrl)
-                    .description(request.getDescription())
+                    .description(TextUtils.normalizeNewlines(request.getDescription()))
                     .build();
 
             exhibitionGuideMapRepository.save(guideMap);

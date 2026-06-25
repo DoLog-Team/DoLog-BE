@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
@@ -46,7 +47,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         ExhibitionZone zone = ExhibitionZone.builder()
                 .exhibition(exhibition)
                 .name(request.getName())
-                .description(request.getDescription())
+                .description(TextUtils.normalizeNewlines(request.getDescription()))
                 .orderId(request.getOrderId())
                 .build();
 
@@ -60,7 +61,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
 
-        zone.update(request.getName(), request.getDescription(), request.getOrderId());
+        zone.update(request.getName(), TextUtils.normalizeNewlines(request.getDescription()), request.getOrderId());
 
         return ExhibitionZoneUpdateResponse.from(zone);
     }

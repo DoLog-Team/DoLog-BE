@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.entity.ExhibitionCustomTheme;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
@@ -325,7 +326,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 request.getTitle() != null ? request.getTitle() : exhibitionDetail.getTitle(),
 
                 request.getDescription() != null
-                        ? request.getDescription().replace("\\n", "\n")
+                        ? TextUtils.normalizeNewlines(request.getDescription())
                         : exhibitionDetail.getDescription(),
 
                 imageUrl,
@@ -339,7 +340,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         : exhibitionDetail.getEndDate(),
 
                 request.getDateInfo() != null
-                        ? request.getDateInfo().replace("\\n", "\n")
+                        ? TextUtils.normalizeNewlines(request.getDateInfo())
                         : exhibitionDetail.getDateInfo(),
 
                 request.getEmail() != null

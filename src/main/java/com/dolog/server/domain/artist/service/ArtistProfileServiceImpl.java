@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artist.service;
 
 import com.dolog.server.domain.artist.entity.ArtistSns;
+import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistNotRegisteredInExhibitionException;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAlreadyExistsException;
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
@@ -76,7 +77,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         ArtistProfile profile = ArtistProfile.builder()
                 .artist(artist).exhibition(exhibition)
                 .nameKo(request.getNameKo()).nameEn(request.getNameEn())
-                .bio(request.getBio() != null ? request.getBio().replace("\\n", "\n") : null).email(request.getEmail())
+                .bio(TextUtils.normalizeNewlines(request.getBio())).email(request.getEmail())
                 .profileImg(dbImageUrl).isPublic(true).build();
 
         profile.fillDefaultInfoFromArtist();
@@ -120,7 +121,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         profile.updateProfile(
                 request.getNameKo() != null ? request.getNameKo() : profile.getNameKo(),
                 request.getNameEn() != null ? request.getNameEn() : profile.getNameEn(),
-                request.getBio() != null ? request.getBio().replace("\\n", "\n") : profile.getBio(),
+                request.getBio() != null ? TextUtils.normalizeNewlines(request.getBio()) : profile.getBio(),
                 request.getEmail() != null ? request.getEmail() : profile.getEmail(),
                 newImageUrl
         );
