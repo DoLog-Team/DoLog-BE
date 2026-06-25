@@ -19,6 +19,7 @@ public class ExhibitionArtworkListResponse {
     @Builder
     public static class ZoneInfo {
         private String zoneName;
+        private String description;
         private Integer zoneOrderId; // 피드백: 존 순서
         private List<CategoryArtworkResponse> categories; // 기존 CategoryArtworkResponse 재사용
     }

@@ -73,6 +73,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
 
                     return ExhibitionArtworkListResponse.ZoneInfo.builder()
                             .zoneName(ez != null ? ez.getName() : "미지정 구역")
+                            .description(ez != null ? ez.getDescription() : null)
                             .zoneOrderId(ez != null ? ez.getOrderId() : 999) // 순서 지정
                             .categories(categoryResponses)
                             .build();
