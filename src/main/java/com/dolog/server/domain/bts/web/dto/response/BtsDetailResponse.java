@@ -15,7 +15,8 @@ public class BtsDetailResponse {
     private UUID btsId;
     private String title;
     private String mainImg;
-    private String contentUrl;
+    private String linkLabel;
+    private String linkUrl;
     private String content;
     private List<BtsArtistProfileInfo> artists;
     private List<RelatedArtworkInfo> relatedArtworks;

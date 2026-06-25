@@ -99,7 +99,8 @@ public class BtsServiceImpl implements BtsService {
                 .exhibition(exhibition)
                 .artistProfile(artistProfile)
                 .title(request.getTitle())
-                .contentUrl(request.getContentUrl())
+                .linkLabel(request.getLinkLabel())
+                .linkUrl(request.getLinkUrl())
                 .content(request.getContent())
                 .mainImg(dbImageUrl)
                 .build();
@@ -143,7 +144,7 @@ public class BtsServiceImpl implements BtsService {
         String mainImgUrl = (mainImg != null && !mainImg.isEmpty())
                 ? fileService.uploadFile(mainImg, "bts")
                 : null;
-        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), request.getContent(), mainImgUrl, artistProfile);
+        bts.updateBtsInfo(request.getTitle(), request.getLinkLabel(), request.getLinkUrl(), request.getContent(), mainImgUrl, artistProfile);
 
         // 4. 연결된 작품 목록 업데이트 (기존 로직 동일)
         if (request.getArtworkIds() != null) {
@@ -239,8 +240,9 @@ public class BtsServiceImpl implements BtsService {
         return BtsDetailResponse.builder()
                 .btsId(bts.getId())
                 .title(bts.getTitle())
-                .contentUrl(bts.getContentUrl())
-                .content(bts.getContent())
+                .linkLabel(bts.getLinkLabel())
+                .linkUrl(bts.getLinkUrl())
+                .content(bts.getContent() != null ? bts.getContent().replace("\\n", "\n") : null)
                 .mainImg(bts.getMainImg())
                 .artists(artists)
                 .relatedArtworks(relatedArtworks)
@@ -310,7 +312,7 @@ public class BtsServiceImpl implements BtsService {
         }
 
         // 4. BTS 기본 정보 업데이트 (title, content, artist)
-        bts.updateBtsInfo(request.getTitle(), request.getContentUrl(), null, null, artistProfile);
+        bts.updateBtsInfo(request.getTitle(), request.getLinkLabel(), request.getLinkUrl(), null, null, artistProfile);
 
         // 5. 작품 매핑 교체 - 조회 결과가 요청 개수와 다르면 일부 ID가 잘못된 것
         List<Artwork> artworks = artworkRepository.findAllById(request.getArtworkIds());

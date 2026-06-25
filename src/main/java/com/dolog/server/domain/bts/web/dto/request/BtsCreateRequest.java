@@ -13,7 +13,8 @@ import java.util.UUID;
 @NoArgsConstructor
 public class BtsCreateRequest {
     private String title;
-    private String contentUrl;
+    private String linkLabel;
+    private String linkUrl;
     private String content;
     @NotEmpty(message = "작품 ID는 필수입니다.")
     private List<UUID> artworkIds;

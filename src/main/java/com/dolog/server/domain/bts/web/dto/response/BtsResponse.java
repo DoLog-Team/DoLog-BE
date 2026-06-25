@@ -15,7 +15,8 @@ import java.util.stream.Collectors;
 public class BtsResponse {
     private UUID btsId;
     private String title;
-    private String contentUrl;
+    private String linkLabel;
+    private String linkUrl;
     private String content;
     private String mainImg;
 
@@ -44,7 +45,8 @@ public class BtsResponse {
         return BtsResponse.builder()
                 .btsId(bts.getId())
                 .title(bts.getTitle())
-                .contentUrl(bts.getContentUrl())
+                .linkLabel(bts.getLinkLabel())
+                .linkUrl(bts.getLinkUrl())
                 .content(bts.getContent())
                 .mainImg(bts.getMainImg())
                 .exhibitionId(bts.getExhibition() != null ? bts.getExhibition().getId() : null)
