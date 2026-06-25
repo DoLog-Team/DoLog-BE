@@ -15,7 +15,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.beans.PropertyEditorSupport;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +32,16 @@ import java.util.UUID;
 public class ExhibitionController {
 
     private final ExhibitionService exhibitionService;
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(MultipartFile.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) {
+                setValue(null);
+            }
+        });
+    }
 
     // 전시회 전체 목록 조회
     @Operation(summary = "전시회 전체 목록 조회")
