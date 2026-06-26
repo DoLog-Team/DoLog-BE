@@ -13,7 +13,6 @@ public class ExhibitionCreateRequest {
     @NotBlank(message = "필수 입력 값(학교명, 학과명)이 누락되었습니다.")
     private String univName;
 
-    @NotBlank(message = "필수 입력 값(단과대명)이 누락되었습니다.") // 추가
     private String collegeName;
 
     @NotBlank(message = "필수 입력 값(학교명, 학과명)이 누락되었습니다.")
