@@ -17,6 +17,10 @@ public class ExhibitionFooterResponse {
     @JsonProperty("exhibition_id")
     private UUID exhibitionId;
     private String title;
+
+    @JsonProperty("univ_name")
+    private String univName;
+
     private String department;
     private String address;
 
@@ -30,6 +34,7 @@ public class ExhibitionFooterResponse {
         return ExhibitionFooterResponse.builder()
                 .exhibitionId(detail.getExhibition().getId())
                 .title(detail.getTitle())
+                .univName(detail.getExhibition().getUnivName())
                 .department(detail.getExhibition().getDeptName())
                 .address(map.getAddress())
                 .addressDetail(map.getDetailLocation())
