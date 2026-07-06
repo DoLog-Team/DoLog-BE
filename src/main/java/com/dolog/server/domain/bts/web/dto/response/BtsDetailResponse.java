@@ -46,6 +46,8 @@ public class BtsDetailResponse {
         private UUID artworkId;
         private String title;
         private String image;
+        private String category;
+        private List<String> artistNames;
     }
 
     @Getter

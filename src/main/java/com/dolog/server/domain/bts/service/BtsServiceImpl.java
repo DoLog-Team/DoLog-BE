@@ -227,11 +227,21 @@ public class BtsServiceImpl implements BtsService {
         // 3. 연관 작품 매핑 (BtsArtworkMap을 거쳐서 Artwork 추출)
         List<BtsDetailResponse.RelatedArtworkInfo> relatedArtworks = bts.getArtworkMaps().stream()
                 .map(BtsArtworkMap::getArtwork)
-                .map(artwork -> BtsDetailResponse.RelatedArtworkInfo.builder()
-                        .artworkId(artwork.getId())
-                        .title(artwork.getTitle())
-                        .image(artwork.getMainImg())
-                        .build())
+                .map(artwork -> {
+                    List<String> artistNames = artwork.getArtworkArtistMaps().stream()
+                            .map(map -> map.getArtistProfile() != null
+                                    ? map.getArtistProfile().getNameKo()
+                                    : map.getArtist().getNameKo())
+                            .filter(Objects::nonNull)
+                            .toList();
+                    return BtsDetailResponse.RelatedArtworkInfo.builder()
+                            .artworkId(artwork.getId())
+                            .title(artwork.getTitle())
+                            .image(artwork.getMainImg())
+                            .category(artwork.getCategory())
+                            .artistNames(artistNames)
+                            .build();
+                })
                 .toList();
 
         // 4. 추천 BTS 리스트 생성 (우선순위: 동일 작가 -> 동일 전시 최신순)
