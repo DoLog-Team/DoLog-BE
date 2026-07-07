@@ -15,6 +15,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionMetaUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
 import com.dolog.server.global.util.FileService;
@@ -198,6 +199,41 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
         ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
+
+        return ExhibitionMetaResponse.of(exhibition, detail);
+    }
+
+    @Override
+    @Transactional
+    public ExhibitionMetaResponse updateExhibitionMeta(
+            UUID exhibitionId,
+            ExhibitionMetaUpdateRequest request
+    ) throws IOException {
+
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
+
+        String ogImageUrl = replaceImage(
+                request.getOgImage(),
+                detail.getOgImage(),
+                "og-images"
+        );
+
+        String faviconImgUrl = replaceImage(
+                request.getFaviconImg(),
+                detail.getFaviconImg(),
+                "favicons"
+        );
+
+        detail.updateOgMeta(
+                request.getOgTitle(),
+                TextUtils.normalizeNewlines(request.getOgDescription()),
+                ogImageUrl,
+                faviconImgUrl
+        );
 
         return ExhibitionMetaResponse.of(exhibition, detail);
     }

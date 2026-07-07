@@ -30,8 +30,8 @@ public class ExhibitionMetaResponse {
 
         return ExhibitionMetaResponse.builder()
                 .id(exhibition.getId().toString())
-                .title(detail.getTitle())
-                .description(detail.getDescription())
+                .title(detail.getOgTitle() != null ? detail.getOgTitle() : detail.getTitle())
+                .description(detail.getOgDescription() != null ? detail.getOgDescription() : detail.getDescription())
                 .image(detail.getOgImage() != null ? detail.getOgImage() : detail.getExhibitionImg())
                 .favicon(detail.getFaviconImg())
 

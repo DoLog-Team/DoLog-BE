@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.service;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionMetaUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
@@ -28,4 +29,7 @@ public interface ExhibitionService {
     ExhibitionMessageResponse deleteExhibition(UUID exhibitionId);
 
     ExhibitionDetailUpsertResponse upsertExhibitionDetail(UUID exhibitionId, ExhibitionDetailUpsertRequest request) throws IOException;
+
+    // 전시 Meta 정보 관련
+    ExhibitionMetaResponse updateExhibitionMeta(UUID exhibitionId, ExhibitionMetaUpdateRequest request) throws IOException;
 }

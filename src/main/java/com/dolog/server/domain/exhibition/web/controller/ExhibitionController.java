@@ -1,5 +1,6 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionMetaUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.beans.PropertyEditorSupport;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -96,6 +98,16 @@ public class ExhibitionController {
     public SuccessResponse<ExhibitionMetaResponse> getExhibitionMeta(
             @PathVariable UUID exhibitionId) {
         return SuccessResponse.ok(exhibitionService.getExhibitionMeta(exhibitionId));
+    }
+
+    @Operation(summary = "전시회 OG 메타 정보 수정")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    @PatchMapping(value = "/{exhibitionId}/meta", consumes = "multipart/form-data")
+    public SuccessResponse<ExhibitionMetaResponse> updateExhibitionMeta(
+            @PathVariable UUID exhibitionId,
+            @ModelAttribute ExhibitionMetaUpdateRequest request
+    ) throws IOException {
+        return SuccessResponse.ok(exhibitionService.updateExhibitionMeta(exhibitionId, request));
     }
 
 

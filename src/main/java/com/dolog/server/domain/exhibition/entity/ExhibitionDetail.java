@@ -66,6 +66,12 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(length = 255)
     private String copyright;
 
+    @Column(name = "og_title", length = 255)
+    private String ogTitle;
+
+    @Column(name = "og_description", columnDefinition = "TEXT")
+    private String ogDescription;
+
     public void updateSplashImg(String splashImg) {
         this.splashImg = splashImg;
     }
@@ -89,5 +95,12 @@ public class ExhibitionDetail extends BaseEntity {
 
     public void updateFaviconImg(String faviconImg) {
         this.faviconImg = faviconImg;
+    }
+
+    public void updateOgMeta(String ogTitle, String ogDescription, String ogImage, String faviconImg) {
+        if (ogTitle != null) this.ogTitle = ogTitle;
+        if (ogDescription != null) this.ogDescription = ogDescription;
+        if (ogImage != null) this.ogImage = ogImage;
+        if (faviconImg != null) this.faviconImg = faviconImg;
     }
 }
