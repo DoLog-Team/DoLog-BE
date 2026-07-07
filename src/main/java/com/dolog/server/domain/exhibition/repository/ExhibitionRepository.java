@@ -19,7 +19,8 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
             "WHERE (:isPublic IS NULL OR e.isPublic = :isPublic) " +
             "AND (:univName IS NULL OR e.univName = :univName) " +
             "AND (:exhibitionType IS NULL OR e.exhibitionType = :exhibitionType) " +
-            "AND (:search IS NULL OR d.title LIKE CONCAT('%', :search, '%'))")
+            "AND (:search IS NULL OR d.title LIKE CONCAT('%', :search, '%')) " +
+            "ORDER BY e.createdAt DESC")
     List<Exhibition> findExhibitions(
             @Param("isPublic") Boolean isPublic,
             @Param("univName") String univName,
