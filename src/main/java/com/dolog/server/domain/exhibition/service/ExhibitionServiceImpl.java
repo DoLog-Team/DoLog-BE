@@ -184,11 +184,13 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                     return new ExhibitionException(ExhibitionErrorCode.CUSTOM_THEME_NOT_FOUND);
                 });
 
-        String splashImg = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
-                .map(ExhibitionDetail::getSplashImg)
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
                 .orElse(null);
 
-        return ExhibitionCustomThemeResponse.of(theme, exhibitionId, splashImg);
+        String splashImg = detail != null ? detail.getSplashImg() : null;
+        String logoImg = detail != null ? detail.getLogoImg() : null;
+
+        return ExhibitionCustomThemeResponse.of(theme, exhibitionId, splashImg, logoImg);
     }
 
     @Override
