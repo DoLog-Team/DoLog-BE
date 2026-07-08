@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionPartnerService;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberReorderRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberResponse;
@@ -18,6 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -110,5 +112,17 @@ public class PartnerController {
     ) {
         exhibitionPartnerService.deleteMember(memberId);
         return SuccessResponse.ok(null, "데이터 삭제에 성공하였습니다.");
+    }
+
+    // 멤버 순서 일괄 변경
+    @Operation(summary = "도움을 주신 분들 멤버 순서 일괄 변경")
+    @PreAuthorize("hasRole('DEVELOPER')")
+    @PatchMapping("/parts/{partId}/members/reorder")
+    public SuccessResponse<Void> reorderMembers(
+            @PathVariable UUID partId,
+            @RequestBody List<PartnerMemberReorderRequest> requests
+    ) {
+        exhibitionPartnerService.reorderMembers(partId, requests);
+        return SuccessResponse.ok(null, "멤버 순서가 변경되었습니다.");
     }
 }

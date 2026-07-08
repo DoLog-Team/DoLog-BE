@@ -76,6 +76,9 @@ public class PartnerListResponse {
         @JsonProperty("member_image_url")
         private String memberImageUrl;
 
+        @JsonProperty("member_order")
+        private Integer memberOrder;
+
         public static MemberItem from(PartnerMember member) {
             return MemberItem.builder()
                     .memberId(member.getId())
@@ -83,6 +86,7 @@ public class PartnerListResponse {
                     .memberNameEn(member.getNameEn())
                     .memberEmail(member.getEmail())
                     .memberImageUrl(member.getImageUrl())
+                    .memberOrder(member.getOrder())
                     .build();
         }
     }

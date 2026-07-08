@@ -37,10 +37,17 @@ public class PartnerMember extends BaseEntity {
     @Column(length = 500)
     private String imageUrl;
 
+    @Column(name = "display_order")
+    private Integer order;
+
     public void update(String name, String nameEn, String email, String imageUrl) {
         if (name != null) this.name = name;
         if (nameEn != null) this.nameEn = nameEn;
         if (email != null) this.email = email;
         if (imageUrl != null) this.imageUrl = imageUrl;
+    }
+
+    public void updateOrder(Integer order) {
+        this.order = order;
     }
 }

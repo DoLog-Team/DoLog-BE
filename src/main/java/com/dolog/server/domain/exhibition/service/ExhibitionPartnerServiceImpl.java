@@ -9,6 +9,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.PartnerMemberRepository;
 import com.dolog.server.domain.exhibition.repository.PartnerRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberReorderRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
@@ -22,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +48,7 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
 
         List<PartnerMember> allMembers = "name".equals(sort)
                 ? partnerMemberRepository.findByPartnerIdInOrderByNameAsc(partnerIds)
-                : partnerMemberRepository.findByPartnerIdIn(partnerIds);
+                : partnerMemberRepository.findByPartnerIdInOrderByOrderAscCreatedAtAsc(partnerIds);
 
         return PartnerListResponse.from(partners, allMembers);
     }
@@ -102,12 +105,17 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
             throw new RuntimeException(e);
         }
 
+        int nextOrder = request.getMemberOrder() != null
+                ? request.getMemberOrder()
+                : partnerMemberRepository.findMaxOrderByPartnerId(partId).map(max -> max + 1).orElse(1);
+
         PartnerMember member = PartnerMember.builder()
                 .partner(partner)
                 .name(request.getMemberName())
                 .nameEn(request.getMemberNameEn())
                 .email(request.getMemberEmail())
                 .imageUrl(imageUrl)
+                .order(nextOrder)
                 .build();
 
         partnerMemberRepository.save(member);
@@ -153,5 +161,33 @@ public class ExhibitionPartnerServiceImpl implements ExhibitionPartnerService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND));
 
         partnerMemberRepository.delete(member);
+    }
+
+    @Override
+    public void reorderMembers(UUID partId, List<PartnerMemberReorderRequest> requests) {
+        partnerRepository.findById(partId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.PARTNER_NOT_FOUND));
+
+        List<UUID> memberIds = requests.stream()
+                .map(PartnerMemberReorderRequest::getMemberId)
+                .collect(Collectors.toList());
+
+        List<PartnerMember> members = partnerMemberRepository.findAllById(memberIds);
+
+        boolean hasInvalidMember = members.stream()
+                .anyMatch(m -> !m.getPartner().getId().equals(partId));
+        if (hasInvalidMember) {
+            throw new ExhibitionException(ExhibitionErrorCode.PARTNER_MEMBER_NOT_FOUND);
+        }
+
+        Map<UUID, PartnerMember> memberMap = members.stream()
+                .collect(Collectors.toMap(PartnerMember::getId, m -> m));
+
+        for (PartnerMemberReorderRequest req : requests) {
+            PartnerMember member = memberMap.get(req.getMemberId());
+            if (member != null) {
+                member.updateOrder(req.getOrder());
+            }
+        }
     }
 }
