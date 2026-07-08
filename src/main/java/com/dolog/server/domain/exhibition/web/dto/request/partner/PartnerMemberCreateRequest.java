@@ -19,4 +19,6 @@ public class PartnerMemberCreateRequest {
     private MultipartFile memberImage;
 
     private String memberEmail;
+
+    private Integer memberOrder;
 }

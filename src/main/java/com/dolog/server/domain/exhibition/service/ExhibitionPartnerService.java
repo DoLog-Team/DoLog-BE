@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberReorderRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerMemberUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerListResponse;
 import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartCreateRequest;
@@ -8,6 +9,7 @@ import com.dolog.server.domain.exhibition.web.dto.request.partner.PartnerPartUpd
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerMemberResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.partner.PartnerPartResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface ExhibitionPartnerService {
@@ -25,4 +27,6 @@ public interface ExhibitionPartnerService {
     PartnerMemberResponse updateMember(UUID memberId, PartnerMemberUpdateRequest request);
 
     void deleteMember(UUID memberId);
+
+    void reorderMembers(UUID partId, List<PartnerMemberReorderRequest> requests);
 }
