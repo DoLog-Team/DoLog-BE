@@ -1,25 +1,34 @@
-version: '3.8'
-
 services:
-#  mysql:
-#    image: mysql:8
-#    container_name: local-mysql
-#    environment:
-#      MYSQL_ROOT_PASSWORD: root
-#      MYSQL_DATABASE: dolog
-#    ports:
-#      - "3306:3306"
-#    volumes:
-#      - mysql-data:/var/lib/mysql
+  mysql:
+    image: mysql:8.4
+    container_name: dolog-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: dolog          # 앱 URL의 /dolog
+      MYSQL_USER: dolog              # 앱 접속 계정 (application-local.properties와 일치)
+      MYSQL_PASSWORD: localpassword
+      TZ: Asia/Seoul
+    ports:
+      - "3307:3306"   # 포트 충돌 있을까봐 포트 변경함 - 변경 시 local.properties와 맞추어야함.
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   localstack:
-    image: localstack/localstack
-    container_name: localstack
+    image: localstack/localstack:3
+    container_name: dolog-localstack
     environment:
       - SERVICES=s3
       - DEBUG=1
     ports:
-      - "4566:4566"
+      - "4567:4566"   # 포트 충돌 있을까봐 포트 변경함 - 변경 시 local.properties와 맞추어야함.
+    volumes:
+      - localstack-data:/var/lib/localstack
 
 volumes:
   mysql-data:
+  localstack-data:

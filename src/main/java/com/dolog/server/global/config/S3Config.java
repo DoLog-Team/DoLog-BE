@@ -1,5 +1,6 @@
 package com.dolog.server.global.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,7 +9,10 @@ import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.BucketAlreadyExistsException;
+import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
 
+@Slf4j
 @Configuration
 public class S3Config {
 
@@ -23,6 +27,10 @@ public class S3Config {
 
     @Value("${bucket-name}")
     private String bucketName;
+
+    // localstack 엔드포인트 (application-local.properties에서 주입 / prod 환경에선 기본값으로 주입, 사용은 안함 단순 에러 방지임.)
+    @Value("${s3.endpoint:http://localhost:4567}")
+    private String s3Endpoint;
 
     // 공통 크리덴셜 생성 메소드
     private AwsBasicCredentials getCredentials() {
@@ -46,18 +54,21 @@ public class S3Config {
         S3Client client = S3Client.builder()
                 .region(Region.of(region))
                 .credentialsProvider(StaticCredentialsProvider.create(getCredentials()))
-                .endpointOverride(java.net.URI.create("http://localhost:4566"))
+                .endpointOverride(java.net.URI.create(s3Endpoint))
                 .forcePathStyle(true)
                 .build();
 
         // 자동 생성 로직
         try {
             client.createBucket(b -> b.bucket(bucketName));
-            System.out.println("✅ 로컬 테스트용 S3 버킷 생성 완료: " + bucketName);
+            log.info("로컬 테스트용 S3 버킷 생성 완료: {}", bucketName);
+        } catch (BucketAlreadyOwnedByYouException | BucketAlreadyExistsException e) {
+            log.info("로컬 버킷이 이미 존재합니다: {}", bucketName);
         } catch (Exception e) {
-            System.out.println("ℹ️ 로컬 버킷이 이미 존재합니다.");
+            log.warn("localstack 버킷 생성 실패 — localstack이 떠 있는지 확인하세요 (endpoint: {}): {}",
+                    s3Endpoint, e.getMessage());
         }
 
         return client;
-        }
     }
+}
