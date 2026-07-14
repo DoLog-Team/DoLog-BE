@@ -82,6 +82,11 @@ dependencyManagement {
 	}
 }
 
+// plain jar 비활성 — build/libs에 실행 JAR 하나만 남기도록 변경. docker file에서 copy *.jar 로 인해 생기는 모호성 제거.
+jar {
+	enabled = false
+}
+
 // bootRun은 개발용 명령이므로 프로파일 기본값을 local로 (ACTIVE 지정 시 그 값이 우선. 운영은 jar 직접 실행이라 무관)
 bootRun {
 	environment 'ACTIVE', System.getenv('ACTIVE') ?: 'local'
