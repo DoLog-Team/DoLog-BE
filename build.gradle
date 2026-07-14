@@ -82,6 +82,11 @@ dependencyManagement {
 	}
 }
 
+// bootRun은 개발용 명령이므로 프로파일 기본값을 local로 (ACTIVE 지정 시 그 값이 우선. 운영은 jar 직접 실행이라 무관)
+bootRun {
+	environment 'ACTIVE', System.getenv('ACTIVE') ?: 'local'
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 	// 빌드 시 테스트 결과 보고서를 명확히 생성하도록 보장합니다.

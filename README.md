@@ -13,10 +13,10 @@ DoLog 백엔드 서버 (Spring Boot 3.3 / Java 17 / Gradle)
 
 ```bash
 docker compose up -d
-docker compose ps        # mysql이 healthy 될 때까지 수 초
+docker compose ps 
 ```
 
-로컬 인프라는 다른 프로젝트와 충돌하지 않도록 **기본 포트를 사용하지 않습니다**:
+로컬 인프라는 다른 프로젝트와 충돌하지 않도록 기본 포트를 사용하지 않습니다:
 
 | 서비스 | 호스트 포트 | 접속 정보 |
 |---|---|---|
@@ -26,10 +26,10 @@ docker compose ps        # mysql이 healthy 될 때까지 수 초
 ### 2. 앱 실행 (local 프로파일)
 
 ```bash
-ACTIVE=local ./gradlew bootRun
+./gradlew bootRun        # bootRun은 프로파일 기본값이 local (ACTIVE=dev 등으로 지정 시 그 값이 우선)
 ```
 
-IntelliJ에서는 실행 구성(Run Configuration)의 환경변수에 `ACTIVE=local`을 지정합니다.
+IntelliJ에서 메인 클래스를 직접 실행하는 경우에는 실행 구성(Run Configuration)의 환경변수에 `ACTIVE=local`을 지정합니다 (최초 1회).
 
 - API: `http://localhost:8080/api` (동작 확인: `GET /api/exhibitions` → 200)
 - Swagger: `http://localhost:8080/api/swagger-ui/index.html`
@@ -38,7 +38,7 @@ IntelliJ에서는 실행 구성(Run Configuration)의 환경변수에 `ACTIVE=lo
 ### 3. 테스트 / 빌드
 
 ```bash
-./gradlew build          # 테스트 포함 — 별도 환경변수가 필요 없습니다 (로컬 인프라는 떠 있어야 함)
+./gradlew build          # 테스트 포함 — 별도 환경변수가 필요 없습니다 (로컬 도커 컴포즈는 떠 있어야 함)
 ```
 
 ### 로컬 S3(LocalStack) 파일 확인
