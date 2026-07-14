@@ -1,0 +1,14 @@
+.git
+.gradle
+.github
+.idea
+src
+docs
+emd
+gradle
+gradlew
+gradlew.bat
+*.md
+# build 하위는 JAR(libs)만 남기고 제외
+build/*
+!build/libs
