@@ -1,5 +1,5 @@
 # Runtime image (JRE) — 패치버전 고정으로 재현성 확보 (dependabot(docker)이 자동 갱신)
-FROM eclipse-temurin:17.0.19_10-jre
+FROM eclipse-temurin:24.0.2_12-jre
 
 WORKDIR /app
 
