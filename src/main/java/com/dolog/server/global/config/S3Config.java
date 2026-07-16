@@ -37,9 +37,10 @@ public class S3Config {
         return AwsBasicCredentials.create(accessKey, secretKey);
     }
 
-    // [서버 환경용]
+    // [서버 환경용] — prod는 운영 키/운영 버킷, dev(Oracle)는 dev 버킷 한정 IAM 키를 env로 공급받는다.
+    // DefaultCredentialsProvider(EC2 롤)로의 통합은 Phase 1-4에서 진행 (docs/dev-environment-plan.md §4)
     @Bean
-    @Profile("prod")
+    @Profile({"prod", "dev"})
     public S3Client s3ClientProd() {
         return S3Client.builder()
                 .region(Region.of(region))
