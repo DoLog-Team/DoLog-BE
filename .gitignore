@@ -13,7 +13,7 @@ build/
 *.log
 
 ### Spring Config ###
-application-dev.properties
+# application-dev/local은 시크릿 없이 커밋한다 — 실제 값은 서버 .env가 공급
 application-prod.properties
 application-test.properties
 application-secret.properties
@@ -21,6 +21,8 @@ application-secret.properties
 ### Env & Credentials ###
 .env
 .env.*
+# 예시 파일은 시크릿이 없으므로 허용
+!.env.example
 *.bak
 *.local
 *.key
