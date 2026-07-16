@@ -1,27 +1,44 @@
 # 의존성 자동 갱신 — Dockerfile의 고정 베이스 태그는 이것(docker)이 최신 패치로 유지한다
-# 메이저 버전 bump는 전부 무시 — 수동 검토로만 올리도록 변경 java 버전 및 Spring Boot 프레임워크 등등.
+# 운영 방침: 검증된 안정 버전만 (보안 업데이트는 아래 설정과 무관하게 즉시 올라옴)
+#  - monthly + groups: 월 1회, 생태계당 PR 하나로 묶어서
+#  - cooldown 21일: 릴리스 후 3주 지난 버전만 제안 — 신상 버전의 회귀 버그 검증 대기
+#  - 메이저 무시: java 버전, Spring Boot 프레임워크 등 메이저 업그레이드는 수동 검토로만
 version: 2
 updates:
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 21
     open-pull-requests-limit: 3
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+
   - package-ecosystem: gradle
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 21
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
     open-pull-requests-limit: 5
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
+    cooldown:
+      default-days: 21
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
     open-pull-requests-limit: 5
     ignore:
       - dependency-name: "*"
