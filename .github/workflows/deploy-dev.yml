@@ -1,0 +1,94 @@
+name: Deploy Dev
+
+# Oracle dev 서버 배포 — secret은 GitHub Environments(development)가 정본.
+# 트리거: dev CI 성공 시 자동
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: ["dev"]
+
+jobs:
+  deploy:
+    name: Deploy to Oracle dev
+    runs-on: ubuntu-latest
+    environment: development
+    # CI 성공일 때만 (수동 실행은 항상 허용)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Check environment configured
+        id: ready
+        run: echo "ok=${{ secrets.SSH_HOST != '' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: steps.ready.outputs.ok == 'true'
+        uses: actions/checkout@v4
+
+      # 배포 파일을 서버로 동기화 — 서버 상태가 항상 레포와 일치
+      - name: Copy deploy files
+        if: steps.ready.outputs.ok == 'true'
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "deploy/dev"
+          target: /home/${{ secrets.SSH_USER }}/dolog-dev
+          strip_components: 2
+          overwrite: true
+
+      - name: Deploy over SSH
+        if: steps.ready.outputs.ok == 'true'
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            cd /home/${{ secrets.SSH_USER }}/dolog-dev
+
+            # 환경변수는 development 환경 Secret이 정본 — 매 배포마다 새로 기록
+            echo "${{ secrets.ENV_FILE }}" > .env
+            chmod 600 .env
+
+            if [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+            fi
+
+            # 인증서 발급 이후에는 레포의 ssl 설정(.disabled)이 활성본을 대체 — 레포가 항상 정본
+            if [ -f nginx/dev-ssl.conf ] && [ -f nginx/dev-ssl.conf.disabled ]; then
+              mv -f nginx/dev-ssl.conf.disabled nginx/dev-ssl.conf
+            fi
+
+            echo "[1/3] Pull & up..."
+            docker compose pull app
+            docker compose up -d mysql app
+            # nginx/certbot은 최초 인증서 발급(init-cert.sh) 이후에만 기동 가능
+            if [ -f nginx/dev-ssl.conf ]; then
+              docker compose up -d nginx certbot
+              docker compose exec -T nginx nginx -s reload || true
+            else
+              echo "(안내) 아직 인증서 미발급 상태 — ./init-cert.sh <도메인> <이메일> 실행 필요"
+            fi
+
+            echo "[2/3] Health check (최대 150초 폴링)..."
+            healthy=""
+            for i in $(seq 1 30); do
+              if curl -fsS http://localhost:9090/actuator/health > /dev/null 2>&1; then
+                healthy=1
+                break
+              fi
+              sleep 5
+            done
+            if [ -z "$healthy" ]; then
+              echo "Health check 실패"
+              docker logs --tail 100 be-dev || true
+              exit 1
+            fi
+            echo "Health check OK"
+
+            echo "[3/3] Cleanup..."
+            docker image prune -f

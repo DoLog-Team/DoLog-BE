@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: ["dev", "main"]
+    branches: ["dev"]
   push:
-    branches: ["dev", "main"]
+    branches: ["dev"]
   workflow_dispatch:
 
 concurrency:
@@ -75,9 +75,9 @@ jobs:
         with:
           files: "**/build/test-results/test/*.xml"
 
-      # 3) 도커 허브 로그인 및 푸시 (PR이 아니고 메인/데브 브랜치일 때만 실행)
+      # 3) 도커 허브 로그인 및 푸시 (PR이 아닌 dev push일 때만 실행)
       - name: Login to Docker Hub
-        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
         uses: docker/login-action@v4.2.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -86,22 +86,23 @@ jobs:
       # 멀티아치 준비 — 같은 태그 하나로 prod(EC2, amd64)와 dev(Oracle A1, arm64)를 모두 커버.
       # 이미지가 "JRE 베이스 + JAR 복사" 구조라 QEMU에서 무거운 컴파일이 돌 일은 없음 (JAR 빌드는 위 Gradle 단계에서 완료)
       - name: Set up QEMU
-        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
         uses: docker/setup-buildx-action@v3
 
+      # :latest 없음 — dev 배포는 :dev, 운영 배포는 릴리즈가 만드는 :vX.Y.Z (A안)
       - name: Build & Push image
-        if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
         uses: docker/build-push-action@v7.2.0
         with:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:dev
             ${{ env.IMAGE }}:${{ github.sha }}
 
       # 테스트 실패 시 리포트 저장
