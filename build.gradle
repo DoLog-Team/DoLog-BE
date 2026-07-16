@@ -73,8 +73,8 @@ dependencies {
 	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
 
 	// 이미지 처리 및 WebP 변환을 위한 라이브러리
-	implementation 'com.sksamuel.scrimage:scrimage-core:4.1.2'
-	implementation 'com.sksamuel.scrimage:scrimage-webp:4.1.2'
+	implementation 'com.sksamuel.scrimage:scrimage-core:4.6.6'
+	implementation 'com.sksamuel.scrimage:scrimage-webp:4.6.6'
 }
 
 dependencyManagement {
