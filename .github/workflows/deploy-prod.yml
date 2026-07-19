@@ -19,6 +19,8 @@ env:
 jobs:
   build-and-deploy:
     name: Build & Deploy ${{ github.event.release.tag_name }}
+    # Pre-release 발행은 배포 제외 — 태그·릴리즈 노트만 생성되고 운영엔 나가지 않는다
+    if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     environment: production
 
