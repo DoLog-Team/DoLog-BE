@@ -24,7 +24,7 @@ jobs:
 
       - name: Checkout
         if: steps.ready.outputs.ok == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.3.1
 
       # 배포 파일을 서버로 동기화 — 서버 상태가 항상 레포와 일치
       - name: Copy deploy files
