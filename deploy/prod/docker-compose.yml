@@ -1,0 +1,91 @@
+# Oracle prod 서버용 compose — MySQL + 앱 + nginx + certbot
+# dev(deploy/dev/docker-compose.yml)와 동형. 환경차(ACTIVE/이미지/버킷/CORS/볼륨/컨테이너명)만 다름.
+# 메모리 튜닝(-Xmx2g / innodb-buffer-pool / mem_limit)은 실측 근거로 미적용 — dev와 동일 기본값.
+#   근거: 1 OCPU/6GB 단독에서 app+mysql 실사용 ~0.84GB, 가용 4.3GB, 데이터 ~1MB, buffer pool 기본 128M.
+# 사용 (Oracle prod 서버에서, 이 디렉터리에 .env를 만든 뒤):
+#   docker compose pull && docker compose up -d
+# .env 항목은 .env.example 참고 (실제 값은 절대 커밋하지 말 것)
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: prod-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PROD_MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: dolog
+      MYSQL_USER: dolog
+      MYSQL_PASSWORD: ${PROD_MYSQL_PASSWORD}
+    volumes:
+      - prod-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  app:
+    image: ${PROD_IMAGE}
+    container_name: be
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      ACTIVE: prod
+      TZ: Asia/Seoul
+      JAVA_OPTS: -Xms256m -Xmx1g
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9090:9090"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: prod-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - certbot-etc:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    # certbot이 갱신한 인증서를 반영하도록 6시간마다 리로드
+    command: sh -c 'while :; do sleep 6h; nginx -s reload; done & exec nginx -g "daemon off;"'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  certbot:
+    image: certbot/certbot
+    container_name: prod-certbot
+    restart: unless-stopped
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-webroot:/var/www/certbot
+    # 12시간마다 갱신 시도 (만료 30일 전부터 실제 갱신됨) — 최초 발급은 init-cert.sh
+    entrypoint: sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  prod-mysql-data:
+  certbot-etc:
+  certbot-webroot:
