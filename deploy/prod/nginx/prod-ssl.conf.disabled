@@ -1,0 +1,24 @@
+# prod HTTPS(443) — 첫 인증서 발급 전에는 .disabled 상태여야 nginx가 뜬다 (init-cert.sh가 발급 후 활성화)
+# server_name / 인증서 경로의 prod.example.com은 init-cert.sh가 실제 도메인으로 치환한다
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name prod.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/prod.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/prod.example.com/privkey.pem;
+
+    # 앱 API — /api 프리픽스 그대로 전달 (컨테이너 네트워크로 app 서비스에 직접)
+    location /api {
+        proxy_pass http://app:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 헬스체크 공개 (모니터링용) — 정확 매칭이라 다른 actuator 엔드포인트는 비노출
+    location = /health {
+        proxy_pass http://app:9090/actuator/health;
+    }
+}
