@@ -97,8 +97,8 @@ jobs:
             echo "${{ secrets.ENV_FILE }}" > .env
             chmod 600 .env
 
-            # 이번 릴리즈 이미지 태그를 compose 인터폴레이션에 주입 (.env/시크릿은 불변, shell env가 우선)
-            export PROD_IMAGE="${{ env.IMAGE }}:${{ env.VERSION }}"
+            # 이번 릴리즈 이미지 태그를 .env에 기록
+            echo "PROD_IMAGE=${{ env.IMAGE }}:${{ env.VERSION }}" >> .env
 
             # 인증서 발급 이후에는 레포의 ssl 설정(.disabled)이 활성본을 대체 — 레포가 항상 정본
             if [ -f nginx/prod-ssl.conf ] && [ -f nginx/prod-ssl.conf.disabled ]; then
