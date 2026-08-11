@@ -1,0 +1,28 @@
+name: Backup Check
+
+# prod 서버에 cron 등록해둔게 잘 작동하는지 감시하기 위함입니다.
+# 매일 최신 db/ 백업의 신선도(26h 내)·크기를 확인, 문제면 job 실패(빨간불 = 알림).
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC (백업 04:00 UTC 후)
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_READER_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_READER_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ap-northeast-2
+      BUCKET: dolog-prod-backup
+    steps:
+      - name: 최신 db 백업 신선도·크기 확인
+        run: |
+          read KEY SIZE LM < <(aws s3api list-objects-v2 --bucket "$BUCKET" --prefix db/ \
+            --query 'sort_by(Contents,&LastModified)[-1].[Key,Size,LastModified]' --output text)
+          echo "최신 백업: $KEY (${SIZE}B, $LM)"
+          [ "$KEY" = "None" ] && { echo "::error::db/ 백업이 하나도 없음"; exit 1; }
+          AGE=$(( $(date +%s) - $(date -d "$LM" +%s) ))
+          [ "$AGE" -gt 93600 ] && { echo "::error::최신 백업이 26h 초과 ($((AGE/3600))h 전)"; exit 1; }
+          [ "$SIZE" -lt 10000 ] && { echo "::error::백업 크기 과소 (${SIZE}B < 10KB)"; exit 1; }
+          echo "OK — 백업 정상"
