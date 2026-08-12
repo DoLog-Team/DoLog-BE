@@ -1,12 +1,12 @@
 # prod HTTPS(443) — 첫 인증서 발급 전에는 .disabled 상태여야 nginx가 뜬다 (init-cert.sh가 발급 후 활성화)
-# server_name / 인증서 경로의 prod.example.com은 init-cert.sh가 실제 도메인으로 치환한다
+# 도메인은= 하드코딩 (배포 scp가 서버 conf를 덮으므로 레포가 정본. 인증서는 init-cert.sh로 최초 1회 발급)
 server {
     listen 443 ssl;
     http2 on;
-    server_name prod.example.com;
+    server_name dolog-archive.site;
 
-    ssl_certificate /etc/letsencrypt/live/prod.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/prod.example.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/dolog-archive.site/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/dolog-archive.site/privkey.pem;
 
     # 앱 API — /api 프리픽스 그대로 전달 (컨테이너 네트워크로 app 서비스에 직접)
     location /api {
