@@ -17,7 +17,10 @@ server {
     }
 
     # 헬스체크 공개 (모니터링용) — 정확 매칭이라 다른 actuator 엔드포인트는 비노출
+    # uptimerobot에서 HEAD로 찍힘. actuator(9090)는 HEAD에 403 → HEAD엔 nginx가 직접 200(엣지 생존).
+    # 실제 app health는 GET으로 반영(CD 폴링).
     location = /health {
+        if ($request_method = HEAD) { return 200; }
         proxy_pass http://app:9090/actuator/health;
     }
 }
