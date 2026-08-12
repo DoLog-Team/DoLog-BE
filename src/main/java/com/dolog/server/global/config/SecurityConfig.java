@@ -47,6 +47,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         // 헬스체크(관리 포트 9090)는 인증 없이 허용 — CD 폴링·외부 모니터링용
                         .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
+                        // HealthEndpoint 매처는 GET만 매칭 → HEAD(무료 모니터 기본 메서드) 별도 허용
+                        .requestMatchers(HttpMethod.HEAD, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artist-profiles", "/artist-profiles/**").permitAll()

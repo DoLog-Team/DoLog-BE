@@ -15,6 +15,9 @@ services:
       MYSQL_DATABASE: dolog
       MYSQL_USER: dolog
       MYSQL_PASSWORD: ${PROD_MYSQL_PASSWORD}
+    # 로컬 툴(DataGrip 등) SSH 터널 접속용 — 루프백만 바인딩(인터넷 노출 X, SSH 터널로만 도달)
+    ports:
+      - "127.0.0.1:3306:3306"
     volumes:
       - prod-mysql-data:/var/lib/mysql
     healthcheck:
