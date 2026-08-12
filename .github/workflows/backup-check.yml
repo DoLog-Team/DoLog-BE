@@ -26,3 +26,10 @@ jobs:
           [ "$AGE" -gt 93600 ] && { echo "::error::최신 백업이 26h 초과 ($((AGE/3600))h 전)"; exit 1; }
           [ "$SIZE" -lt 10000 ] && { echo "::error::백업 크기 과소 (${SIZE}B < 10KB)"; exit 1; }
           echo "OK — 백업 정상"
+
+      - name: Discord 알림 (실패 시)
+        if: failure()
+        run: |
+          curl -sf -H "Content-Type: application/json" \
+            -d '{"content":"🔴 DoLog 백업 감시 실패 — S3 최신 db/ 백업이 없거나 오래됨/과소. Actions 로그 확인."}' \
+            "${{ secrets.DISCORD_WEBHOOK }}"
