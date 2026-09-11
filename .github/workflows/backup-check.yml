@@ -4,7 +4,7 @@ name: Backup Check
 # 매일 최신 db/ 백업의 신선도(26h 내)·크기를 확인, 문제면 job 실패(빨간불 = 알림).
 on:
   schedule:
-    - cron: '0 6 * * *'   # 06:00 UTC (백업 04:00 UTC 후)
+    - cron: '0 21 * * *'   # 21:00 UTC = 다음 날 KST 06:00 (KST 04:00 백업 2시간 후)
   workflow_dispatch:
 
 jobs:
