@@ -5,8 +5,11 @@
 # 필요: prod-mysql 컨테이너 기동, aws CLI + .env의 BACKUP_AWS_ACCESS_KEY_ID/SECRET/BACKUP_BUCKET/AWS_REGION
 #
 # 크론 등록 (서버, 1회만 실행해주면 됨!!):
+#   서버 cron 시간대가 UTC인지 먼저 확인: timedatectl
+#   아래 예시는 UTC 19:00 = 다음 날 KST 04:00 (KST 서버는 0 4 사용).
+#   배포는 crontab을 갱신하지 않으므로 기존 항목을 직접 수정할 것.
 #   crontab -e
-#   0 4 * * * /home/ubuntu/dolog-prod/backup-db.sh >> /home/ubuntu/logs/backup.log 2>&1
+#   0 19 * * * /home/ubuntu/dolog-prod/backup-db.sh >> /home/ubuntu/logs/backup.log 2>&1
 #
 # 원격 보존 = 버킷 수명주기 규칙이 담당 (db/ 14일, log/ 14일). 이 스크립트는 로컬 3일만 정리.
 set -euo pipefail
