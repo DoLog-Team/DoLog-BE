@@ -1,6 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionMetaUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.EntryCodeRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -119,6 +120,16 @@ public class ExhibitionController {
             @Valid @RequestBody ExhibitionCreateRequest request) {
         ExhibitionCreateResponse response = exhibitionService.createExhibition(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(response));
+    }
+
+    // 전시 로그인 코드 재발급
+    @Operation(summary = "전시 로그인 코드 발급·재발급")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PostMapping("/{exhibitionId}/entry-code")
+    public ResponseEntity<SuccessResponse<EntryCodeResponse>> reissueEntryCode(
+            @PathVariable UUID exhibitionId, @Valid @RequestBody EntryCodeRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(exhibitionService.reissueEntryCode(exhibitionId, request.getExpiresAt())));
     }
 
     // 전시회 기본정보 수정

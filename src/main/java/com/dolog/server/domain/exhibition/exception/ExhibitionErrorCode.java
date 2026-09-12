@@ -10,6 +10,11 @@ import static com.dolog.server.global.constant.StaticValue.*;
 @AllArgsConstructor
 public enum ExhibitionErrorCode implements BaseResponseCode {
 
+    ENTRY_CODE_INVALID("EXHIBITION_ENTRY_CODE_400", BAD_REQUEST, "유효하지 않은 전시 로그인 코드입니다."),
+    ENTRY_CODE_EXPIRED("EXHIBITION_ENTRY_CODE_403", FORBIDDEN, "전시 로그인 코드가 만료되었습니다."),
+    ENTRY_CODE_EXPIRY_INVALID("EXHIBITION_ENTRY_CODE_EXPIRY_400", BAD_REQUEST, "코드 만료 시각은 현재보다 이후여야 합니다."),
+    EXHIBITION_EXPIRED("EXHIBITION_EXPIRED_403", FORBIDDEN, "사용 기간이 만료되었어요. 연장 희망 시, 두록에 문의해주세요."),
+
     EXHIBITION_NOT_FOUND("EXHIBITION_404_1", NOT_FOUND, "전시회를 찾을 수 없습니다."),
     EXHIBITION_UNAUTHORIZED("EXHIBITION_401_1", UNAUTHORIZED, "전시회 등록 권한이 없습니다. 로그인이 필요합니다."),
 

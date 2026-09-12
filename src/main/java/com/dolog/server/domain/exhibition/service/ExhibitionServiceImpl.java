@@ -1,6 +1,10 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.account.entity.enums.AccountStatus;
+import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.entity.ExhibitionCustomTheme;
@@ -26,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.security.SecureRandom;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +48,9 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionMapRepository exhibitionMapRepository;
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
     private final FileService fileService;
+    private final AccountRepository accountRepository;
+    private static final SecureRandom CODE_RANDOM = new SecureRandom();
+    private static final String CODE_CHARACTERS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
     @Override
     @Transactional(readOnly = true)
@@ -254,8 +263,17 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_SLUG_DUPLICATE);
         }
 
+        String entryCode = generateCode();
+        String artistJoinCode;
+        do {
+            artistJoinCode = generateCode();
+        } while (entryCode.equals(artistJoinCode));
+        Account account = accountRepository.save(Account.builder()
+                .role(Role.EXHIBITION_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
         Exhibition exhibition = Exhibition.builder()
-                .account(null) //TODO: JWT -> v2 에서 연동함
+                .account(account)
+                .entryCode(entryCode)
+                .artistJoinCode(artistJoinCode)
                 .univName(request.getUnivName())
                 .collegeName(request.getCollegeName())
                 .deptName(request.getDeptName())
@@ -270,7 +288,32 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .id(saved.getId().toString())
                 .slug(saved.getSlug())
                 .message("전시회가 성공적으로 등록되었습니다.")
+                .entryCode(saved.getEntryCode())
+                .artistJoinCode(saved.getArtistJoinCode())
                 .build();
+    }
+
+    private String generateCode() {
+        String code;
+        do {
+            StringBuilder value = new StringBuilder(8);
+            for (int i = 0; i < 8; i++) {
+                value.append(CODE_CHARACTERS.charAt(CODE_RANDOM.nextInt(CODE_CHARACTERS.length())));
+            }
+            code = value.toString();
+        } while (exhibitionRepository.existsByEntryCodeOrArtistJoinCode(code, code));
+        return code;
+    }
+
+    @Override
+    public EntryCodeResponse reissueEntryCode(UUID exhibitionId, LocalDateTime expiresAt) {
+        if (expiresAt != null && !expiresAt.isAfter(LocalDateTime.now())) {
+            throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_EXPIRY_INVALID);
+        }
+        Exhibition exhibition = exhibitionRepository.findForCodeUpdate(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+        exhibition.reissueEntryCode(generateCode(), expiresAt);
+        return new EntryCodeResponse(exhibition.getEntryCode(), exhibition.getEntryCodeExpiresAt());
     }
 
     @Override

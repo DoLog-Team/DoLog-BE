@@ -34,7 +34,7 @@ public class AccountServiceImpl implements AccountService {
         Account admin = Account.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.EXHIBITION_ADMIN) // 전시 관리자
+                .role(Role.DOLOG_ADMIN) // 두록 관리자
                 .accountStatus(AccountStatus.ACTIVE)
                 .build();
 

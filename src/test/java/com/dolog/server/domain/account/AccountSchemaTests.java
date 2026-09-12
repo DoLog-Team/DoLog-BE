@@ -8,6 +8,8 @@ import com.dolog.server.domain.account.exception.InvalidLoginException;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.account.service.AuthService;
+import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.global.jwt.JwtTokenProvider;
 import com.dolog.server.global.jwt.JwtUserDetailsService;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
@@ -44,6 +46,7 @@ class AccountSchemaTests {
     @Autowired AccountRepository accounts;
     @Autowired RefreshTokenRepository tokens;
     @Autowired AuthService auth;
+    @Autowired ExhibitionRepository exhibitions;
     @Autowired JwtTokenProvider jwt;
     @Autowired JwtUserDetailsService users;
     @Autowired MockMvc mvc;
@@ -99,6 +102,8 @@ class AccountSchemaTests {
     void emailLessAccountCanRefreshAndLogoutOnlyCurrentSession() throws Exception {
         var account = accounts.saveAndFlush(Account.builder().role(Role.EXHIBITION_ADMIN)
                 .accountStatus(AccountStatus.ACTIVE).build());
+        exhibitions.saveAndFlush(Exhibition.builder().account(account).univName("테스트 대학")
+                .deptName("테스트 학과").slug("session-test").build());
         var first = session(account);
         var second = session(account);
         String access = jwt.createAccessToken(account.getId(), first.getId());

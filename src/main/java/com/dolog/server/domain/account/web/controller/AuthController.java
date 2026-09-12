@@ -6,6 +6,8 @@ import com.dolog.server.domain.account.service.AuthService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.dolog.server.domain.account.web.dto.request.LoginRequest;
+import com.dolog.server.domain.account.web.dto.request.ExhibitionLoginRequest;
+import com.dolog.server.domain.account.web.dto.response.ExhibitionLoginResponse;
 import com.dolog.server.domain.account.web.dto.request.RefreshTokenRequest;
 import com.dolog.server.domain.account.web.dto.response.LoginResponse;
 import com.dolog.server.domain.account.web.dto.response.TokenResponse;
@@ -31,6 +33,12 @@ public class AuthController {
         return SuccessResponse.ok(tokens, "로그인 성공");
     }
 
+
+    @Operation(summary = "전시 어드민 코드 로그인")
+    @PostMapping("/exhibition/login")
+    public SuccessResponse<ExhibitionLoginResponse> loginExhibition(@Valid @RequestBody ExhibitionLoginRequest request) {
+        return SuccessResponse.ok(authService.loginExhibition(request.getEntryCode()), "전시 어드민 로그인 성공");
+    }
 
     // 토큰 재발급
     @Operation(summary = "토큰 재발급")

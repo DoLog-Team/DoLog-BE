@@ -28,9 +28,9 @@ public class AccountController {
 
     private final AccountService accountService; // 인터페이스 타입으로 DI
 
-    // 슈퍼어드민만 접근 가능\
+    // 두록 관리자만 접근 가능
     // admin 계정 생성
-    @Operation(summary = "admin 계정(전시 총대) 생성")
+    @Operation(summary = "두록 관리자 계정 생성")
     @PostMapping("/admin")
     @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<AccountResponse> createAdmin(
