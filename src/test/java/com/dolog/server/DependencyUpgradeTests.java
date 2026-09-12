@@ -1,6 +1,7 @@
 package com.dolog.server;
 
 import com.dolog.server.global.jwt.JwtTokenProvider;
+import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.global.util.FileService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class DependencyUpgradeTests {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired JwtTokenProvider jwt;
+    @Autowired AccountRepository accounts;
     @Value("${admin.email}") String email;
     @Value("${admin.password}") String password;
 
@@ -47,14 +49,15 @@ class DependencyUpgradeTests {
                         .content(json.writeValueAsString(Map.of("email", email, "password", password))))
                 .andExpect(status().isOk()).andReturn();
         var tokens = json.readTree(response.getResponse().getContentAsString()).path("data");
-        assertEquals(email, jwt.getNicknameFromToken(tokens.path("accessToken").asText()));
+        var accountId = accounts.findByEmail(email).orElseThrow().getId();
+        assertEquals(accountId, jwt.parseAccessToken(tokens.path("accessToken").asText()).accountId());
         var refresh = mvc.perform(post("/api/auth/refresh").contextPath("/api").contentType("application/json")
                         .content(json.writeValueAsString(Map.of("refreshToken", tokens.path("refreshToken").asText()))))
                 .andExpect(status().isOk()).andReturn();
-        assertEquals(email, jwt.getNicknameFromToken(json.readTree(refresh.getResponse().getContentAsString())
-                .path("data").path("accessToken").asText()));
+        assertEquals(accountId, jwt.parseAccessToken(json.readTree(refresh.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText()).accountId());
         mvc.perform(get("/api/v3/api-docs").contextPath("/api")).andExpect(status().isOk()).andExpect(jsonPath("$.paths").isNotEmpty());
-        assertThrows(RuntimeException.class, () -> jwt.validateToken("invalid.token.value"));
+        assertThrows(RuntimeException.class, () -> jwt.parseAccessToken("invalid.token.value"));
     }
 
     @Test

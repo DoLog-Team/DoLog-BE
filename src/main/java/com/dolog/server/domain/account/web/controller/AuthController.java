@@ -3,7 +3,8 @@ package com.dolog.server.domain.account.web.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.account.service.AuthService;
-import com.dolog.server.domain.account.web.dto.request.ChangePasswordRequest;
+import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.dolog.server.domain.account.web.dto.request.LoginRequest;
 import com.dolog.server.domain.account.web.dto.request.RefreshTokenRequest;
 import com.dolog.server.domain.account.web.dto.response.LoginResponse;
@@ -25,7 +26,7 @@ public class AuthController {
     // 로그인
     @Operation(summary = "로그인")
     @PostMapping("/login")
-    public SuccessResponse<LoginResponse> login(@RequestBody LoginRequest request) {
+    public SuccessResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse tokens = authService.login(request.getEmail(), request.getPassword());
         return SuccessResponse.ok(tokens, "로그인 성공");
     }
@@ -35,7 +36,7 @@ public class AuthController {
     @Operation(summary = "토큰 재발급")
     @PostMapping("/refresh")
     public SuccessResponse<TokenResponse> refresh(
-            @RequestBody RefreshTokenRequest request
+            @Valid @RequestBody RefreshTokenRequest request
     ) {
         TokenResponse response = authService.refresh(request.getRefreshToken());
 
@@ -43,5 +44,13 @@ public class AuthController {
                 response,
                 "토큰 재발급 성공"
         );
+    }
+
+    @Operation(summary = "현재 로그인 세션 로그아웃")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/logout")
+    public SuccessResponse<Void> logout(@AuthenticationPrincipal CustomUserDetails user) {
+        authService.logout(user.getId(), user.getSessionId());
+        return SuccessResponse.ok(null, "로그아웃 성공");
     }
 }

@@ -5,6 +5,7 @@ import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.global.response.BaseResponse;
 import com.dolog.server.global.response.ErrorResponse;
 import jakarta.servlet.http.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -14,6 +15,7 @@ import java.io.IOException;
 
 
 @Component
+@Slf4j
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -33,7 +35,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         if (ex instanceof BaseException baseEx) {
             errorResponse = ErrorResponse.of(
                     baseEx.getErrorCode().getCode(),
-                    baseEx.getMessage(),
+                    baseEx.getErrorCode().getMessage(),
                     baseEx.getErrorCode().getHttpStatus()
             );
             response.setStatus(baseEx.getErrorCode().getHttpStatus());
@@ -47,6 +49,9 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
             );
             response.setStatus(HttpStatus.UNAUTHORIZED.value());
         }
+
+        log.warn("JWT 인증 거절: code={}, method={}, path={}",
+                errorResponse.getCode(), request.getMethod(), request.getRequestURI());
 
         // JSON 형태로 클라이언트에 응답
         response.setContentType("application/json; charset=UTF-8");

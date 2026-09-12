@@ -22,6 +22,18 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @Slf4j
 public class GlobalExceptionHandler {
 
+
+    /*
+    @PreAuthorize 등 메서드 보안에서 권한 부족 시 발생
+    필터 단계 거부는 SecurityConfig.accessDeniedHandler가 처리하며 응답 형식은 동일
+    */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    private ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            org.springframework.security.access.AccessDeniedException e) {
+        ErrorResponse error = ErrorResponse.of(GlobalErrorCode.ACCESS_DENIED_REQUEST);
+        return ResponseEntity.status(error.getHttpStatus()).body(error);
+    }
+
     /*
         javax.validation.Valid or @Validated 으로 binding error 발생시 발생
         주로 @RequestBody, @RequestPart 어노테이션에서 발생
@@ -111,29 +123,41 @@ public class GlobalExceptionHandler {
     //* JWT */
     // JWT 만료
     @ExceptionHandler(JwtExpiredException.class)
-    public ResponseEntity<ErrorResponse<?>> handleJwtExpiredException(JwtExpiredException e) {
-        ErrorResponse<?> error = ErrorResponse.of("JWT_401_EXPIRED", e.getMessage(), HttpStatus.UNAUTHORIZED.value());
+    public ResponseEntity<ErrorResponse<?>> handleJwtExpiredException(JwtExpiredException e,
+            jakarta.servlet.http.HttpServletRequest request) {
+        log.warn("JWT 인증 거절: code={}, method={}, path={}",
+                e.getErrorCode().getCode(), request.getMethod(), request.getRequestURI());
+        ErrorResponse<?> error = ErrorResponse.of(e.getErrorCode());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     // 잘못된 토큰
     @ExceptionHandler(JwtInvalidException.class)
-    public ResponseEntity<ErrorResponse<?>> handleJwtInvalidException(JwtInvalidException e) {
-        ErrorResponse<?> error = ErrorResponse.of("JWT_401_INVALID", e.getMessage(), HttpStatus.UNAUTHORIZED.value());
+    public ResponseEntity<ErrorResponse<?>> handleJwtInvalidException(JwtInvalidException e,
+            jakarta.servlet.http.HttpServletRequest request) {
+        log.warn("JWT 인증 거절: code={}, method={}, path={}",
+                e.getErrorCode().getCode(), request.getMethod(), request.getRequestURI());
+        ErrorResponse<?> error = ErrorResponse.of(e.getErrorCode());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     // 지원하지 않는 형식
     @ExceptionHandler(JwtUnsupportedException.class)
-    public ResponseEntity<ErrorResponse<?>> handleJwtUnsupportedException(JwtUnsupportedException e) {
-        ErrorResponse<?> error = ErrorResponse.of("JWT_401_UNSUPPORTED", e.getMessage(), HttpStatus.UNAUTHORIZED.value());
+    public ResponseEntity<ErrorResponse<?>> handleJwtUnsupportedException(JwtUnsupportedException e,
+            jakarta.servlet.http.HttpServletRequest request) {
+        log.warn("JWT 인증 거절: code={}, method={}, path={}",
+                e.getErrorCode().getCode(), request.getMethod(), request.getRequestURI());
+        ErrorResponse<?> error = ErrorResponse.of(e.getErrorCode());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     // 손상된 구조
     @ExceptionHandler(JwtMalformedException.class)
-    public ResponseEntity<ErrorResponse<?>> handleJwtMalformedException(JwtMalformedException e) {
-        ErrorResponse<?> error = ErrorResponse.of("JWT_401_MALFORMED", e.getMessage(), HttpStatus.UNAUTHORIZED.value());
+    public ResponseEntity<ErrorResponse<?>> handleJwtMalformedException(JwtMalformedException e,
+            jakarta.servlet.http.HttpServletRequest request) {
+        log.warn("JWT 인증 거절: code={}, method={}, path={}",
+                e.getErrorCode().getCode(), request.getMethod(), request.getRequestURI());
+        ErrorResponse<?> error = ErrorResponse.of(e.getErrorCode());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 

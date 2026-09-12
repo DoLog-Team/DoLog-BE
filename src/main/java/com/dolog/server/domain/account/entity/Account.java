@@ -2,6 +2,8 @@ package com.dolog.server.domain.account.entity;
 
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
 import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.account.exception.AccountErrorCode;
+import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -44,6 +46,12 @@ public class Account extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "account_status")
     private AccountStatus accountStatus;
+
+    public void requireActive() {
+        if (accountStatus != AccountStatus.ACTIVE) {
+            throw new BaseException(AccountErrorCode.ACCOUNT_INACTIVE);
+        }
+    }
 
     public void update(String password, Role role, String socialProvider, AccountStatus accountStatus) {
         if (password != null && !password.isBlank()) {

@@ -10,6 +10,7 @@ import lombok.Getter;
 public enum AccountErrorCode implements BaseResponseCode {
 
     DUPLICATE_EMAIL("ACCOUNT_409_1", StaticValue.CONFLICT, "이미 존재하는 이메일입니다."),
+    ACCOUNT_INACTIVE("ACCOUNT_403_INACTIVE", StaticValue.FORBIDDEN, "이용할 수 없는 계정입니다."),
     INVALID_LOGIN("ACCOUNT_401_INVALID_LOGIN", StaticValue.UNAUTHORIZED, "이메일 또는 비밀번호가 잘못되었습니다."),
     INVALID_PASSWORD("ACCOUNT_401_PASSWORD", StaticValue.UNAUTHORIZED, "현재 비밀번호가 일치하지 않습니다.");
 
@@ -17,6 +18,5 @@ public enum AccountErrorCode implements BaseResponseCode {
     private final int httpStatus;
     private final String message;
 }
-
 
 
