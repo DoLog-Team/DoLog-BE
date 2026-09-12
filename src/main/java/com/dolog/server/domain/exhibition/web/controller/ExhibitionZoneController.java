@@ -40,7 +40,7 @@ public class ExhibitionZoneController {
 
     // 전시 구역 생성
     @Operation(summary = "전시 구역 생성")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PostMapping("/{exhibitionId}/zones")
     public ResponseEntity<SuccessResponse<ExhibitionZoneCreateResponse>> createZone(
             @PathVariable UUID exhibitionId,
@@ -52,7 +52,7 @@ public class ExhibitionZoneController {
 
     // 전시 구역 수정
     @Operation(summary = "전시 구역 정보 수정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PatchMapping("/zones/{zoneId}")
     public SuccessResponse<ExhibitionZoneUpdateResponse> updateZone(
             @PathVariable UUID zoneId,
@@ -64,7 +64,7 @@ public class ExhibitionZoneController {
 
     // 전시 구역 삭제
     @Operation(summary = "전시 구역 삭제")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @DeleteMapping("/zones/{zoneId}")
     public SuccessResponse<Void> deleteZone(
             @PathVariable UUID zoneId

@@ -33,7 +33,7 @@ public class PartnerController {
 
     // 파트 수정
     @Operation(summary = "도움을 주신 분들 파트 정보 수정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PatchMapping("/parts/{partId}")
     public SuccessResponse<PartnerPartResponse> updatePart(
             @PathVariable UUID partId,
@@ -45,7 +45,7 @@ public class PartnerController {
 
     // 파트 삭제
     @Operation(summary = "도움을 주신 분들 파트 삭제")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @DeleteMapping("/parts/{partId}")
     public SuccessResponse<Void> deletePart(
             @PathVariable UUID partId
@@ -56,7 +56,7 @@ public class PartnerController {
 
     // 멤버 등록
     @Operation(summary = "도움을 주신 분들 멤버 등록")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PostMapping(
             value = "/parts/{partId}/members",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -82,7 +82,7 @@ public class PartnerController {
 
     // 멤버 수정
     @Operation(summary = "도움을 주신 분들 멤버 수정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PatchMapping(
             value = "/members/{memberId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -105,7 +105,7 @@ public class PartnerController {
 
     // 멤버 삭제
     @Operation(summary = "도움을 주신 분들 멤버 삭제")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @DeleteMapping("/members/{memberId}")
     public SuccessResponse<Void> deleteMember(
             @PathVariable UUID memberId
@@ -116,7 +116,7 @@ public class PartnerController {
 
     // 멤버 순서 일괄 변경
     @Operation(summary = "도움을 주신 분들 멤버 순서 일괄 변경")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PatchMapping("/parts/{partId}/members/reorder")
     public SuccessResponse<Void> reorderMembers(
             @PathVariable UUID partId,

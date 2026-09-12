@@ -36,7 +36,7 @@ public class BannerController {
 
     @Operation(summary = "메인 배너 이미지 생성")
     @PostMapping(value = "/mainbanner", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public ResponseEntity<SuccessResponse<MainBannerResponse>> createMainBanner(
             @Valid @ModelAttribute MainBannerCreateRequest request) {
         MainBannerResponse response = mainBannerService.createMainBanner(request);
@@ -45,7 +45,7 @@ public class BannerController {
 
     @Operation(summary = "메인 배너 이미지 교체")
     @PutMapping(value = "/mainbanner/{id}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public ResponseEntity<SuccessResponse<MainBannerResponse>> updateMainBanner(
             @PathVariable Long id,
             @Valid @ModelAttribute MainBannerUpdateRequest request) {
@@ -55,7 +55,7 @@ public class BannerController {
 
     @Operation(summary = "메인 배너 이미지 삭제")
     @DeleteMapping("/mainbanner/{id}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public ResponseEntity<SuccessResponse<BannerMessageResponse>> deleteMainBanner(
             @PathVariable Long id) {
         BannerMessageResponse response = mainBannerService.deleteMainBanner(id);

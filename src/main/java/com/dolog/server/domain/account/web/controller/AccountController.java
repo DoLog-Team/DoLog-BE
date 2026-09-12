@@ -31,7 +31,7 @@ public class AccountController {
     // admin 계정 생성
     @Operation(summary = "admin 계정(전시 총대) 생성")
     @PostMapping("/admin")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<AccountResponse> createAdmin(
             @RequestBody AdminCreateRequest request
     ) {
@@ -48,7 +48,7 @@ public class AccountController {
     // admin 계정 조회
     @Operation(summary = "계정 목록 조회")
     @GetMapping
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<List<AccountResponse>> getAccounts(
             @RequestParam(required = false) Role role
     ) {

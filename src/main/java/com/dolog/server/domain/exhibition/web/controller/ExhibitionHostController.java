@@ -42,7 +42,7 @@ public class ExhibitionHostController {
     }
 
     @Operation(summary = "주최기관 등록/교체")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PutMapping(value = "/{exhibitionId}/host", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public SuccessResponse<ExhibitionHostResponse> upsertHost(
             @PathVariable UUID exhibitionId,
@@ -66,7 +66,7 @@ public class ExhibitionHostController {
 //===============[SNS]================
 // SNS 추가
 @Operation(summary = "주최기관 SNS 추가")
-@PreAuthorize("hasRole('DEVELOPER')")
+@PreAuthorize("hasRole('DOLOG_ADMIN')")
 @PostMapping("/{exhibitionId}/host/sns")
 public SuccessResponse<HostSnsResponse> addHostSns(
         @PathVariable UUID exhibitionId, // exhibitionId로 받기
@@ -84,7 +84,7 @@ public SuccessResponse<HostSnsResponse> addHostSns(
 
     // SNS 수정
     @Operation(summary = "주최기관 SNS 링크 수정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PatchMapping("/host/sns/{snsId}")
     public SuccessResponse<List<HostSnsResponse>> updateHostSns(
             @PathVariable UUID snsId,
@@ -94,7 +94,7 @@ public SuccessResponse<HostSnsResponse> addHostSns(
 
     // SNS 삭제
     @Operation(summary = "주최기관 SNS 링크 삭제")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @DeleteMapping("/host/sns/{snsId}")
     public SuccessResponse<List<HostSnsResponse>> deleteHostSns(@PathVariable UUID snsId) {
         return SuccessResponse.ok(exhibitionHostService.deleteHostSns(snsId), "주최 기관 SNS 삭제 성공");

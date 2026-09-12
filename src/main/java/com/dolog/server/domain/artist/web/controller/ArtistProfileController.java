@@ -76,7 +76,7 @@ public class ArtistProfileController {
     @PostMapping(
             consumes = "multipart/form-data"
     )
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtistProfileResponse> createArtistProfile(
             @ModelAttribute ArtistProfileCreateRequest request
     ) throws IOException {
@@ -90,7 +90,7 @@ public class ArtistProfileController {
     // 프로필 수정
     @Operation(summary = "전시 작가 프로필 수정")
     @PatchMapping(value = "/{profileId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
             @PathVariable UUID profileId,
             @ModelAttribute ArtistProfileCreateRequest request

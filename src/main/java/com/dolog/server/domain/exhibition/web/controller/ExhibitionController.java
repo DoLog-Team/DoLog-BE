@@ -101,7 +101,7 @@ public class ExhibitionController {
     }
 
     @Operation(summary = "전시회 OG 메타 정보 수정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PatchMapping(value = "/{exhibitionId}/meta", consumes = "multipart/form-data")
     public SuccessResponse<ExhibitionMetaResponse> updateExhibitionMeta(
             @PathVariable UUID exhibitionId,
@@ -113,7 +113,7 @@ public class ExhibitionController {
 
     // 전시회 기본정보 등록
     @Operation(summary = "전시회 기본정보 등록")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PostMapping
     public ResponseEntity<SuccessResponse<ExhibitionCreateResponse>> createExhibition(
             @Valid @RequestBody ExhibitionCreateRequest request) {
@@ -123,7 +123,7 @@ public class ExhibitionController {
 
     // 전시회 기본정보 수정
     @Operation(summary = "전시회 기본정보 수정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PatchMapping("/{exhibitionId}")
     public ResponseEntity<SuccessResponse<ExhibitionMessageResponse>> updateExhibition(
             @PathVariable UUID exhibitionId,
@@ -134,7 +134,7 @@ public class ExhibitionController {
 
     // 전시회 삭제
     @Operation(summary = "전시회 삭제")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @DeleteMapping("/{exhibitionId}")
     public ResponseEntity<SuccessResponse<ExhibitionMessageResponse>> deleteExhibition(
             @PathVariable UUID exhibitionId) {
@@ -146,7 +146,7 @@ public class ExhibitionController {
 
     // 전시 상세정보 등록/수정
     @Operation(summary = "전시회 상세정보 등록/수정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PutMapping(value = "/{exhibitionId}/details", consumes = "multipart/form-data")
     public SuccessResponse<ExhibitionDetailUpsertResponse> upsertExhibitionDetail(
             @PathVariable UUID exhibitionId,
