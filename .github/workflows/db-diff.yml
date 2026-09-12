@@ -1,0 +1,126 @@
+name: DB schema diff
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-diff-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: schema-diff-only
+        ports: [3306:3306]
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      MYSQL_PWD: schema-diff-only
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_TCP_PORT: 3306
+      MYSQL_USER: root
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find migration diff
+        id: diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          mkdir -p report
+          git merge-base "$BASE_SHA" HEAD > report/base-sha.txt
+          git diff --name-status "$(cat report/base-sha.txt)" HEAD -- src/main/resources/db/migration > report/files.txt
+          if test -s report/files.txt; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+            mkdir -p /tmp/db-diff-base
+            git archive "$(cat report/base-sha.txt)" src/main/resources/db/migration | tar -x -C /tmp/db-diff-base
+          else
+            echo '이번 PR에는 Flyway 마이그레이션 변경이 없습니다.' > report/comment.md
+          fi
+
+      - name: Apply both migration histories to disposable databases
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          mysql --protocol=TCP -h "$MYSQL_HOST" -P "$MYSQL_TCP_PORT" -u "$MYSQL_USER" -e 'CREATE DATABASE schema_before; CREATE DATABASE schema_after;'
+          for side in before after; do
+            migration_dir="$GITHUB_WORKSPACE/src/main/resources/db/migration"
+            if [ "$side" = before ]; then
+              migration_dir=/tmp/db-diff-base/src/main/resources/db/migration
+            fi
+            mkdir -p "$migration_dir"
+            docker run --rm --network host \
+              -v "$migration_dir:/flyway/sql:ro" \
+              redgate/flyway:11.7.2 \
+              -url="jdbc:mysql://127.0.0.1:3306/schema_$side?allowPublicKeyRetrieval=true&useSSL=false" \
+              -user=root -password=schema-diff-only -validateMigrationNaming=true migrate
+          done
+
+      - name: Render changed tables
+        if: steps.diff.outputs.changed == 'true'
+        run: python3 .github/scripts/db_diff.py schema_before schema_after report/comment.md
+
+      - name: Test report generation
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_db_diff.py'
+
+      - name: Report migration failure
+        if: failure()
+        run: |
+          mkdir -p report
+          echo '스키마 비교 실패: 변경 전·후 마이그레이션 적용 또는 다이어그램 생성을 완료하지 못했습니다. Actions 로그를 확인하세요.' > report/comment.md
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: db-schema-diff
+          path: report/
+          retention-days: 7
+
+  comment:
+    needs: compare
+    if: >-
+      always() && !cancelled() &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: db-schema-diff
+          path: report
+      - uses: actions/github-script@v8
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- dolog-db-schema-diff -->';
+            const issue_number = context.issue.number;
+            const {data: pr} = await github.rest.pulls.get({...context.repo, pull_number: issue_number});
+            if (pr.head.sha !== process.env.HEAD_SHA || pr.state !== 'open') return;
+            const comments = await github.paginate(github.rest.issues.listComments, {...context.repo, issue_number});
+            const existing = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.startsWith(marker));
+            const report = fs.readFileSync('report/comment.md', 'utf8');
+            if (!existing && report.startsWith('이번 PR에는')) return;
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            let body = `${marker}\n## DB 스키마 변경\n\n커밋: ${process.env.HEAD_SHA}\n\n${report}\n\n[실행 로그 및 전체 보고서](${run})`;
+            if (body.length > 60000) body = `${marker}\n## DB 스키마 변경\n\n보고서가 댓글 크기 제한을 초과했습니다. [전체 보고서 다운로드](${run})`;
+            if (existing) {
+              await github.rest.issues.updateComment({...context.repo, comment_id: existing.id, body});
+            } else {
+              await github.rest.issues.createComment({...context.repo, issue_number, body});
+            }
