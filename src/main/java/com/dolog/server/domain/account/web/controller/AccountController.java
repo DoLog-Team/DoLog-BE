@@ -16,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.dolog.server.domain.account.web.dto.response.MyAccountResponse;
+
 import java.util.List;
 import jakarta.validation.Valid;
 
@@ -44,6 +46,12 @@ public class AccountController {
                 response,
                 "관리자 생성 완료"
         );
+    }
+
+    @Operation(summary = "내 계정 정보 조회")
+    @GetMapping("/me")
+    public SuccessResponse<MyAccountResponse> getMyAccount(@AuthenticationPrincipal CustomUserDetails user) {
+        return SuccessResponse.ok(accountService.getMyAccount(user.getId()), "계정 정보 조회 성공");
     }
 
     // admin 계정 조회

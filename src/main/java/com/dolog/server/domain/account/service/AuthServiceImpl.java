@@ -63,13 +63,13 @@ public class AuthServiceImpl implements AuthService {
             throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_INVALID);
         }
         var tokens = issueTokens(account);
-        // ponytail: 약관 저장 기능이 아직 없으므로 현재 생성된 계정은 모두 미동의다.
         // 약관 API 구현 시 실제 동의 이력 조회로 대체한다.
         return new ExhibitionLoginResponse(exhibition.getId(), true, account.getRole(),
                 tokens.getAccessToken(), tokens.getRefreshToken());
     }
 
-    private LoginResponse issueTokens(Account account) {
+    @Transactional
+    public LoginResponse issueTokens(Account account) {
         userDetailsService.requireAvailable(account);
 
         // JWT 토큰 발급
