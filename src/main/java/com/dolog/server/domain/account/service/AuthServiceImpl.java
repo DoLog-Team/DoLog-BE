@@ -24,11 +24,15 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
 
     @Override
+    @Transactional
     public LoginResponse login(String email, String password) {
+        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+            throw new InvalidLoginException();
+        }
         Account account = accountRepository.findByEmail(email)
                 .orElseThrow(InvalidLoginException::new);
 
-        if (!passwordEncoder.matches(password, account.getPassword())) {
+        if (account.getPassword() == null || !passwordEncoder.matches(password, account.getPassword())) {
             throw new InvalidLoginException();
         }
 
@@ -36,17 +40,11 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtTokenProvider.createAccessToken(account.getEmail());
         String refreshToken = jwtTokenProvider.createRefreshToken(account.getEmail());
 
-        // 2. DB에 Refresh Token 저장 또는 기존 토큰 갱신
-        refreshTokenRepository.findByEmail(account.getEmail())
-                .ifPresentOrElse(
-                        token -> token.updateToken(refreshToken),
-                        () -> refreshTokenRepository.save(
-                                RefreshToken.builder()
-                                        .email(account.getEmail())
-                                        .token(refreshToken)
-                                        .build()
-                        )
-                );
+        // 동시 로그인 제약을 느슨하게 변경하였습니다
+        refreshTokenRepository.save(RefreshToken.builder()
+                .account(account)
+                .token(refreshToken)
+                .build());
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
@@ -56,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public TokenResponse refresh(String refreshToken) {
 
         // 1. refresh token 검증
@@ -65,10 +64,10 @@ public class AuthServiceImpl implements AuthService {
         String email = jwtTokenProvider.getNicknameFromToken(refreshToken);
 
         // 3. DB에 저장된 토큰 정보 조회 및 일치 여부 확인 (탈취 차단 핵심 로직)
-        RefreshToken savedRefreshToken = refreshTokenRepository.findByEmail(email)
+        RefreshToken savedRefreshToken = refreshTokenRepository.findByToken(refreshToken)
                 .orElseThrow(() -> new JwtInvalidException()); // DB에 토큰이 없으면 잘못된 접근
 
-        if (!savedRefreshToken.getToken().equals(refreshToken)) {
+        if (!email.equals(savedRefreshToken.getAccount().getEmail())) {
             throw new JwtInvalidException(); // DB의 토큰과 클라이언트가 보낸 토큰이 다르면 탈취 의심 처리
         }
 
@@ -82,6 +81,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Transactional
     public void logout(String email) {
-        refreshTokenRepository.deleteByEmail(email);
+        accountRepository.findByEmail(email)
+                .ifPresent(account -> refreshTokenRepository.deleteByAccountId(account.getId()));
     }
 }

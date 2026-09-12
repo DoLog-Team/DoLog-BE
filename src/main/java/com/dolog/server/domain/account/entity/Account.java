@@ -13,7 +13,12 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Table(name = "accounts")
+@Table( name = "accounts",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_accounts_social_identity",
+                columnNames = {"social_provider", "social_provider_id"}
+        )
+)
 public class Account extends BaseEntity {
 
     @Id
@@ -21,10 +26,9 @@ public class Account extends BaseEntity {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
 
-    @Column(nullable = false)
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -33,6 +37,9 @@ public class Account extends BaseEntity {
 
     @Column(name = "social_provider", length = 50)
     private String socialProvider;
+
+    @Column(name = "social_provider_id")
+    private String socialProviderId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "account_status")

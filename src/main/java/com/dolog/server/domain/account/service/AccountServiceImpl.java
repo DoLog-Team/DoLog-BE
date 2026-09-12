@@ -34,7 +34,7 @@ public class AccountServiceImpl implements AccountService {
         Account admin = Account.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.ADMIN) // 일반 관리자
+                .role(Role.EXHIBITION_ADMIN) // 전시 관리자
                 .accountStatus(AccountStatus.ACTIVE)
                 .build();
 
@@ -61,7 +61,8 @@ public class AccountServiceImpl implements AccountService {
                 .orElseThrow(() -> new RuntimeException("계정을 찾을 수 없습니다."));
 
         // 1. 현재 비밀번호 검증
-        if (!passwordEncoder.matches(request.getCurrentPassword(), account.getPassword())) {
+        if (account.getPassword() == null || request.getCurrentPassword() == null
+                || !passwordEncoder.matches(request.getCurrentPassword(), account.getPassword())) {
             throw new InvalidPasswordException();
         }
 

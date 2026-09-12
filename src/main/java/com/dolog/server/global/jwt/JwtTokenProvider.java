@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 
 //JWT 토큰 생성 / 검증 유틸리티
 @Component
@@ -46,6 +47,7 @@ public class JwtTokenProvider {
     public String createRefreshToken(String email) {
         Date now = new Date();
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(email)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION))

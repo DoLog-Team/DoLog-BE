@@ -16,15 +16,17 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String email; // 사용자 식별자 (이메일)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "account_id", nullable = false,
+            foreignKey = @ForeignKey(name = "fk_refresh_token_account"))
+    private Account account;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 1024)
     private String token; // 발급된 Refresh Token 값
 
     @Builder
-    public RefreshToken(String email, String token) {
-        this.email = email;
+    public RefreshToken(Account account, String token) {
+        this.account = account;
         this.token = token;
     }
 

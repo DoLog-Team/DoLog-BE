@@ -32,7 +32,7 @@ public class AdminInitializer {
                 Account superAdmin = Account.builder()
                         .email(adminEmail)
                         .password(passwordEncoder.encode(adminPassword))
-                        .role(Role.DOLOG_ADMIN) // 슈퍼어드민
+                        .role(Role.DOLOG_ADMIN) // 두록어드민
                         .accountStatus(AccountStatus.ACTIVE)
                         .build();
 

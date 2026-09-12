@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import jakarta.validation.Valid;
 
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "account")
@@ -33,7 +34,7 @@ public class AccountController {
     @PostMapping("/admin")
     @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<AccountResponse> createAdmin(
-            @RequestBody AdminCreateRequest request
+            @Valid @RequestBody AdminCreateRequest request
     ) {
         Account admin = accountService.createAdmin(request);
 
@@ -68,7 +69,7 @@ public class AccountController {
     @PatchMapping("/me/password")
     public SuccessResponse<AccountResponse> changePassword(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody ChangePasswordRequest request
+            @Valid @RequestBody ChangePasswordRequest request
     ) {
 
         Account account = accountService.changePassword(userDetails.getId(), request);
