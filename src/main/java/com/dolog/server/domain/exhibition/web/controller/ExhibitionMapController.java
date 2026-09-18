@@ -30,7 +30,7 @@ public class ExhibitionMapController {
     // 전시 장소 정보 등록
     @Operation(summary = "전시회 장소 정보 생성")
     @PostMapping("/{exhibitionId}/map")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public ResponseEntity<SuccessResponse<ExhibitionMapCreateResponse>> createExhibitionMap(
             @PathVariable UUID exhibitionId,
             @Valid @RequestBody ExhibitionMapCreateRequest request) {
@@ -41,7 +41,7 @@ public class ExhibitionMapController {
     // 전시 장소 정보 수정
     @Operation(summary = "전시회 장소 정보 수정")
     @PatchMapping("/{exhibitionId}/map")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public ResponseEntity<SuccessResponse<ExhibitionMapUpdateResponse>> updateExhibitionMap(
             @PathVariable UUID exhibitionId,
             @RequestBody ExhibitionMapUpdateRequest request) {
@@ -52,7 +52,7 @@ public class ExhibitionMapController {
     // 전시 장소 정보 삭제
     @Operation(summary = "전시회 장소 정보 삭제")
     @DeleteMapping("/{exhibitionId}/map")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public ResponseEntity<SuccessResponse<Void>> deleteExhibitionMap(
             @PathVariable UUID exhibitionId) {
         exhibitionMapService.deleteExhibitionMap(exhibitionId);

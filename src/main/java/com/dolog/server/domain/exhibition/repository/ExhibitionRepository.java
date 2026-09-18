@@ -15,6 +15,14 @@ import java.util.UUID;
 
 public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
 
+    Optional<Exhibition> findByEntryCode(String entryCode);
+    Optional<Exhibition> findByAccountId(UUID accountId);
+    boolean existsByEntryCodeOrArtistJoinCode(String entryCode, String artistJoinCode);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select e from Exhibition e where e.id = :id")
+    Optional<Exhibition> findForCodeUpdate(@Param("id") UUID id);
+
     @Query("SELECT e FROM Exhibition e LEFT JOIN FETCH e.exhibitionDetail d " +
             "WHERE (:isPublic IS NULL OR e.isPublic = :isPublic) " +
             "AND (:univName IS NULL OR e.univName = :univName) " +

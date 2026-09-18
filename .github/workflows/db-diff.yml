@@ -21,7 +21,7 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: schema-diff-only
         ports: [3306:3306]
-        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=5s --health-retries=20
+        options: --health-cmd="mysql --protocol=TCP -h 127.0.0.1 -uroot -pschema-diff-only -e 'SELECT 1'" --health-interval=5s --health-timeout=5s --health-retries=20
     env:
       MYSQL_PWD: schema-diff-only
       MYSQL_HOST: 127.0.0.1

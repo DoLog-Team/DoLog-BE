@@ -110,18 +110,45 @@ def render(before, after):
     changed = sorted(name for name in before.keys() | after.keys() if before.get(name) != after.get(name))
     if not changed:
         return "마이그레이션 파일은 변경됐지만 최종 스키마 차이는 없습니다. 데이터 변경 여부는 SQL diff를 확인하세요.\n"
-    selected = set(changed)
+    # Show changed fields and only the endpoints needed to read their relationships.
+    columns = {name: set() for name in changed}
+    constraints = {name: set() for name in changed}
+    for name in changed:
+        old, new = before.get(name, {}), after.get(name, {})
+        old_columns = {row[0]: row for row in old.get("columns", [])}
+        new_columns = {row[0]: row for row in new.get("columns", [])}
+        columns[name].update(col for col in old_columns.keys() | new_columns.keys()
+                             if old_columns.get(col) != new_columns.get(col))
+        for side, other in ((old, new), (new, old)):
+            for index in side.get("indexes", []):
+                if index not in other.get("indexes", []) and index[3] is not None:
+                    columns[name].add(index[3])
+        for side, other in ((old, new), (new, old)):
+            for fk in side.get("foreign_keys", []):
+                if fk not in other.get("foreign_keys", []) or fk[1] in columns[name]:
+                    constraints[name].add(fk[0])
+
     for tables in (before, after):
-        for name, table in tables.items():
-            for fk in table["foreign_keys"]:
-                if name in changed or fk[2] in changed:
-                    selected.update((name, fk[2]))
-    lines = ["변경된 테이블과 직접 연결된 테이블을 표시합니다. 데이터 변경·운영 데이터 호환성은 검증하지 않습니다.",
+        for name in changed:
+            for constraint, column, parent, parent_column, *_ in tables.get(name, {}).get("foreign_keys", []):
+                if constraint in constraints[name]:
+                    columns[name].add(column)
+                    columns.setdefault(parent, set()).add(parent_column)
+
+    def focused(tables):
+        return {name: {**tables[name],
+                       "columns": [row for row in tables[name]["columns"] if row[0] in selected],
+                       "foreign_keys": [row for row in tables[name]["foreign_keys"]
+                                        if row[0] in constraints.get(name, set())]}
+                for name, selected in columns.items() if name in tables}
+
+    lines = ["변경된 컬럼·인덱스 구성 컬럼과 관련 FK만 표시합니다. FK 대상은 참조 컬럼만 표시합니다.",
+             "CHECK·테이블 옵션·컬럼 순서 변경 등은 아래 상세 diff를 확인하세요. 데이터 변경·운영 데이터 호환성은 검증하지 않습니다.",
              "UK는 복합 UNIQUE의 구성 컬럼일 수 있습니다. 정확한 제약은 아래 diff를 확인하세요.", ""]
     for name in changed:
         status = "추가" if name not in before else "삭제" if name not in after else "변경"
         lines.append(f"- {status}: `{label(name)}`")
-    lines.extend(["", "### 변경 전", "", diagram(before, selected), "### 변경 후", "", diagram(after, selected),
+    lines.extend(["", "### 변경 전", "", diagram(focused(before), set(columns)), "### 변경 후", "", diagram(focused(after), set(columns)),
                   "<details><summary>스키마 상세 diff (컬럼·인덱스·FK·CHECK·테이블 옵션)</summary>", "", "```diff"])
     old = json.dumps({n: before[n] for n in changed if n in before}, ensure_ascii=True, indent=2).splitlines()
     new = json.dumps({n: after[n] for n in changed if n in after}, ensure_ascii=True, indent=2).splitlines()

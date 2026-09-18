@@ -40,7 +40,7 @@ public class ExhibitionArtistController {
 
     //전시 작가 추가
     @Operation(summary = "전시 작가 추가")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PostMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistAddResponse> addArtist(
             @PathVariable UUID exhibitionId,
@@ -57,7 +57,7 @@ public class ExhibitionArtistController {
 
     //전시 작가 삭제
     @Operation(summary = "전시 작가 삭제")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @DeleteMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
             @PathVariable UUID exhibitionId,

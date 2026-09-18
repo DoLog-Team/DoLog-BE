@@ -43,7 +43,7 @@ public class ArtworkController {
     // 2. 작품 기본 정보 등록
     @Operation(summary = "작품 등록")
     @PostMapping(value = "/exhibitions/artworks", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkCreateResponse> createArtwork(
             @Valid @ModelAttribute ArtworkCreateRequest request) {
         ArtworkCreateResponse data = artworkService.createArtwork(request);
@@ -53,7 +53,7 @@ public class ArtworkController {
     // 3. 작품 기본 정보 수정 (PATCH)
     @Operation(summary = "작품 기본 정보 수정")
     @PatchMapping(value = "/exhibitions/artworks/{artworkId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkCreateResponse> updateArtwork(
             @PathVariable UUID artworkId,
             @Valid @ModelAttribute ArtworkUpdateRequest request) {
@@ -64,7 +64,7 @@ public class ArtworkController {
     // 4. 작품 삭제 (DELETE)
     @Operation(summary = "작품 기본 정보 삭제")
     @DeleteMapping("/exhibitions/artworks/{artworkId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> deleteArtwork(
             @PathVariable UUID artworkId) {
         artworkService.deleteArtwork(artworkId);
@@ -86,7 +86,7 @@ public class ArtworkController {
     // 6. 작품 상세 이미지 개별 수정 (PATCH)
     @Operation(summary = "작품 상세 이미지 수정")
     @PatchMapping(value = "/artworks/{artworkId}/images/{imageId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId,
@@ -98,7 +98,7 @@ public class ArtworkController {
     // 7. 작품 상세 이미지 개별 삭제 (DELETE)
     @Operation(summary = "작품 상세 이미지 삭제")
     @DeleteMapping("/artworks/{artworkId}/images/{imageId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> deleteArtworkImage(
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId) {
@@ -111,7 +111,7 @@ public class ArtworkController {
     // 8. 작품 작가 매핑 등록 (POST)
     @Operation(summary = "작품 공동 작가 등록")
     @PostMapping("/artworks/{artworkId}/artists")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkArtistMappingResponse> createArtistMapping(
             @PathVariable UUID artworkId,
             @Valid @RequestBody ArtworkArtistMappingRequest request) {
@@ -122,7 +122,7 @@ public class ArtworkController {
     // 9. 작품 작가 매핑 수정 (PATCH)
     @Operation(summary = "작품 공동 작가 수정")
     @PatchMapping("/artworks/{artworkId}/artists/{artistProfileId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkArtistMappingResponse> updateArtistMapping(
             @PathVariable UUID artworkId,
             @PathVariable UUID artistProfileId,
@@ -134,7 +134,7 @@ public class ArtworkController {
     // 10. 작품 작가 매핑 삭제 (DELETE)
     @Operation(summary = "작품 공동 작가 삭제")
     @DeleteMapping("/artworks/{artworkId}/artists/{artistProfileId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> deleteArtistMapping(
             @PathVariable UUID artworkId,
             @PathVariable UUID artistProfileId) {
@@ -157,7 +157,7 @@ public class ArtworkController {
     // 11. 작품 전체 정보 수정 (PUT)
     @Operation(summary = "작품 전체 정보 수정")
     @PutMapping(value = "/exhibitions/{exhibitionId}/artworks/{artworkId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkUpdateFullResponse> updateArtworkFull(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID artworkId,
@@ -181,7 +181,7 @@ public class ArtworkController {
     // 12. 전시회 내 모든 작품 순서 일괄 재정렬 및 DB 저장 (PUT)
     @Operation(summary = "전시회 내 전체 작품 순서 재정렬", description = "전시회 내의 작품들을 각 Zone별로 [1순위: 작가 가나다, 2순위: 작품명 가나다] 순서로 정렬하여 orderIndex(10, 20, 30...)를 DB에 일괄 갱신합니다.")
     @PutMapping("/exhibitions/{exhibitionId}/artworks/reorder")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> reorderExhibitionArtworks(
             @PathVariable UUID exhibitionId) {
 

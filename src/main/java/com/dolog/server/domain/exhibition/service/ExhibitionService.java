@@ -11,6 +11,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCust
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 public interface ExhibitionService {
 
@@ -25,6 +26,7 @@ public interface ExhibitionService {
 
     // 전시 생성, 수정, 삭제
     ExhibitionCreateResponse createExhibition(ExhibitionCreateRequest request);
+    EntryCodeResponse reissueEntryCode(UUID exhibitionId, LocalDateTime expiresAt);
     ExhibitionMessageResponse updateExhibition(UUID exhibitionId, ExhibitionUpdateRequest request);
     ExhibitionMessageResponse deleteExhibition(UUID exhibitionId);
 

@@ -16,7 +16,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.dolog.server.domain.account.web.dto.response.MyAccountResponse;
+
 import java.util.List;
+import jakarta.validation.Valid;
 
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "account")
@@ -27,13 +30,13 @@ public class AccountController {
 
     private final AccountService accountService; // 인터페이스 타입으로 DI
 
-    // 슈퍼어드민만 접근 가능\
+    // 두록 관리자만 접근 가능
     // admin 계정 생성
-    @Operation(summary = "admin 계정(전시 총대) 생성")
+    @Operation(summary = "두록 관리자 계정 생성")
     @PostMapping("/admin")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<AccountResponse> createAdmin(
-            @RequestBody AdminCreateRequest request
+            @Valid @RequestBody AdminCreateRequest request
     ) {
         Account admin = accountService.createAdmin(request);
 
@@ -45,10 +48,16 @@ public class AccountController {
         );
     }
 
+    @Operation(summary = "내 계정 정보 조회")
+    @GetMapping("/me")
+    public SuccessResponse<MyAccountResponse> getMyAccount(@AuthenticationPrincipal CustomUserDetails user) {
+        return SuccessResponse.ok(accountService.getMyAccount(user.getId()), "계정 정보 조회 성공");
+    }
+
     // admin 계정 조회
     @Operation(summary = "계정 목록 조회")
     @GetMapping
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<List<AccountResponse>> getAccounts(
             @RequestParam(required = false) Role role
     ) {
@@ -68,7 +77,7 @@ public class AccountController {
     @PatchMapping("/me/password")
     public SuccessResponse<AccountResponse> changePassword(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody ChangePasswordRequest request
+            @Valid @RequestBody ChangePasswordRequest request
     ) {
 
         Account account = accountService.changePassword(userDetails.getId(), request);

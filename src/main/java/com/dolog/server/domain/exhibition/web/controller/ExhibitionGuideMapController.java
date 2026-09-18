@@ -27,7 +27,7 @@ public class ExhibitionGuideMapController {
             value = "/{exhibitionId}/guide-maps",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> createGuideMap(
             @PathVariable UUID exhibitionId,
             @ModelAttribute ExhibitionGuideMapCreateRequest request
@@ -50,7 +50,7 @@ public class ExhibitionGuideMapController {
             value = "/guide-maps/{guideMapId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> updateGuideMap(
             @PathVariable UUID guideMapId,
             @ModelAttribute ExhibitionGuideMapCreateRequest request
@@ -68,7 +68,7 @@ public class ExhibitionGuideMapController {
 
     @Operation(summary = "전시 구역 지도 삭제")
     @DeleteMapping("/guide-maps/{guideMapId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> deleteGuideMap(
             @PathVariable UUID guideMapId
     ) {

@@ -24,7 +24,7 @@ public class ExhibitionCustomSplashController {
 
     // 전시회 커스텀 스플래시 설정
     @Operation(summary = "전시회 커스텀 스플래시 설정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PutMapping("/{exhibitionId}/custom/splash")
     public SuccessResponse<ExhibitionCustomSplashResponse> upsertCustomSplash(
             @PathVariable UUID exhibitionId,

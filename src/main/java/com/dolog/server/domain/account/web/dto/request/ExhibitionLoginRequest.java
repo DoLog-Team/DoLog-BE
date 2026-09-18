@@ -1,12 +1,12 @@
 package com.dolog.server.domain.account.web.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotBlank;
 
 @Getter
 @NoArgsConstructor
-public class RefreshTokenRequest {
+public class ExhibitionLoginRequest {
     @NotBlank
-    private String refreshToken;
+    private String entryCode;
 }

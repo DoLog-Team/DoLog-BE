@@ -39,7 +39,7 @@ public class ExhibitionPartnerController {
 
     // 파트 생성
     @Operation(summary = "도움을 주신 분들 파트 생성")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PostMapping("/{exhibitionId}/partners/parts")
     public ResponseEntity<SuccessResponse<PartnerPartResponse>> createPart(
             @PathVariable UUID exhibitionId,

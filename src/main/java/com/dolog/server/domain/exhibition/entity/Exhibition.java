@@ -3,10 +3,13 @@ package com.dolog.server.domain.exhibition.entity;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.global.entity.BaseEntity;
+import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -21,10 +24,38 @@ public class Exhibition extends BaseEntity {
     @Column(name = "id", columnDefinition = "BINARY(16)")
     private UUID id;
 
-    // TODO: JWT 연동 후 nullable = false 로 복구
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", nullable = true)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "account_id", nullable = false, unique = true)
     private Account account;
+
+    @Column(name = "entry_code", length = 8, unique = true)
+    private String entryCode;
+
+    @Column(name = "artist_join_code", length = 8, unique = true)
+    private String artistJoinCode;
+
+    @Column(name = "entry_code_expires_at")
+    private LocalDateTime entryCodeExpiresAt;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    public void reissueEntryCode(String code, LocalDateTime codeExpiresAt) {
+        this.entryCode = code;
+        this.entryCodeExpiresAt = codeExpiresAt;
+    }
+
+    public void requireAvailable() {
+        if (expiresAt != null && !expiresAt.isAfter(LocalDateTime.now())) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_EXPIRED);
+        }
+    }
+
+    public void requireEntryCodeValid() {
+        if (entryCodeExpiresAt != null && !entryCodeExpiresAt.isAfter(LocalDateTime.now())) {
+            throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_EXPIRED);
+        }
+    }
 
     @Column(name = "univ_name", length = 100, nullable = false)
     private String univName;

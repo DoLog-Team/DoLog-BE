@@ -38,7 +38,7 @@ public class BtsController {
     // 등록 (POST)
     @Operation(summary = "BTS 등록")
     @PostMapping(value = "/{exhibitionId}/bts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<BtsResponse> createBts(
             @PathVariable UUID exhibitionId,
             @Valid @ParameterObject @ModelAttribute BtsCreateRequest request,
@@ -51,7 +51,7 @@ public class BtsController {
     // 수정 (PATCH)
     @Operation(summary = "BTS 수정")
     @PatchMapping(value = "/{exhibitionId}/bts/{btsId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<BtsResponse> updateBts(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID btsId,
@@ -65,7 +65,7 @@ public class BtsController {
     // 삭제 (DELETE)
     @Operation(summary = "BTS 삭제")
     @DeleteMapping("/{exhibitionId}/bts/{btsId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> deleteBts(@PathVariable UUID exhibitionId, @PathVariable UUID btsId) {
         btsService.deleteBts(exhibitionId, btsId);
         return SuccessResponse.ok(null, "BTS 콘텐츠가 성공적으로 삭제되었습니다.");
@@ -101,7 +101,7 @@ public class BtsController {
     // BTS 매핑 등록/수정 (PUT)
     @Operation(summary = "BTS 매핑 등록/수정")
     @PutMapping("/{exhibitionId}/bts/{btsId}")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<BtsMappingUpdateResponse> syncBtsMapping(
             @PathVariable UUID exhibitionId,
             @PathVariable UUID btsId,

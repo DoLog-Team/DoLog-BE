@@ -8,95 +8,78 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.SecretKey;
-import java.security.Key;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
-//JWT 토큰 생성 / 검증 유틸리티
 @Component
-@Slf4j
 public class JwtTokenProvider {
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000L * 60 * 60;
+    private static final long REFRESH_TOKEN_EXPIRATION = 1000L * 60 * 60 * 24 * 7;
+    private final SecretKey key;
 
-    // 토큰 유효기간
-    private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 60;       // 1시간
-    private static final long REFRESH_TOKEN_EXPIRATION = 1000 * 60 * 60 * 24 * 7; // 7일
-
-    private final Key key;
-
-    // 생성자를 통해 스프링이 yml에서 값을 읽어와 주입해 주고, 안전하게 Key 객체를 생성합니다.
     public JwtTokenProvider(@Value("${jwt.secret}") String secretKey) {
-        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
 
-    /** 1. 토큰 생성 */
-    /** Access Token */
-    public String createAccessToken(String email) {
+    public String createAccessToken(UUID accountId, long sessionId) {
+        if (sessionId <= 0) throw new IllegalArgumentException("로그인 세션 ID가 필요합니다.");
         Date now = new Date();
         return Jwts.builder()
-                .subject(email)
+                .subject(accountId.toString())
+                .claim("token_type", "access")
+                .claim("sid", sessionId)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + ACCESS_TOKEN_EXPIRATION))
                 .signWith(key)
                 .compact();
     }
 
-    /** Refresh Token */
-    public String createRefreshToken(String email) {
+    public String createRefreshToken(UUID accountId) {
         Date now = new Date();
         return Jwts.builder()
-                .subject(email)
+                .id(UUID.randomUUID().toString())
+                .subject(accountId.toString())
+                .claim("token_type", "refresh")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + REFRESH_TOKEN_EXPIRATION))
                 .signWith(key)
                 .compact();
     }
 
-    /** 2. 토큰 유효성 검증 */
-    public boolean validateToken(String token) {
+    public record AccessIdentity(UUID accountId, long sessionId) {}
+
+    public AccessIdentity parseAccessToken(String token) {
+        Claims claims = parse(token, "access");
         try {
-            Jwts.parser()
-                    .verifyWith((SecretKey) key)
-                    .build()
-                    .parseSignedClaims(token);
-            return true;
-        }  catch (ExpiredJwtException e) {
-            log.warn("JWT 만료: {}", e.getMessage());
-            throw new JwtExpiredException();
-
-        } catch (UnsupportedJwtException e) {
-            log.warn("❌ 지원되지 않는 JWT 형식: {}", e.getMessage());
-            throw new JwtUnsupportedException();
-
-        } catch (MalformedJwtException e) {
-            log.warn("❌ JWT 구조 손상됨: {}", e.getMessage());
-            throw new JwtMalformedException();
-
-        } catch (SignatureException | IllegalArgumentException e) {
-            log.warn("❌ JWT 서명 불일치 또는 잘못된 토큰: {}", e.getMessage());
-            throw new JwtInvalidException();
-
-        } catch (JwtException e) {
-            log.warn("❌ JWT 파싱 중 일반 예외: {}", e.getMessage());
+            Long sessionId = claims.get("sid", Long.class);
+            if (sessionId == null || sessionId <= 0) throw new JwtInvalidException();
+            return new AccessIdentity(UUID.fromString(claims.getSubject()), sessionId);
+        } catch (JwtException | IllegalArgumentException e) {
             throw new JwtInvalidException();
         }
     }
 
-    /** 3. 토큰에서 닉네임(subject) 추출 */
-    public String getNicknameFromToken(String token) {
+    public UUID parseRefreshToken(String token) {
+        return UUID.fromString(parse(token, "refresh").getSubject());
+    }
+
+    private Claims parse(String token, String type) {
         try {
-            return Jwts.parser()
-                    .verifyWith((SecretKey) key)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload()
-                    .getSubject();
+            Claims claims = Jwts.parser().verifyWith(key).require("token_type", type)
+                    .build().parseSignedClaims(token).getPayload();
+            if (claims.getSubject() == null || claims.getExpiration() == null) throw new JwtInvalidException();
+            UUID.fromString(claims.getSubject());
+            return claims;
         } catch (ExpiredJwtException e) {
-            log.warn("❌ Access Token 만료: {}", e.getMessage());
             throw new JwtExpiredException();
-        } catch (JwtException e) {
-            log.warn("❌ JWT 파싱 실패: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            throw new JwtUnsupportedException();
+        } catch (MalformedJwtException e) {
+            throw new JwtMalformedException();
+        } catch (JwtException | IllegalArgumentException e) {
             throw new JwtInvalidException();
         }
     }

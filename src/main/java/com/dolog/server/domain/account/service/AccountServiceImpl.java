@@ -15,6 +15,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.dolog.server.domain.account.web.dto.response.MyAccountResponse;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.global.exception.jwt.JwtInvalidException;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -24,6 +29,21 @@ public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ArtistRepository artistRepository;
+    private final ExhibitionRepository exhibitionRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public MyAccountResponse getMyAccount(UUID accountId) {
+        Account account = accountRepository.findById(accountId).orElseThrow(JwtInvalidException::new);
+        account.requireActive();
+        UUID artistId = account.getRole() == Role.ARTIST_ADMIN
+                ? artistRepository.findByAccountId(accountId).map(artist -> artist.getId()).orElse(null) : null;
+        UUID exhibitionId = account.getRole() == Role.EXHIBITION_ADMIN
+                ? exhibitionRepository.findByAccountId(accountId).map(exhibition -> exhibition.getId()).orElse(null) : null;
+        return new MyAccountResponse(account.getId(), account.getEmail(), account.getRole(),
+                account.getAccountStatus(), exhibitionId, artistId);
+    }
 
     @Override
     public Account createAdmin(AdminCreateRequest request) {
@@ -34,7 +54,7 @@ public class AccountServiceImpl implements AccountService {
         Account admin = Account.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.ADMIN) // 일반 관리자
+                .role(Role.DOLOG_ADMIN) // 두록 관리자
                 .accountStatus(AccountStatus.ACTIVE)
                 .build();
 
@@ -61,7 +81,8 @@ public class AccountServiceImpl implements AccountService {
                 .orElseThrow(() -> new RuntimeException("계정을 찾을 수 없습니다."));
 
         // 1. 현재 비밀번호 검증
-        if (!passwordEncoder.matches(request.getCurrentPassword(), account.getPassword())) {
+        if (account.getPassword() == null || request.getCurrentPassword() == null
+                || !passwordEncoder.matches(request.getCurrentPassword(), account.getPassword())) {
             throw new InvalidPasswordException();
         }
 

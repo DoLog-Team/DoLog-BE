@@ -26,7 +26,7 @@ public class ExhibitionCustomThemeController {
 
     // 전시회 커스텀 테마 설정
     @Operation(summary = "전시회 커스텀 테마 설정")
-    @PreAuthorize("hasRole('DEVELOPER')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     @PutMapping("/{exhibitionId}/custom/theme")
     public SuccessResponse<ExhibitionCustomThemeResponse> upsertCustomTheme(
             @PathVariable UUID exhibitionId,

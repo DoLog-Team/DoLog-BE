@@ -1,39 +1,40 @@
 package com.dolog.server.global.jwt;
 
 import com.dolog.server.domain.account.entity.Account;
-import com.dolog.server.domain.account.repository.AccountRepository;
+import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.account.repository.RefreshTokenRepository;
+import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import com.dolog.server.global.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
-/**
- * JWT 인증용 사용자 정보 로드 서비스
- */
 @Service
 @RequiredArgsConstructor
-public class JwtUserDetailsService implements UserDetailsService {
+public class JwtUserDetailsService {
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final ExhibitionRepository exhibitionRepository;
 
-    private final AccountRepository accountRepository;
+    @Transactional(readOnly = true)
+    public CustomUserDetails loadUser(UUID accountId, long sessionId) {
+        Account account = refreshTokenRepository.findByIdAndAccountId(sessionId, accountId)
+                .orElseThrow(JwtInvalidException::new).getAccount();
+        requireAvailable(account);
+        return new CustomUserDetails(account.getId(), sessionId, account.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_" + account.getRole().name())));
+    }
 
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-
-        Account account = accountRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("계정을 찾을 수 없습니다: " + email));
-
-        List<SimpleGrantedAuthority> authorities = List.of(
-                new SimpleGrantedAuthority("ROLE_" + account.getRole().name())
-        );
-
-        return new CustomUserDetails(
-                account.getId(),
-                account.getEmail(),
-                account.getPassword(),
-                authorities
-        );
+    @Transactional(readOnly = true)
+    public void requireAvailable(Account account) {
+        account.requireActive();
+        if (account.getRole() == Role.EXHIBITION_ADMIN) {
+            exhibitionRepository.findByAccountId(account.getId())
+                    .orElseThrow(JwtInvalidException::new).requireAvailable();
+        }
     }
 }
