@@ -36,7 +36,7 @@ if (pm.response.code === 200) {
 | POST /auth/exhibition/login | `{"entryCode":"{{entryCode}}"}` | No Auth |
 | POST /auth/dev/artist-login | `{"fixture":"ARTIST_1"}` | DOLOG_ADMIN Bearer |
 
-전시 로그인은 환경변수 `entryCode`에 실제 전시의 유효한 8자리 코드를 넣는다. 허용 문자는 숫자 2~9와 I/L/O를 제외한 영문자다. 현재 시드 `LOCAL001`은 이 형식에 맞지 않아 거절된다. 전시 시드 계정의 이메일/비밀번호도 관리자 전용 `/auth/login`으로 로그인할 수 없다. 코드의 만료 및 계정·전시 이용 상태 검증도 통과해야 한다.
+전시 로그인은 환경변수 `entryCode`에 실제 전시의 유효한 8자리 코드를 넣는다. 허용 문자는 숫자 2~9와 I/L/O를 제외한 영문자다. 로컬 시드 코드는 `DEME2222`다. 기존 `LOCAL001`은 앱 재기동 시 보정되며 직접 재발급한 코드는 유지된다. 전시 시드 계정의 이메일/비밀번호도 관리자 전용 `/auth/login`으로 로그인할 수 없다. 코드의 만료 및 계정·전시 이용 상태 검증도 통과해야 한다.
 
 작가 로그인은 local/dev에서만 가능하고 prod에서는 없다. 반환받은 작가 토큰을 사용해야 작가 역할 테스트가 된다. 관리자 토큰은 별도 변수로 보관하면 역할 전환이 쉽다. ARTIST_1은 로컬 시드 계정을 재사용하며 ARTIST_2도 개발용 fixture로 지원한다.
 

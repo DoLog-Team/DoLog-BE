@@ -3,7 +3,8 @@
 -- Flyway repeatable 마이그레이션이라 V1~V5 이후에 실행된다.
 --   - docker compose 볼륨을 지우고 새로 올리면 빈 DB에 자동 적용된다.
 --   - 이 파일을 수정하면 체크섬이 바뀌어 다시 실행되므로 모든 INSERT는 고정 ID + INSERT IGNORE로 멱등하게 둔다.
--- 전시 운영자 계정 비밀번호는 test1234 (BCrypt $2a$10)다.
+-- 전시 운영자는 POST /api/auth/exhibition/login에 entryCode=DEME2222로 로그인한다.
+-- 이메일/비밀번호 로그인은 DOLOG_ADMIN 전용이다.
 -- 작가 계정은 DevAuthController(POST /api/auth/dev/artist-login)의 ARTIST_1 fixture와 같은 키로 만들어 둔다.
 --   -> 개발용 작가 로그인이 이 계정과 작가를 그대로 재사용하므로 시드된 프로필/작품이 바로 보인다.
 -- 이미지는 외부 placeholder URL이다. S3(localstack) 업로드 경로는 시드하지 않는다.
@@ -25,7 +26,7 @@ SET @bts                = UUID_TO_BIN('99999999-9999-9999-9999-999999999999');
 SET @now = NOW(6);
 SET @password = '$2a$10$wIcebCYiem.UA3iNf/JCH.qJk24jdYCOEQjB4kpmuwdItm.qGcyam';
 
--- 계정: 전시 운영자(비밀번호 로그인) / 작가(개발용 fixture ARTIST_1).
+-- 계정: 전시 운영자(코드 로그인) / 작가(개발용 fixture ARTIST_1).
 -- DOLOG_ADMIN은 AdminInitializer가 부팅 시 따로 만든다.
 INSERT IGNORE INTO accounts (id, created_at, updated_at, account_status, email, password, role,
                              social_provider, social_provider_id)
@@ -43,7 +44,11 @@ INSERT IGNORE INTO exhibitions (id, created_at, updated_at, dept_name, is_public
                                 entry_code, artist_join_code, published_at)
 VALUES (@exhibition, @now, @now, '시각디자인학과', 1, 'local-demo', '두록대학교',
         @account_exhibition, 'GRADUATION', '디자인대학',
-        'LOCAL001', 'JOIN0001', @now);
+        'DEME2222', 'JOIN0001', @now);
+
+-- 이전 시드만 보정한다. 개발자가 재발급한 코드와 다른 전시는 유지한다.
+UPDATE exhibitions SET entry_code = 'DEME2222', updated_at = @now
+WHERE id = @exhibition AND entry_code = 'LOCAL001';
 
 INSERT IGNORE INTO exhibition_details (id, created_at, updated_at, title, description, sort_type, theme_type,
                                        start_date, end_date, date_info, address, address_detail,
