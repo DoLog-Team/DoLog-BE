@@ -1,6 +1,8 @@
 # DoLog-BE
 
-DoLog 백엔드 서버 (Spring Boot 3.3 / Java 17 / Gradle)
+DoLog 백엔드 서버 (Spring Boot 3.5 / Java 17 / Gradle)
+
+전체 가이드는 [온보딩 문서](docs/onboarding/00-start.md)를 참고하세요.
 
 ## 개발 환경 실행방법
 
