@@ -1,7 +1,9 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
@@ -13,16 +15,22 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.Locale;
 
@@ -33,6 +41,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
 
     private final ArtistRepository artistRepository;
+    private final ArtistProfileRepository artistProfileRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
@@ -182,6 +191,108 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                 context.exhibition().getId(),
                 map.getStatus()
         );
+    }
+
+    @Override
+    public ExhibitionArtistStatusUpdateResponse updateArtistStatuses(
+            UUID accountId,
+            UUID exhibitionId,
+            List<UUID> artistIds,
+            ExhibitionArtistStatus targetStatus
+    ) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
+
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            throw new AccessDeniedException("자신이 관리하는 전시의 참여 상태만 변경할 수 있습니다.");
+        }
+
+        requireAllowedTargetStatus(targetStatus);
+
+        List<UUID> distinctArtistIds = new ArrayList<>(
+                new LinkedHashSet<>(artistIds)
+        );
+
+        List<ExhibitionArtistMap> maps =
+                exhibitionArtistMapRepository
+                        .findAllByExhibitionIdAndArtistIdIn(
+                                exhibitionId,
+                                distinctArtistIds
+                        );
+
+        if (maps.size() != distinctArtistIds.size()) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_FOUND
+            );
+        }
+
+        // 모든 상태 전이를 먼저 검사하여 일부만 변경되는 상황을 방지한다.
+        for (ExhibitionArtistMap map : maps) {
+            if (!map.getStatus().canChangeTo(targetStatus)) {
+                throw new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_ARTIST_STATUS_INVALID
+                );
+            }
+        }
+
+        for (ExhibitionArtistMap map : maps) {
+            map.updateStatus(targetStatus);
+        }
+
+        if (targetStatus == ExhibitionArtistStatus.JOINED) {
+            createMissingArtistProfiles(exhibition, maps);
+        }
+
+        return new ExhibitionArtistStatusUpdateResponse(maps.size());
+    }
+
+    private void requireAllowedTargetStatus(
+            ExhibitionArtistStatus targetStatus
+    ) {
+        if (targetStatus != ExhibitionArtistStatus.JOINED
+                && targetStatus != ExhibitionArtistStatus.DENIED
+                && targetStatus != ExhibitionArtistStatus.REMOVED) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.EXHIBITION_ARTIST_STATUS_INVALID
+            );
+        }
+    }
+
+    private void createMissingArtistProfiles(
+            Exhibition exhibition,
+            List<ExhibitionArtistMap> maps
+    ) {
+        List<UUID> artistIds = maps.stream()
+                .map(map -> map.getArtist().getId())
+                .toList();
+
+        Set<UUID> existingProfileArtistIds = new HashSet<>(
+                artistProfileRepository
+                        .findArtistIdsByExhibitionIdAndArtistIdIn(
+                                exhibition.getId(),
+                                artistIds
+                        )
+        );
+
+        List<ArtistProfile> profilesToCreate = maps.stream()
+                .map(ExhibitionArtistMap::getArtist)
+                .filter(artist -> !existingProfileArtistIds.contains(artist.getId()))
+                .map(artist -> {
+                    ArtistProfile profile = ArtistProfile.builder()
+                            .artist(artist)
+                            .exhibition(exhibition)
+                            .isPublic(true)
+                            .build();
+                    profile.fillDefaultInfoFromArtist();
+                    return profile;
+                })
+                .toList();
+
+        if (!profilesToCreate.isEmpty()) {
+            artistProfileRepository.saveAll(profilesToCreate);
+        }
     }
 
     private String normalizeJoinCode(String rawCode) {

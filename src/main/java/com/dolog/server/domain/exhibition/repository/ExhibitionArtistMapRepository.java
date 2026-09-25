@@ -3,9 +3,13 @@ package com.dolog.server.domain.exhibition.repository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +20,13 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     List<ExhibitionArtistMap> findByExhibitionId(UUID exhibitionId);
     Optional<ExhibitionArtistMap> findByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
     boolean existsByArtistId(UUID artistId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"artist", "artist.account"})
+    List<ExhibitionArtistMap> findAllByExhibitionIdAndArtistIdIn(
+            UUID exhibitionId,
+            Collection<UUID> artistIds
+    );
 
     @Query("""
         SELECT new com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse(

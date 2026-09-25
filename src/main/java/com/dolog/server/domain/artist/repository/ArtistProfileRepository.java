@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -30,6 +31,17 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
     List<ArtistProfile> findAllByExhibitionId(UUID exhibitionId);
 
     Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
+
+    @Query("""
+            SELECT p.artist.id
+            FROM ArtistProfile p
+            WHERE p.exhibition.id = :exhibitionId
+              AND p.artist.id IN :artistIds
+            """)
+    List<UUID> findArtistIdsByExhibitionIdAndArtistIdIn(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("artistIds") Collection<UUID> artistIds
+    );
 
     @Query("SELECT p FROM ArtistProfile p WHERE p.exhibition.id = :exhibitionId AND p.nameKo < :nameKo ORDER BY p.nameKo DESC")
     List<ArtistProfile> findPrevProfile(@Param("exhibitionId") UUID exhibitionId, @Param("nameKo") String nameKo, Pageable pageable);

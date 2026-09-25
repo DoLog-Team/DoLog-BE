@@ -5,10 +5,12 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistStatusUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.RemoveArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -116,5 +118,28 @@ public class ExhibitionArtistController {
                         data,
                         "전시 참여 신청 성공"
                 ));
+    }
+
+    @Operation(summary = "전시 참여 작가 상태 일괄 변경")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @PatchMapping("/{exhibitionId}/artists/status")
+    public SuccessResponse<ExhibitionArtistStatusUpdateResponse>
+    updateArtistStatuses(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExhibitionArtistStatusUpdateRequest request
+    ) {
+        ExhibitionArtistStatusUpdateResponse data =
+                exhibitionArtistService.updateArtistStatuses(
+                        user.getId(),
+                        exhibitionId,
+                        request.artistIds(),
+                        request.status()
+                );
+
+        return SuccessResponse.ok(
+                data,
+                "전시 참여 작가 상태 변경 성공"
+        );
     }
 }
