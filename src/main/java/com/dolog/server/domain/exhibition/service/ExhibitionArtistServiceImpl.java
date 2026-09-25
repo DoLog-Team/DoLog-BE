@@ -14,6 +14,8 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -132,37 +134,10 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             UUID accountId,
             String rawCode
     ) {
-        Artist artist = artistRepository.findByAccountId(accountId)
-                .orElseThrow(ArtistNotFoundException::new);
+        JoinContext context =
+                resolveJoinContext(accountId, rawCode);
 
-        String joinCode = normalizeJoinCode(rawCode);
-
-        Exhibition exhibition =
-                exhibitionRepository.findByArtistJoinCode(joinCode)
-                        .orElseThrow(() -> new ExhibitionException(
-                                ExhibitionErrorCode.ARTIST_JOIN_CODE_INVALID
-                        ));
-
-        // 전시 자체 이용 기간 검사
-        exhibition.requireAvailable();
-
-        // 작가 참여 코드 만료 검사
-        exhibition.requireArtistJoinCodeValid();
-
-        // 이미 신청 중이거나 참여 중인지 검사
-        exhibitionArtistMapRepository
-                .findByExhibitionIdAndArtistId(
-                        exhibition.getId(),
-                        artist.getId()
-                )
-                .ifPresent(map -> {
-                    if (map.getStatus().blocksReapplication()) {
-                        throw new ExhibitionException(
-                                ExhibitionErrorCode
-                                        .EXHIBITION_ARTIST_ALREADY_APPLIED
-                        );
-                    }
-                });
+        Exhibition exhibition = context.exhibition();
 
         if (exhibition.getExhibitionDetail() == null) {
             throw new ExhibitionException(
@@ -173,6 +148,39 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         return new ArtistJoinCodeValidateResponse(
                 exhibition.getId(),
                 exhibition.getExhibitionDetail().getTitle()
+        );
+    }
+
+    @Override
+    public ArtistJoinResponse joinExhibition(
+            UUID accountId,
+            String rawCode,
+            String rawGreeting
+    ) {
+        JoinContext context =
+                resolveJoinContext(accountId, rawCode);
+
+        String greeting = rawGreeting.trim();
+
+        ExhibitionArtistMap map = context.existingMap();
+
+        if (map == null) {
+            map = ExhibitionArtistMap.builder()
+                    .exhibition(context.exhibition())
+                    .artist(context.artist())
+                    .status(ExhibitionArtistStatus.PENDING)
+                    .greeting(greeting)
+                    .build();
+
+            map = exhibitionArtistMapRepository.save(map);
+        } else {
+            // DENIED, WITHDRAWN, REMOVED 상태의 재신청
+            map.reapply(greeting);
+        }
+
+        return new ArtistJoinResponse(
+                context.exhibition().getId(),
+                map.getStatus()
         );
     }
 
@@ -192,6 +200,53 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         }
 
         return normalized;
+    }
+
+    private record JoinContext(
+            Artist artist,
+            Exhibition exhibition,
+            ExhibitionArtistMap existingMap
+    ) {
+    }
+
+    private JoinContext resolveJoinContext(
+            UUID accountId,
+            String rawCode
+    ) {
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(ArtistNotFoundException::new);
+
+        String joinCode = normalizeJoinCode(rawCode);
+
+        Exhibition exhibition =
+                exhibitionRepository.findByArtistJoinCode(joinCode)
+                        .orElseThrow(() -> new ExhibitionException(
+                                ExhibitionErrorCode.ARTIST_JOIN_CODE_INVALID
+                        ));
+
+        exhibition.requireAvailable();
+        exhibition.requireArtistJoinCodeValid();
+
+        ExhibitionArtistMap existingMap =
+                exhibitionArtistMapRepository
+                        .findByExhibitionIdAndArtistId(
+                                exhibition.getId(),
+                                artist.getId()
+                        )
+                        .orElse(null);
+
+        if (existingMap != null
+                && existingMap.getStatus().blocksReapplication()) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.EXHIBITION_ARTIST_ALREADY_APPLIED
+            );
+        }
+
+        return new JoinContext(
+                artist,
+                exhibition,
+                existingMap
+        );
     }
 
 }

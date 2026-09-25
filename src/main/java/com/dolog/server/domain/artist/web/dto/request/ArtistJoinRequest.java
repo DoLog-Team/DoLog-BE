@@ -1,0 +1,9 @@
+package com.dolog.server.domain.artist.web.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+
+public record ArtistJoinRequest(
+        @NotBlank String joinCode,
+        @NotBlank String greeting
+) {
+}

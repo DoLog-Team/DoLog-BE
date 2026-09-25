@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -14,4 +15,5 @@ public interface ExhibitionArtistService {
     List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId, String sort);
     ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId);
     ArtistJoinCodeValidateResponse validateJoinCode(UUID accountId, String joinCode);
+    ArtistJoinResponse joinExhibition(UUID accountId, String joinCode, String greeting);
 }

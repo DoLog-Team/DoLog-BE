@@ -18,6 +18,10 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateRes
 import com.dolog.server.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.dolog.server.domain.artist.web.dto.request.ArtistJoinRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.UUID;
@@ -91,5 +95,26 @@ public class ExhibitionArtistController {
                 data,
                 "작가 참여 코드 확인 성공"
         );
+    }
+
+    @Operation(summary = "작가 전시 참여 신청")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @PostMapping("/join")
+    public ResponseEntity<SuccessResponse<ArtistJoinResponse>> joinExhibition(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @Valid @RequestBody ArtistJoinRequest request
+    ) {
+        ArtistJoinResponse data =
+                exhibitionArtistService.joinExhibition(
+                        user.getId(),
+                        request.joinCode(),
+                        request.greeting()
+                );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(
+                        data,
+                        "전시 참여 신청 성공"
+                ));
     }
 }
