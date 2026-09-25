@@ -12,9 +12,9 @@ public interface ArtistService {
 
     ArtistCreateResponse createArtist(UUID accountId, ArtistCreateRequest request);
 
-    ArtistResponse updateArtist(UUID artistId, ArtistUpdateRequest request);
+    ArtistResponse updateArtist(UUID accountId, UUID artistId, ArtistUpdateRequest request);
 
-    ArtistResponse deleteArtist(UUID artistId);
+    void deleteArtist(UUID accountId, UUID artistId);
 
     List<ArtistResponse> getArtists();
 

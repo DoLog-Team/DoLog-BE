@@ -8,11 +8,15 @@ import com.dolog.server.domain.artist.exception.artistError.ArtistAlreadyExistsE
 import com.dolog.server.domain.artist.exception.artistError.ArtistBadRequestException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.DuplicateArtistPhoneException;
+import com.dolog.server.domain.artist.exception.artistError.ArtistHasLinkedDataException;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
+import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -30,6 +34,9 @@ public class ArtistServiceImpl implements ArtistService {
 
     private final ArtistRepository artistRepository;
     private final AccountRepository accountRepository;
+    private final ArtistProfileRepository artistProfileRepository;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+    private final ArtworkArtistMapRepository artworkArtistMapRepository;
 
     // 작가 생성
     @Override
@@ -83,15 +90,26 @@ public class ArtistServiceImpl implements ArtistService {
 
     // 업데이트
     @Override
-    public ArtistResponse updateArtist(UUID artistId, ArtistUpdateRequest request) {
+    public ArtistResponse updateArtist(UUID accountId, UUID artistId, ArtistUpdateRequest request) {
 
-        Artist artist = artistRepository.findById(artistId)
+        Artist artist = artistRepository.findByIdAndAccountId(artistId, accountId)
                 .orElseThrow(ArtistNotFoundException::new);
+
+        String phone = request.getPhone();
+
+        if (phone != null) {
+            phone = normalizePhone(phone);
+
+            if (phone != null
+                    && artistRepository.existsByPhoneAndIdNot(phone, artistId)) {
+                throw new DuplicateArtistPhoneException();
+            }
+        }
 
         artist.updateArtistInfo(
                 request.getNameKo(),
                 request.getNameEn(),
-                request.getPhone()
+                phone
         );
 
         return ArtistResponse.from(artist);
@@ -99,16 +117,21 @@ public class ArtistServiceImpl implements ArtistService {
 
     // 삭제
     @Override
-    public ArtistResponse deleteArtist(UUID artistId) {
-
-        Artist artist = artistRepository.findById(artistId)
+    public void deleteArtist(
+            UUID accountId,
+            UUID artistId
+    ) {
+        Artist artist = artistRepository
+                .findByIdAndAccountId(artistId, accountId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        ArtistResponse response = ArtistResponse.from(artist);
+        if (artistProfileRepository.existsByArtistId(artistId)
+                || exhibitionArtistMapRepository.existsByArtistId(artistId)
+                || artworkArtistMapRepository.existsByArtistId(artistId)) {
+            throw new ArtistHasLinkedDataException();
+        }
 
         artistRepository.delete(artist);
-
-        return response;
     }
 
 

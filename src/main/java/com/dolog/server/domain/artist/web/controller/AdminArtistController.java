@@ -43,22 +43,29 @@ public class AdminArtistController {
     // 작가 수정
     @Operation(summary = "작가 수정")
     @PatchMapping("/{artistId}")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtistResponse> updateArtist(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artistId,
-            @RequestBody ArtistUpdateRequest request
+            @RequestBody @Valid ArtistUpdateRequest request
     ) {
-        ArtistResponse data = artistService.updateArtist(artistId, request);
-        return SuccessResponse.ok(data);
+        return SuccessResponse.ok(
+                artistService.updateArtist(user.getId(), artistId, request)
+        );
     }
 
     //작가 삭제
     @Operation(summary = "작가 삭제")
     @DeleteMapping("/{artistId}")
-    public SuccessResponse<ArtistResponse> deleteArtist(
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<Void> deleteArtist(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artistId
     ) {
-        return SuccessResponse.ok(
-                artistService.deleteArtist(artistId),
+        artistService.deleteArtist(user.getId(), artistId);
+
+        return SuccessResponse.<Void>ok(
+                null,
                 "작가가 삭제되었습니다."
         );
     }

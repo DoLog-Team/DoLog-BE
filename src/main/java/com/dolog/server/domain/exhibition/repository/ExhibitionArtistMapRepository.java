@@ -15,6 +15,7 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     boolean existsByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
     List<ExhibitionArtistMap> findByExhibitionId(UUID exhibitionId);
     Optional<ExhibitionArtistMap> findByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
+    boolean existsByArtistId(UUID artistId);
 
     @Query("""
         SELECT new com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse(
