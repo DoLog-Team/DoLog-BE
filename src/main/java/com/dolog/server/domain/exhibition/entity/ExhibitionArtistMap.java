@@ -35,6 +35,9 @@ public class ExhibitionArtistMap extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private ExhibitionArtistStatus status;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String greeting;
 
     public void updateStatus(ExhibitionArtistStatus status) {

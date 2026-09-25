@@ -60,6 +60,23 @@ public class Exhibition extends BaseEntity {
         }
     }
 
+    public void reissueArtistJoinCode(
+            String artistJoinCode,
+            LocalDateTime artistJoinCodeExpiresAt
+    ) {
+        this.artistJoinCode = artistJoinCode;
+        this.artistJoinCodeExpiresAt = artistJoinCodeExpiresAt;
+    }
+
+    public void requireArtistJoinCodeValid() {
+        if (artistJoinCodeExpiresAt != null
+                && !artistJoinCodeExpiresAt.isAfter(LocalDateTime.now())) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.ARTIST_JOIN_CODE_EXPIRED
+            );
+        }
+    }
+
     @Column(name = "univ_name", length = 100, nullable = false)
     private String univName;
 

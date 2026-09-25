@@ -472,4 +472,32 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         if (oldUrl != null) fileService.deleteFile(oldUrl);
         return fileService.uploadFile(newFile, folder);
     }
+
+    @Override
+    public ArtistJoinCodeResponse reissueArtistJoinCode(
+            UUID exhibitionId,
+            LocalDateTime expiresAt
+    ) {
+        if (expiresAt != null && !expiresAt.isAfter(LocalDateTime.now())) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.ARTIST_JOIN_CODE_EXPIRY_INVALID
+            );
+        }
+
+        Exhibition exhibition =
+                exhibitionRepository.findForCodeUpdate(exhibitionId)
+                        .orElseThrow(() -> new ExhibitionException(
+                                ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                        ));
+
+        exhibition.reissueArtistJoinCode(
+                generateCode(),
+                expiresAt
+        );
+
+        return new ArtistJoinCodeResponse(
+                exhibition.getArtistJoinCode(),
+                exhibition.getArtistJoinCodeExpiresAt()
+        );
+    }
 }
