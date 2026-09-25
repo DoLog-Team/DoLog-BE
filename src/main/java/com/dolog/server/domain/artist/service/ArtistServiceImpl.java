@@ -13,12 +13,18 @@ import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistListItemResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -138,12 +144,51 @@ public class ArtistServiceImpl implements ArtistService {
     // 작가 목록 조회
     @Override
     @Transactional(readOnly = true)
-    public List<ArtistResponse> getArtists() {
+    public ArtistListResponse getArtists(
+            String search,
+            int page,
+            int size
+    ) {
+        if (page < 0 || size < 1) {
+            throw new ArtistBadRequestException();
+        }
 
-        return artistRepository.findAll()
-                .stream()
-                .map(ArtistResponse::from)
-                .collect(Collectors.toList());
+        String keyword = search == null || search.isBlank()
+                ? null
+                : search.trim();
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+                        .and(Sort.by(Sort.Direction.DESC, "id"))
+        );
+
+        Page<Artist> result;
+
+        if (keyword == null) {
+            result = artistRepository.findAll(pageable);
+        } else {
+            result =
+                    artistRepository
+                            .findByNameKoContainingIgnoreCaseOrNameEnContainingIgnoreCaseOrAccount_EmailContainingIgnoreCase(
+                                    keyword,
+                                    keyword,
+                                    keyword,
+                                    pageable
+                            );
+        }
+
+        return ArtistListResponse.builder()
+                .artists(
+                        result.getContent()
+                                .stream()
+                                .map(ArtistListItemResponse::from)
+                                .toList()
+                )
+                .totalElements(result.getTotalElements())
+                .totalPages(result.getTotalPages())
+                .build();
     }
 
     // 작가 상세 조회

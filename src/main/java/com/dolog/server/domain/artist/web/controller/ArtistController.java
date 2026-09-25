@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artist.web.controller;
 
+import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistService;
@@ -22,9 +23,13 @@ public class ArtistController {
     // 작가 목록 조회
     @Operation(summary = "작가 목록 조회")
     @GetMapping
-    public SuccessResponse<List<ArtistResponse>> getArtists() {
+    public SuccessResponse<ArtistListResponse> getArtists(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         return SuccessResponse.ok(
-                artistService.getArtists(),
+                artistService.getArtists(search, page, size),
                 "작가 목록 조회 성공"
         );
     }

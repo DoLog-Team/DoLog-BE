@@ -4,8 +4,8 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface ArtistService {
@@ -16,7 +16,7 @@ public interface ArtistService {
 
     void deleteArtist(UUID accountId, UUID artistId);
 
-    List<ArtistResponse> getArtists();
+    ArtistListResponse getArtists(String search, int page, int size);
 
     ArtistResponse getArtist(UUID artistId);
 }
