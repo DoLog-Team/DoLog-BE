@@ -11,4 +11,5 @@ public interface ArtistRepository extends JpaRepository<Artist, UUID> {
 
     boolean existsByAccount(Account account);
     Optional<Artist> findByAccountId(UUID accountId);
+    boolean existsByPhone(String phone);
 }

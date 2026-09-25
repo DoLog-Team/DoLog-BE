@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artist.web.dto.request;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,6 +15,9 @@ public class ArtistCreateRequest {
     private String nameKo;
 
     private String nameEn;
+
+    @Email
+    private String email;
 
     private String phone;
 }

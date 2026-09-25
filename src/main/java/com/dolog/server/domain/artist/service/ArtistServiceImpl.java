@@ -1,17 +1,21 @@
 package com.dolog.server.domain.artist.service;
 
+import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
-import com.dolog.server.domain.artist.entity.ArtistProfile;
-import com.dolog.server.domain.artist.entity.ArtistSns;
+import com.dolog.server.domain.artist.exception.artistError.ArtistAlreadyExistsException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistBadRequestException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
+import com.dolog.server.domain.artist.exception.artistError.DuplicateArtistPhoneException;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
-import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
-import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
+import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,24 +29,56 @@ import java.util.stream.Collectors;
 public class ArtistServiceImpl implements ArtistService {
 
     private final ArtistRepository artistRepository;
+    private final AccountRepository accountRepository;
 
     // 작가 생성
     @Override
-    public ArtistResponse createArtist(ArtistCreateRequest request) {
+    public ArtistCreateResponse createArtist(
+            UUID accountId,
+            ArtistCreateRequest request
+    ) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
 
-        if (request.getNameKo() == null || request.getNameKo().isBlank()) {
+        if (account.getRole() != Role.ARTIST_ADMIN) {
+            throw new AccessDeniedException(
+                    "작가 계정만 작가 정보를 생성할 수 있습니다."
+            );
+        }
+
+        if (artistRepository.existsByAccount(account)) {
+            throw new ArtistAlreadyExistsException();
+        }
+
+        if (request.getEmail() != null
+                && !request.getEmail().equalsIgnoreCase(account.getEmail())) {
             throw new ArtistBadRequestException();
         }
 
+        String phone = normalizePhone(request.getPhone());
+
+        if (phone != null && artistRepository.existsByPhone(phone)) {
+            throw new DuplicateArtistPhoneException();
+        }
+
         Artist artist = Artist.builder()
-                .nameKo(request.getNameKo())
+                .account(account)
+                .nameKo(request.getNameKo().trim())
                 .nameEn(request.getNameEn())
-                .phone(request.getPhone())
+                .phone(phone)
                 .build();
 
         artistRepository.save(artist);
 
-        return ArtistResponse.from(artist);
+        return ArtistCreateResponse.from(artist);
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+
+        return phone.trim();
     }
 
     // 업데이트
@@ -97,4 +133,6 @@ public class ArtistServiceImpl implements ArtistService {
 
         return ArtistResponse.from(artist);
     }
+
+
 }

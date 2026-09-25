@@ -1,5 +1,7 @@
 package com.dolog.server.domain.artist.web.controller;
 
+import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
+import com.dolog.server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistService;
@@ -9,6 +11,8 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,13 +26,17 @@ public class AdminArtistController {
 
     private final ArtistService artistService;
 
-    //작가 생성
+    // 작가 생성
     @Operation(summary = "작가 생성")
     @PostMapping
-    public SuccessResponse<ArtistResponse> createArtist(
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtistCreateResponse> createArtist(
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody @Valid ArtistCreateRequest request
     ) {
-        ArtistResponse data = artistService.createArtist(request);
+        ArtistCreateResponse data =
+                artistService.createArtist(user.getId(), request);
+
         return SuccessResponse.created(data);
     }
 
