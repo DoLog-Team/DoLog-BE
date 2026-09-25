@@ -13,6 +13,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -122,6 +124,74 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                 artist.getId(),
                 artist.getNameKo()
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArtistJoinCodeValidateResponse validateJoinCode(
+            UUID accountId,
+            String rawCode
+    ) {
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(ArtistNotFoundException::new);
+
+        String joinCode = normalizeJoinCode(rawCode);
+
+        Exhibition exhibition =
+                exhibitionRepository.findByArtistJoinCode(joinCode)
+                        .orElseThrow(() -> new ExhibitionException(
+                                ExhibitionErrorCode.ARTIST_JOIN_CODE_INVALID
+                        ));
+
+        // 전시 자체 이용 기간 검사
+        exhibition.requireAvailable();
+
+        // 작가 참여 코드 만료 검사
+        exhibition.requireArtistJoinCodeValid();
+
+        // 이미 신청 중이거나 참여 중인지 검사
+        exhibitionArtistMapRepository
+                .findByExhibitionIdAndArtistId(
+                        exhibition.getId(),
+                        artist.getId()
+                )
+                .ifPresent(map -> {
+                    if (map.getStatus().blocksReapplication()) {
+                        throw new ExhibitionException(
+                                ExhibitionErrorCode
+                                        .EXHIBITION_ARTIST_ALREADY_APPLIED
+                        );
+                    }
+                });
+
+        if (exhibition.getExhibitionDetail() == null) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND
+            );
+        }
+
+        return new ArtistJoinCodeValidateResponse(
+                exhibition.getId(),
+                exhibition.getExhibitionDetail().getTitle()
+        );
+    }
+
+    private String normalizeJoinCode(String rawCode) {
+        if (rawCode == null) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.ARTIST_JOIN_CODE_INVALID
+            );
+        }
+
+        String normalized = rawCode.toUpperCase(Locale.ROOT);
+
+        if (!normalized.matches("[2-9A-HJ-KM-NP-Z]{8}")) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.ARTIST_JOIN_CODE_INVALID
+            );
+        }
+
+        return normalized;
     }
 
 }

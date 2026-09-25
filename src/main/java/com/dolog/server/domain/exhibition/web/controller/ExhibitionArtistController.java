@@ -13,6 +13,11 @@ import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.dolog.server.domain.artist.web.dto.request.ArtistJoinCodeValidateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
+import com.dolog.server.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 import java.util.UUID;
@@ -67,5 +72,24 @@ public class ExhibitionArtistController {
                 exhibitionArtistService.removeArtistFromExhibition(exhibitionId, request.getArtistId());
 
         return SuccessResponse.ok(data);
+    }
+
+    @Operation(summary = "작가 참여 코드 검증")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @PostMapping("/join/validate")
+    public SuccessResponse<ArtistJoinCodeValidateResponse> validateJoinCode(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @Valid @RequestBody ArtistJoinCodeValidateRequest request
+    ) {
+        ArtistJoinCodeValidateResponse data =
+                exhibitionArtistService.validateJoinCode(
+                        user.getId(),
+                        request.joinCode()
+                );
+
+        return SuccessResponse.ok(
+                data,
+                "작가 참여 코드 확인 성공"
+        );
     }
 }
