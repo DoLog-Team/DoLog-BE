@@ -40,6 +40,9 @@ public class Exhibition extends BaseEntity {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Column(name = "artist_join_code_expires_at")
+    private LocalDateTime artistJoinCodeExpiresAt;
+
     public void reissueEntryCode(String code, LocalDateTime codeExpiresAt) {
         this.entryCode = code;
         this.entryCodeExpiresAt = codeExpiresAt;

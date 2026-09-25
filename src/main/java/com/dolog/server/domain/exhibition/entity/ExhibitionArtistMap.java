@@ -35,8 +35,14 @@ public class ExhibitionArtistMap extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private ExhibitionArtistStatus status;
+    private String greeting;
 
     public void updateStatus(ExhibitionArtistStatus status) {
         this.status = status;
+    }
+
+    public void reapply(String greeting) {
+        this.status = ExhibitionArtistStatus.PENDING;
+        this.greeting = greeting;
     }
 }
