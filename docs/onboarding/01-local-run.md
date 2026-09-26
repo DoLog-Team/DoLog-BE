@@ -38,10 +38,10 @@ Flyway V1~V5 적용 후 `db/seed/R__local_seed.sql`을 실행한다. 전시 `loc
 | 역할 | 로컬 사용 방법 |
 |---|---|
 | DOLOG_ADMIN | admin@local.test / admin1234, AdminInitializer가 생성 |
-| EXHIBITION_ADMIN | 시드 계정 test@test.com 존재. 현재 로그인 제한은 아래 참고 |
+| EXHIBITION_ADMIN | 전시 코드 DEME2222로 로그인 |
 | ARTIST_ADMIN | 관리자 토큰으로 개발용 작가 로그인, fixture ARTIST_1 |
 
-현재 `/auth/login`은 DOLOG_ADMIN만 허용한다. 시드 전시 코드 `LOCAL001`은 전시 로그인 검증에서 금지하는 문자(0, 1, L, O)를 포함하므로 그대로 로그인할 수 없다. 전시 역할 테스트에는 유효한 코드와 계정·전시 상태를 가진 별도 로컬 데이터가 필요하다. 이번 문서 작업에서는 시드나 인증 코드를 변경하지 않았다.
+`POST /api/auth/exhibition/login`에 `{"entryCode":"DEME2222"}`를 전송한다. `/auth/login`은 DOLOG_ADMIN 전용이다. 기존 시드의 `LOCAL001`은 앱 재기동 시 repeatable 마이그레이션이 보정한다. 직접 재발급한 코드와 다른 전시는 변경하지 않는다.
 
 로그인 요청은 [Postman 가이드](07-postman.md)를 따른다. 시드 이미지는 외부 placeholder이며 LocalStack 업로드 검증을 대체하지 않는다.
 
