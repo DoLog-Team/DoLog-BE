@@ -38,6 +38,14 @@ public class ArtistServiceImpl implements ArtistService {
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkArtistMapRepository artworkArtistMapRepository;
 
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        return email.trim();
+    }
+
     // 작가 생성
     @Override
     public ArtistCreateResponse createArtist(
@@ -57,8 +65,12 @@ public class ArtistServiceImpl implements ArtistService {
             throw new ArtistAlreadyExistsException();
         }
 
-        if (request.getEmail() != null
-                && !request.getEmail().equalsIgnoreCase(account.getEmail())) {
+        String requestEmail = normalizeEmail(request.getEmail());
+        String accountEmail = normalizeEmail(account.getEmail());
+
+        if (requestEmail != null
+                && (accountEmail == null
+                || !requestEmail.equalsIgnoreCase(accountEmail))) {
             throw new ArtistBadRequestException();
         }
 
@@ -85,7 +97,25 @@ public class ArtistServiceImpl implements ArtistService {
             return null;
         }
 
-        return phone.trim();
+        String normalized = phone.replaceAll("[\\s-]+", "");
+
+        if (!normalized.matches("\\d+")) {
+            throw new ArtistBadRequestException();
+        }
+
+        return normalized;
+    }
+
+    private String normalizeOptionalNameKo(String nameKo) {
+        if (nameKo == null) {
+            return null;
+        }
+
+        if (nameKo.isBlank()) {
+            throw new ArtistBadRequestException();
+        }
+
+        return nameKo.trim();
     }
 
     // 업데이트
@@ -95,6 +125,7 @@ public class ArtistServiceImpl implements ArtistService {
         Artist artist = artistRepository.findByIdAndAccountId(artistId, accountId)
                 .orElseThrow(ArtistNotFoundException::new);
 
+        String nameKo = normalizeOptionalNameKo(request.getNameKo());
         String phone = request.getPhone();
 
         if (phone != null) {
@@ -107,7 +138,7 @@ public class ArtistServiceImpl implements ArtistService {
         }
 
         artist.updateArtistInfo(
-                request.getNameKo(),
+                nameKo,
                 request.getNameEn(),
                 phone
         );
