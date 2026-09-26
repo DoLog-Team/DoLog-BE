@@ -3,6 +3,11 @@ package com.dolog.server.domain.account.service;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.RefreshToken;
 import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.account.entity.enums.AccountStatus;
+import com.dolog.server.domain.account.entity.enums.SocialProvider;
+import com.dolog.server.domain.account.exception.DuplicateEmailException;
+import com.dolog.server.domain.account.exception.SocialLoginErrorCode;
+import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -12,6 +17,7 @@ import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.account.web.dto.response.LoginResponse;
 import com.dolog.server.domain.account.web.dto.response.TokenResponse;
+import com.dolog.server.domain.account.web.dto.response.SocialLoginResponse;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import com.dolog.server.global.jwt.JwtTokenProvider;
 import com.dolog.server.domain.account.exception.InvalidLoginException;
@@ -66,6 +72,29 @@ public class AuthServiceImpl implements AuthService {
         var tokens = issueTokens(account);
         return new ExhibitionLoginResponse(exhibition.getId(),
                 termsAgreementService.needsAgreement(account.getId()), account.getRole(),
+                tokens.getAccessToken(), tokens.getRefreshToken());
+    }
+
+    @Override
+    @Transactional
+    public SocialLoginResponse socialLogin(SocialProvider provider, SocialProfile profile) {
+        var existing = accountRepository.findBySocialProviderAndSocialProviderId(provider.name(), profile.providerId());
+        boolean isFirstLogin = existing.isEmpty();
+        Account account = existing.orElseGet(() -> {
+            if (profile.email() != null && accountRepository.existsByEmail(profile.email())) {
+                throw new DuplicateEmailException();
+            }
+            return accountRepository.saveAndFlush(Account.builder()
+                    .email(profile.email()).socialProvider(provider.name()).socialProviderId(profile.providerId())
+                    .role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        });
+        if (account.getRole() != Role.ARTIST_ADMIN) {
+            throw new BaseException(SocialLoginErrorCode.TARGET_ROLE_NOT_ALLOWED);
+        }
+        boolean needsTermsAgreement = termsAgreementService.needsAgreement(account.getId());
+        var tokens = issueTokens(account);
+        return new SocialLoginResponse(isFirstLogin, needsTermsAgreement,
+                new SocialLoginResponse.Profile(profile.name(), account.getEmail()), account.getRole(),
                 tokens.getAccessToken(), tokens.getRefreshToken());
     }
 
