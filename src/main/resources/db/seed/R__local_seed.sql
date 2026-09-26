@@ -44,11 +44,13 @@ INSERT IGNORE INTO exhibitions (id, created_at, updated_at, dept_name, is_public
                                 entry_code, artist_join_code, published_at)
 VALUES (@exhibition, @now, @now, '시각디자인학과', 1, 'local-demo', '두록대학교',
         @account_exhibition, 'GRADUATION', '디자인대학',
-        'DEME2222', 'JOIN0001', @now);
+        'DEME2222', 'JNJN2222', @now);
 
 -- 이전 시드만 보정한다. 개발자가 재발급한 코드와 다른 전시는 유지한다.
 UPDATE exhibitions SET entry_code = 'DEME2222', updated_at = @now
 WHERE id = @exhibition AND entry_code = 'LOCAL001';
+UPDATE exhibitions SET artist_join_code = 'JNJN2222', updated_at = @now
+WHERE id = @exhibition AND artist_join_code = 'JOIN0001';
 
 INSERT IGNORE INTO exhibition_details (id, created_at, updated_at, title, description, sort_type, theme_type,
                                        start_date, end_date, date_info, address, address_detail,
