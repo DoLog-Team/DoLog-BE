@@ -32,6 +32,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final ExhibitionRepository exhibitionRepository;
     private final JwtUserDetailsService userDetailsService;
+    private final TermsAgreementService termsAgreementService;
 
     @Override
     @Transactional
@@ -63,8 +64,8 @@ public class AuthServiceImpl implements AuthService {
             throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_INVALID);
         }
         var tokens = issueTokens(account);
-        // 약관 API 구현 시 실제 동의 이력 조회로 대체한다.
-        return new ExhibitionLoginResponse(exhibition.getId(), true, account.getRole(),
+        return new ExhibitionLoginResponse(exhibition.getId(),
+                termsAgreementService.needsAgreement(account.getId()), account.getRole(),
                 tokens.getAccessToken(), tokens.getRefreshToken());
     }
 

@@ -6,6 +6,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.service.AccountService;
+import com.dolog.server.domain.account.service.TermsAgreementService;
+import com.dolog.server.domain.account.web.dto.request.TermsAgreementRequest;
+import com.dolog.server.domain.account.web.dto.response.TermsAgreementResponse;
 import com.dolog.server.domain.account.web.dto.request.AdminCreateRequest;
 import com.dolog.server.domain.account.web.dto.request.ChangePasswordRequest;
 import com.dolog.server.domain.account.web.dto.response.AccountResponse;
@@ -15,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 
 import com.dolog.server.domain.account.web.dto.response.MyAccountResponse;
 
@@ -29,6 +33,7 @@ import jakarta.validation.Valid;
 public class AccountController {
 
     private final AccountService accountService; // 인터페이스 타입으로 DI
+    private final TermsAgreementService termsAgreementService;
 
     // 두록 관리자만 접근 가능
     // admin 계정 생성
@@ -52,6 +57,16 @@ public class AccountController {
     @GetMapping("/me")
     public SuccessResponse<MyAccountResponse> getMyAccount(@AuthenticationPrincipal CustomUserDetails user) {
         return SuccessResponse.ok(accountService.getMyAccount(user.getId()), "계정 정보 조회 성공");
+    }
+
+    @Operation(summary = "내 약관 동의 저장")
+    @PostMapping("/me/terms")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN')")
+    public SuccessResponse<TermsAgreementResponse> agreeToTerms(
+            @AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody TermsAgreementRequest request) {
+        return SuccessResponse.created(new TermsAgreementResponse(termsAgreementService.agree(user.getId(), request)),
+                "약관 동의 저장 성공");
     }
 
     // admin 계정 조회
