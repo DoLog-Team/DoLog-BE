@@ -30,9 +30,9 @@ public class HttpClientConfig {
         return new RestTemplate(factory);
     }
 
-    // 카카오 로그인 전용: 로그인 요청을 오래 붙잡지 않도록 짧은 타임아웃을 쓴다.
+    // 소셜 로그인 공급자(카카오·구글) 전용: 로그인 요청을 오래 붙잡지 않도록 짧은 타임아웃을 쓴다.
     @Bean
-    public RestTemplate kakaoRestTemplate() {
+    public RestTemplate socialRestTemplate() {
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(3000);
         factory.setReadTimeout(5000);

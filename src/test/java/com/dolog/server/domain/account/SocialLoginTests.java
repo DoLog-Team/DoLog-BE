@@ -11,6 +11,7 @@ import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.account.repository.TermsAgreementRepository;
 import com.dolog.server.domain.account.service.AuthServiceImpl;
+import com.dolog.server.domain.account.service.GoogleClient;
 import com.dolog.server.domain.account.service.KakaoClient;
 import com.dolog.server.domain.account.service.SocialProfile;
 import com.dolog.server.domain.account.service.TermsAgreementService;
@@ -38,7 +39,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
-// 카카오 통신·소셜 계정 처리·약관 동의 단위 테스트. Spring 컨텍스트 없이 실행한다.
+// 카카오·구글 통신, 소셜 계정 처리, 약관 동의 단위 테스트. Spring 컨텍스트 없이 실행한다.
 class SocialLoginTests {
 
     @Test
@@ -73,6 +74,44 @@ class SocialLoginTests {
         server.reset();
         server.expect(requestTo("https://kauth.kakao.com/oauth/token"))
                 .andRespond(withBadRequest().body("{\"error\":\"invalid_grant\",\"error_code\":\"KOE320\"}"));
+        var invalidCode = assertThrows(BaseException.class, () -> client.fetchProfile("used-code", redirectUri));
+        assertEquals(SocialLoginErrorCode.INVALID_AUTHORIZATION_CODE, invalidCode.getErrorCode());
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("구글 인가 코드를 교환하고 검증된 이메일만 프로필에 담는다.")
+    void googleExchangesCodeAndAcceptsOnlyVerifiedEmail() {
+        var http = new RestTemplate();
+        var server = MockRestServiceServer.bindTo(http).build();
+        String redirectUri = "http://localhost:3000/oauth/callback/google";
+        var client = new GoogleClient(http, "client-id", "client-secret", redirectUri);
+
+        var rejected = assertThrows(BaseException.class,
+                () -> client.fetchProfile("code", "http://localhost:3000/oauth/callback/kakao"));
+        assertEquals(SocialLoginErrorCode.INVALID_REDIRECT_URI, rejected.getErrorCode());
+
+        server.expect(requestTo("https://oauth2.googleapis.com/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(containsString("grant_type=authorization_code")))
+                .andExpect(content().string(containsString(
+                        "redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Foauth%2Fcallback%2Fgoogle")))
+                .andRespond(withSuccess("{\"access_token\":\"provider-token\",\"id_token\":\"x.y.z\"}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://openidconnect.googleapis.com/v1/userinfo"))
+                .andExpect(header("Authorization", "Bearer provider-token"))
+                .andRespond(withSuccess("{\"sub\":\"1097\",\"name\":\"작가\",\"email\":\"x@example.com\","
+                        + "\"email_verified\":false}", MediaType.APPLICATION_JSON));
+
+        var profile = client.fetchProfile("code", redirectUri);
+        assertEquals("1097", profile.providerId());
+        assertEquals("작가", profile.name());
+        assertNull(profile.email());
+        server.verify();
+
+        server.reset();
+        server.expect(requestTo("https://oauth2.googleapis.com/token"))
+                .andRespond(withBadRequest().body("{\"error\":\"invalid_grant\",\"error_description\":\"Bad Request\"}"));
         var invalidCode = assertThrows(BaseException.class, () -> client.fetchProfile("used-code", redirectUri));
         assertEquals(SocialLoginErrorCode.INVALID_AUTHORIZATION_CODE, invalidCode.getErrorCode());
         server.verify();
