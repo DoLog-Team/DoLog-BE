@@ -113,6 +113,12 @@ class SocialLoginTests {
         assertTrue(new ObjectMapper().valueToTree(result).path("isFirstLogin").asBoolean());
         verify(accountRepo).saveAndFlush(argThat(created -> created.getPassword() == null
                 && created.getRole() == Role.ARTIST_ADMIN && created.getAccountStatus() == AccountStatus.ACTIVE));
+
+        when(accountRepo.findBySocialProviderAndSocialProviderId("GOOGLE", "999")).thenReturn(Optional.empty());
+        when(accountRepo.existsByEmail("verified@example.com")).thenReturn(true);
+        var linked = assertThrows(BaseException.class, () -> auth.socialLogin(SocialProvider.GOOGLE,
+                new SocialProfile("999", null, "verified@example.com")));
+        assertEquals(SocialLoginErrorCode.EMAIL_ALREADY_LINKED, linked.getErrorCode());
     }
 
     @Test

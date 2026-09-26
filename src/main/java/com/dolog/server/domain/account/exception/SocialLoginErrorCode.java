@@ -11,6 +11,7 @@ public enum SocialLoginErrorCode implements BaseResponseCode {
     PROVIDER_NOT_SUPPORTED("SOCIAL_400_PROVIDER", 400, "아직 지원하지 않는 소셜 로그인 제공자입니다."),
     INVALID_AUTHORIZATION_CODE("SOCIAL_400_CODE", 400, "인가 코드가 유효하지 않습니다. 다시 로그인해 주세요."),
     TARGET_ROLE_NOT_ALLOWED("SOCIAL_403_ROLE", 403, "소셜 로그인 대상 계정이 아닙니다."),
+    EMAIL_ALREADY_LINKED("SOCIAL_409_EMAIL", 409, "다른 방식으로 가입된 이메일입니다."),
     PROVIDER_ERROR("SOCIAL_502_PROVIDER", 502, "소셜 로그인 제공자 응답을 처리할 수 없습니다."),
     PROVIDER_UNAVAILABLE("SOCIAL_503_PROVIDER", 503, "소셜 로그인 제공자를 일시적으로 이용할 수 없습니다."),
     PROVIDER_TIMEOUT("SOCIAL_504_PROVIDER", 504, "소셜 로그인 제공자 응답 시간이 초과되었습니다."),

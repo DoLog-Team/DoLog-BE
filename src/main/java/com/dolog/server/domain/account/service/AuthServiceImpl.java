@@ -5,7 +5,6 @@ import com.dolog.server.domain.account.entity.RefreshToken;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
 import com.dolog.server.domain.account.entity.enums.SocialProvider;
-import com.dolog.server.domain.account.exception.DuplicateEmailException;
 import com.dolog.server.domain.account.exception.SocialLoginErrorCode;
 import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
@@ -82,7 +81,7 @@ public class AuthServiceImpl implements AuthService {
         boolean isFirstLogin = existing.isEmpty();
         Account account = existing.orElseGet(() -> {
             if (profile.email() != null && accountRepository.existsByEmail(profile.email())) {
-                throw new DuplicateEmailException();
+                throw new BaseException(SocialLoginErrorCode.EMAIL_ALREADY_LINKED);
             }
             return accountRepository.saveAndFlush(Account.builder()
                     .email(profile.email()).socialProvider(provider.name()).socialProviderId(profile.providerId())
