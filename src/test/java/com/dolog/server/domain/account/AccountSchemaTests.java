@@ -217,6 +217,23 @@ class AccountSchemaTests {
         assertThrows(JwtInvalidException.class, () -> jwt.parseAccessToken(foreign));
     }
 
+    @Test
+    @DisplayName("로컬 시드 전시 코드로 로그인하고 발급된 토큰으로 내 계정을 조회한다")
+    void localSeedExhibitionCanLogin() throws Exception {
+        var response = mvc.perform(post("/api/auth/exhibition/login").contextPath("/api")
+                        .contentType("application/json").content("{\"entryCode\":\"DEME2222\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("EXHIBITION_ADMIN"))
+                .andReturn();
+        String access = json.readTree(response.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+        assertEquals(UUID.fromString("11111111-1111-1111-1111-111111111111"),
+                jwt.parseAccessToken(access).accountId());
+        mvc.perform(get("/api/accounts/me").contextPath("/api")
+                        .header("Authorization", "Bearer " + access))
+                .andExpect(status().isOk());
+    }
+
     private RefreshToken session(Account account) {
         return tokens.saveAndFlush(RefreshToken.builder().account(account)
                 .token(jwt.createRefreshToken(account.getId())).build());

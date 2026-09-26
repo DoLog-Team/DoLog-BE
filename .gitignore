@@ -17,6 +17,8 @@ build/
 application-prod.properties
 application-test.properties
 application-secret.properties
+# 로컬 전용 오버라이드 — file:./config/ 가 classpath보다 우선한다. 실제 키는 여기에만 둔다
+/config/
 
 ### Env & Credentials ###
 .env
