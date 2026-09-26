@@ -21,4 +21,6 @@ public interface ArtworkArtistMapRepository extends JpaRepository<ArtworkArtistM
 
     // 중복 등록 확인
     boolean existsByArtworkIdAndArtistProfileId(UUID artworkId, UUID artistProfileId);
+
+    boolean existsByArtistId(UUID artistId);
 }

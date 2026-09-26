@@ -17,6 +17,7 @@ import java.util.UUID;
 @Repository
 public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UUID> {
     boolean existsByArtistAndExhibition(Artist artist, Exhibition exhibition);
+    boolean existsByArtistId(UUID artistId);
 
     @Query("SELECT p FROM ArtistProfile p " +
             "LEFT JOIN FETCH p.snsList " +

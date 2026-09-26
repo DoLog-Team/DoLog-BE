@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artist.service;
 
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 
@@ -9,11 +10,11 @@ import java.util.UUID;
 
 public interface ArtistService {
 
-    ArtistResponse createArtist(ArtistCreateRequest request);
+    ArtistCreateResponse createArtist(UUID accountId, ArtistCreateRequest request);
 
-    ArtistResponse updateArtist(UUID artistId, ArtistUpdateRequest request);
+    ArtistResponse updateArtist(UUID accountId, UUID artistId, ArtistUpdateRequest request);
 
-    ArtistResponse deleteArtist(UUID artistId);
+    void deleteArtist(UUID accountId, UUID artistId);
 
     List<ArtistResponse> getArtists();
 
