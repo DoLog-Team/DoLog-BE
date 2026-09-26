@@ -36,7 +36,7 @@ VALUES (@account_exhibition, @now, @now, 'ACTIVE', 'test@test.com', @password, '
         'DEV', 'ARTIST_1');
 
 INSERT IGNORE INTO artists (id, created_at, updated_at, name_ko, name_en, phone, account_id)
-VALUES (@artist, @now, @now, '개발용 작가 ARTIST_1', 'Dev Artist 1', '010-0000-0000', @account_artist);
+VALUES (@artist, @now, @now, '개발용 작가 ARTIST_1', 'Dev Artist 1', '01000000000', @account_artist);
 
 -- 전시: account_id는 UNIQUE라 계정당 1개다. entry_code/artist_join_code로 로그인·참여 흐름을 확인할 수 있다.
 INSERT IGNORE INTO exhibitions (id, created_at, updated_at, dept_name, is_public, slug, univ_name,
