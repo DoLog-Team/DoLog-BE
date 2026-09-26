@@ -51,19 +51,25 @@ public class ExhibitionArtistController {
 
     //전시 작가 추가
     @Operation(summary = "전시 작가 추가")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
     @PostMapping("/{exhibitionId}/artists")
-    public SuccessResponse<ExhibitionArtistAddResponse> addArtist(
+    public ResponseEntity<SuccessResponse<ExhibitionArtistAddResponse>> addArtist(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId,
-            @RequestBody AddArtistRequest request
+            @Valid @RequestBody AddArtistRequest request
     ) {
         ExhibitionArtistAddResponse data =
-                exhibitionArtistService.addArtistToExhibition(exhibitionId, request.getArtistId());
+                exhibitionArtistService.addArtistToExhibition(
+                        user.getId(),
+                        exhibitionId,
+                        request.artistId()
+                );
 
-        return SuccessResponse.ok(
-                data,
-                "작가가 전시에 추가되었습니다."
-        );
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(
+                        data,
+                        "전시 작가 추가 성공"
+                ));
     }
 
     //전시 작가 삭제

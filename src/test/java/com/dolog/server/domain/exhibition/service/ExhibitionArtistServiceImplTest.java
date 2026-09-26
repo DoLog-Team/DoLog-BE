@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.service;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
 import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -49,6 +50,9 @@ class ExhibitionArtistServiceImplTest {
     private ArtistProfileRepository artistProfileRepository;
 
     @Mock
+    private AccountRepository accountRepository;
+
+    @Mock
     private ExhibitionRepository exhibitionRepository;
 
     @Mock
@@ -56,6 +60,216 @@ class ExhibitionArtistServiceImplTest {
 
     @InjectMocks
     private ExhibitionArtistServiceImpl service;
+
+    @Test
+    @DisplayName("전시 관리자는 자신의 전시에 작가를 즉시 JOINED 상태로 추가한다")
+    void exhibitionAdminAddsArtistAsJoined() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist artist = artist("직접 추가", "direct@test.com");
+        UUID mapId = UUID.randomUUID();
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findById(artist.getId()))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.empty());
+        when(exhibitionArtistMapRepository.save(any(ExhibitionArtistMap.class)))
+                .thenAnswer(invocation -> {
+                    ExhibitionArtistMap unsaved = invocation.getArgument(0);
+                    return ExhibitionArtistMap.builder()
+                            .id(mapId)
+                            .exhibition(unsaved.getExhibition())
+                            .artist(unsaved.getArtist())
+                            .status(unsaved.getStatus())
+                            .greeting(unsaved.getGreeting())
+                            .build();
+                });
+        when(artistProfileRepository
+                .findArtistIdsByExhibitionIdAndArtistIdIn(
+                        eq(exhibition.getId()),
+                        anyCollection()
+                ))
+                .thenReturn(List.of());
+
+        var response = service.addArtistToExhibition(
+                ownerId,
+                exhibition.getId(),
+                artist.getId()
+        );
+
+        assertEquals(mapId, response.exhibitionArtistId());
+        assertEquals(ExhibitionArtistStatus.JOINED, response.status());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<ArtistProfile>> profilesCaptor =
+                ArgumentCaptor.forClass(Iterable.class);
+        verify(artistProfileRepository).saveAll(profilesCaptor.capture());
+
+        List<ArtistProfile> profiles = StreamSupport.stream(
+                profilesCaptor.getValue().spliterator(),
+                false
+        ).toList();
+        assertEquals(1, profiles.size());
+        assertEquals(artist.getId(), profiles.get(0).getArtist().getId());
+        assertEquals(exhibition.getId(), profiles.get(0).getExhibition().getId());
+    }
+
+    @Test
+    @DisplayName("두록 관리자는 자신이 소유하지 않은 전시에도 작가를 추가할 수 있다")
+    void dologAdminCanAddArtistToAnyExhibition() {
+        UUID ownerId = UUID.randomUUID();
+        UUID dologAdminId = UUID.randomUUID();
+        Account dologAdmin = account(dologAdminId, Role.DOLOG_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist artist = artist("두록 추가", "dolog@test.com");
+        UUID mapId = UUID.randomUUID();
+
+        when(accountRepository.findById(dologAdminId))
+                .thenReturn(Optional.of(dologAdmin));
+        when(artistRepository.findById(artist.getId()))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.empty());
+        when(exhibitionArtistMapRepository.save(any(ExhibitionArtistMap.class)))
+                .thenAnswer(invocation -> {
+                    ExhibitionArtistMap unsaved = invocation.getArgument(0);
+                    return ExhibitionArtistMap.builder()
+                            .id(mapId)
+                            .exhibition(unsaved.getExhibition())
+                            .artist(unsaved.getArtist())
+                            .status(unsaved.getStatus())
+                            .build();
+                });
+        when(artistProfileRepository
+                .findArtistIdsByExhibitionIdAndArtistIdIn(
+                        eq(exhibition.getId()),
+                        anyCollection()
+                ))
+                .thenReturn(List.of(artist.getId()));
+
+        var response = service.addArtistToExhibition(
+                dologAdminId,
+                exhibition.getId(),
+                artist.getId()
+        );
+
+        assertEquals(mapId, response.exhibitionArtistId());
+        assertEquals(ExhibitionArtistStatus.JOINED, response.status());
+        verify(artistProfileRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("기존 참여 이력은 새 행을 만들지 않고 JOINED로 복구하며 greeting을 보존한다")
+    void reusesExistingParticipationHistory() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist artist = artist("재추가", "readd@test.com");
+        ExhibitionArtistMap existingMap = ExhibitionArtistMap.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .artist(artist)
+                .status(ExhibitionArtistStatus.REMOVED)
+                .greeting("기존 인사말")
+                .build();
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findById(artist.getId()))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(existingMap));
+        when(artistProfileRepository
+                .findArtistIdsByExhibitionIdAndArtistIdIn(
+                        eq(exhibition.getId()),
+                        anyCollection()
+                ))
+                .thenReturn(List.of(artist.getId()));
+
+        var response = service.addArtistToExhibition(
+                ownerId,
+                exhibition.getId(),
+                artist.getId()
+        );
+
+        assertEquals(existingMap.getId(), response.exhibitionArtistId());
+        assertEquals(ExhibitionArtistStatus.JOINED, existingMap.getStatus());
+        assertEquals("기존 인사말", existingMap.getGreeting());
+        verify(exhibitionArtistMapRepository, never())
+                .save(any(ExhibitionArtistMap.class));
+        verify(artistProfileRepository, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("이미 JOINED 상태인 작가는 중복 추가할 수 없다")
+    void rejectsAlreadyJoinedArtist() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist artist = artist("이미 참여", "joined-direct@test.com");
+        ExhibitionArtistMap existingMap = map(
+                exhibition,
+                artist,
+                ExhibitionArtistStatus.JOINED
+        );
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findById(artist.getId()))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(existingMap));
+
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.addArtistToExhibition(
+                        ownerId,
+                        exhibition.getId(),
+                        artist.getId()
+                )
+        );
+
+        assertEquals(
+                ExhibitionErrorCode.EXHIBITION_ARTIST_ALREADY_EXISTS,
+                exception.getErrorCode()
+        );
+        verifyNoInteractions(artistProfileRepository);
+    }
+
+    @Test
+    @DisplayName("전시 관리자는 다른 관리자의 전시에 작가를 추가할 수 없다")
+    void exhibitionAdminCannotAddArtistToAnotherExhibition() {
+        UUID actorId = UUID.randomUUID();
+        Account actor = account(actorId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(UUID.randomUUID());
+
+        when(accountRepository.findById(actorId))
+                .thenReturn(Optional.of(actor));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> service.addArtistToExhibition(
+                        actorId,
+                        exhibition.getId(),
+                        UUID.randomUUID()
+                )
+        );
+
+        verifyNoInteractions(artistRepository);
+        verifyNoInteractions(exhibitionArtistMapRepository);
+        verifyNoInteractions(artistProfileRepository);
+    }
 
     @Test
     @DisplayName("대기 중인 작가를 일괄 수락하고 없는 전시 프로필만 생성한다")
@@ -312,11 +526,7 @@ class ExhibitionArtistServiceImplTest {
     }
 
     private Exhibition exhibition(UUID ownerId) {
-        Account owner = Account.builder()
-                .id(ownerId)
-                .role(Role.EXHIBITION_ADMIN)
-                .accountStatus(AccountStatus.ACTIVE)
-                .build();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
 
         Exhibition exhibition = Exhibition.builder()
                 .id(UUID.randomUUID())
@@ -329,6 +539,14 @@ class ExhibitionArtistServiceImplTest {
         when(exhibitionRepository.findById(exhibition.getId()))
                 .thenReturn(Optional.of(exhibition));
         return exhibition;
+    }
+
+    private Account account(UUID accountId, Role role) {
+        return Account.builder()
+                .id(accountId)
+                .role(role)
+                .accountStatus(AccountStatus.ACTIVE)
+                .build();
     }
 
     private Artist artist(String name, String email) {

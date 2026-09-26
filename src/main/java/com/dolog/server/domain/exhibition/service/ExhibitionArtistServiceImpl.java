@@ -1,5 +1,8 @@
 package com.dolog.server.domain.exhibition.service;
 
+import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
@@ -18,6 +21,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
+import com.dolog.server.global.exception.jwt.JwtInvalidException;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -42,41 +46,71 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
     private final ArtistRepository artistRepository;
     private final ArtistProfileRepository artistProfileRepository;
+    private final AccountRepository accountRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
     // 전시 작가 추가
     @Override
-    public ExhibitionArtistAddResponse addArtistToExhibition(UUID exhibitionId, UUID artistId) {
+    public ExhibitionArtistAddResponse addArtistToExhibition(
+            UUID accountId,
+            UUID exhibitionId,
+            UUID artistId
+    ) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
 
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
+        requireCanAddArtist(actor, exhibition);
+
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        // 중복 체크
-        if (exhibitionArtistMapRepository.existsByExhibitionIdAndArtistId(exhibitionId, artistId)) {
+        ExhibitionArtistMap map = exhibitionArtistMapRepository
+                .findByExhibitionIdAndArtistId(exhibitionId, artistId)
+                .orElse(null);
+
+        if (map != null && map.getStatus() == ExhibitionArtistStatus.JOINED) {
             throw new ExhibitionException(
                     ExhibitionErrorCode.EXHIBITION_ARTIST_ALREADY_EXISTS
             );
         }
 
-        // 매핑
-        ExhibitionArtistMap map = ExhibitionArtistMap.builder()
-                .exhibition(exhibition)
-                .artist(artist)
-                .status(ExhibitionArtistStatus.JOINED)
-                .build();
+        if (map == null) {
+            map = exhibitionArtistMapRepository.save(
+                    ExhibitionArtistMap.builder()
+                            .exhibition(exhibition)
+                            .artist(artist)
+                            .status(ExhibitionArtistStatus.JOINED)
+                            .build()
+            );
+        } else {
+            // 기존 참여 이력은 UNIQUE 제약 때문에 새 행을 만들지 않고 복구한다.
+            map.updateStatus(ExhibitionArtistStatus.JOINED);
+        }
 
-        exhibitionArtistMapRepository.save(map);
+        createMissingArtistProfiles(exhibition, List.of(map));
 
-        // name 없으면 임시로 univName 사용
-        return ExhibitionArtistAddResponse.of(
-                exhibition.getId(),
-                exhibition.getUnivName(),
-                artist.getId(),
-                artist.getNameKo()
+        return ExhibitionArtistAddResponse.from(map);
+    }
+
+    private void requireCanAddArtist(
+            Account actor,
+            Exhibition exhibition
+    ) {
+        if (actor.getRole() == Role.DOLOG_ADMIN) {
+            return;
+        }
+
+        if (actor.getRole() == Role.EXHIBITION_ADMIN
+                && exhibition.getAccount().getId().equals(actor.getId())) {
+            return;
+        }
+
+        throw new AccessDeniedException(
+                "자신이 관리하는 전시에만 작가를 추가할 수 있습니다."
         );
     }
 
