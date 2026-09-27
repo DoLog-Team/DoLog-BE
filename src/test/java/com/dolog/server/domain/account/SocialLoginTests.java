@@ -29,6 +29,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -126,7 +127,9 @@ class SocialLoginTests {
                 .accountStatus(AccountStatus.ACTIVE).build();
         when(accountRepo.findById(accountId)).thenReturn(Optional.of(account));
         when(agreements.hasRequiredAgreement(accountId, "v1.0")).thenReturn(false, true);
-        when(agreements.existsByAccountIdAndTermsVersion(accountId, "v1.0")).thenReturn(false, true);
+        var firstAgreedAt = LocalDateTime.of(2026, 9, 27, 12, 0);
+        when(agreements.findByAccountIdAndTermsVersion(accountId, "v1.0")).thenReturn(Optional.empty(),
+                Optional.of(TermsAgreement.builder().account(account).termsVersion("v1.0").agreedAt(firstAgreedAt).build()));
         assertTrue(service.needsAgreement(accountId));
         assertThrows(BaseException.class, () -> service.agree(accountId,
                 new TermsAgreementRequest("v1.0", false, true, true, false, false, false)));
@@ -146,7 +149,8 @@ class SocialLoginTests {
                 && Boolean.TRUE.equals(saved.getAdKakaoAgreed()) && Boolean.TRUE.equals(saved.getAdSmsAgreed())
                 && "v1.0".equals(saved.getTermsVersion())));
         assertFalse(service.needsAgreement(accountId));
-        assertThrows(BaseException.class, () -> service.agree(accountId,
+        // 재요청은 기존 동의 시각을 그대로 돌려주고 새 행을 저장하지 않는다.
+        assertEquals(firstAgreedAt, service.agree(accountId,
                 new TermsAgreementRequest("v1.0", true, true, true, false, false, false)));
         verify(agreements, times(1)).save(any(TermsAgreement.class));
     }

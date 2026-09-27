@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface TermsAgreementRepository extends JpaRepository<TermsAgreement, UUID> {
@@ -13,5 +14,5 @@ public interface TermsAgreementRepository extends JpaRepository<TermsAgreement, 
             + "and t.serviceTermsAgreed = true and t.privacyAgreed = true")
     boolean hasRequiredAgreement(@Param("accountId") UUID accountId, @Param("termsVersion") String termsVersion);
 
-    boolean existsByAccountIdAndTermsVersion(UUID accountId, String termsVersion);
+    Optional<TermsAgreement> findByAccountIdAndTermsVersion(UUID accountId, String termsVersion);
 }

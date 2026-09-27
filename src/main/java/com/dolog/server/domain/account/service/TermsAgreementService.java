@@ -45,9 +45,11 @@ public class TermsAgreementService {
                 || (Boolean.TRUE.equals(request.adReceiveAgreed()) && !Boolean.TRUE.equals(request.marketingAgreed()))) {
             throw new BaseException(AccountErrorCode.TERMS_REQUIRED_MISSING);
         }
-        // 재시도 중복 저장 방지. 동시 요청 경합은 DB UNIQUE(account_id, terms_version)가 409로 막는다.
-        if (agreements.existsByAccountIdAndTermsVersion(accountId, version)) {
-            throw new BaseException(AccountErrorCode.TERMS_ALREADY_AGREED);
+        // 멱등: 같은 버전 동의가 이미 있으면 기존 동의 시각을 그대로 돌려준다(재시도 안전).
+        // 선택 항목 변경은 반영하지 않는다. 동시 요청 경합은 DB UNIQUE(account_id, terms_version)가 막는다.
+        var existing = agreements.findByAccountIdAndTermsVersion(accountId, version);
+        if (existing.isPresent()) {
+            return existing.get().getAgreedAt();
         }
         // 역할·활성 상태는 컨트롤러 @PreAuthorize와 JWT 필터가 이미 검증한다.
         var account = accounts.findById(accountId).orElseThrow(JwtInvalidException::new);
