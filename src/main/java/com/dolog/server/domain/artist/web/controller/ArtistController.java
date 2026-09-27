@@ -8,6 +8,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class ArtistController {
     // 작가 목록 조회
     @Operation(summary = "작가 목록 조회")
     @GetMapping
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtistListResponse> getArtists(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,

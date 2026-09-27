@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artist.web.dto.response;
 
 import com.dolog.server.domain.artist.entity.Artist;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -16,6 +17,7 @@ public class ArtistListItemResponse {
     private String nameEn;
     private String phone;
     private String accountEmail;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 
     public static ArtistListItemResponse from(Artist artist) {
