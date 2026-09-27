@@ -8,6 +8,8 @@ import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -30,6 +32,7 @@ import java.util.UUID;
 import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -58,8 +61,76 @@ class ExhibitionArtistServiceImplTest {
     @Mock
     private ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
+    @Mock
+    private ArtworkRepository artworkRepository;
+
     @InjectMocks
     private ExhibitionArtistServiceImpl service;
+
+    @Test
+    @DisplayName("DELETE 제외는 참여 행을 유지한 채 REMOVED로 전환하고 출품작 연결을 해제한다")
+    void softlyRemovesArtistAndCancelsArtworkSubmissions() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist artist = artist("제외 대상", "removed-delete@test.com");
+        ExhibitionArtistMap map = map(
+                exhibition,
+                artist,
+                ExhibitionArtistStatus.JOINED
+        );
+        Artwork artwork = Artwork.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .build();
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(map));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                List.of(artist.getId())
+        )).thenReturn(List.of(artwork));
+
+        var response = service.removeArtistFromExhibition(
+                ownerId,
+                exhibition.getId(),
+                artist.getId()
+        );
+
+        assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
+        assertNull(artwork.getExhibition());
+        assertNull(artwork.getExhibitionZone());
+        assertEquals(artist.getId(), response.getArtistId());
+        assertEquals("제외 대상 님이 두록대학교에서 제외되었습니다.", response.getMessage());
+        verify(exhibitionArtistMapRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("전시 관리자는 다른 관리자의 전시에서 작가를 제외할 수 없다")
+    void exhibitionAdminCannotRemoveArtistFromAnotherExhibition() {
+        UUID actorId = UUID.randomUUID();
+        Account actor = account(actorId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(UUID.randomUUID());
+
+        when(accountRepository.findById(actorId))
+                .thenReturn(Optional.of(actor));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> service.removeArtistFromExhibition(
+                        actorId,
+                        exhibition.getId(),
+                        UUID.randomUUID()
+                )
+        );
+
+        verifyNoInteractions(exhibitionArtistMapRepository);
+        verifyNoInteractions(artworkRepository);
+    }
 
     @Test
     @DisplayName("전시 관리자는 자신의 전시에 작가를 즉시 JOINED 상태로 추가한다")
@@ -419,6 +490,10 @@ class ExhibitionArtistServiceImplTest {
                 artist,
                 ExhibitionArtistStatus.JOINED
         );
+        Artwork artwork = Artwork.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .build();
 
         when(exhibitionArtistMapRepository
                 .findAllByExhibitionIdAndArtistIdIn(
@@ -426,6 +501,10 @@ class ExhibitionArtistServiceImplTest {
                         anyCollection()
                 ))
                 .thenReturn(List.of(map));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                List.of(artist.getId())
+        )).thenReturn(List.of(artwork));
 
         service.updateArtistStatuses(
                 ownerId,
@@ -435,6 +514,8 @@ class ExhibitionArtistServiceImplTest {
         );
 
         assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
+        assertNull(artwork.getExhibition());
+        assertNull(artwork.getExhibitionZone());
         verifyNoInteractions(artistProfileRepository);
     }
 

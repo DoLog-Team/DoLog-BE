@@ -72,16 +72,21 @@ public class ExhibitionArtistController {
                 ));
     }
 
-    //전시 작가 삭제
-    @Operation(summary = "전시 작가 삭제")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    //전시 작가 제외
+    @Operation(summary = "전시 작가 제외")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
     @DeleteMapping("/{exhibitionId}/artists")
     public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId,
-            @RequestBody RemoveArtistRequest request
+            @Valid @RequestBody RemoveArtistRequest request
     ) {
         ExhibitionArtistRemoveResponse data =
-                exhibitionArtistService.removeArtistFromExhibition(exhibitionId, request.getArtistId());
+                exhibitionArtistService.removeArtistFromExhibition(
+                        user.getId(),
+                        exhibitionId,
+                        request.getArtistId()
+                );
 
         return SuccessResponse.ok(data);
     }

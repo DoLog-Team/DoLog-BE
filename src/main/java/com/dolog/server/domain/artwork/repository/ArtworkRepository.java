@@ -14,6 +14,14 @@ import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
 
+    @Query("SELECT DISTINCT aam.artwork FROM ArtworkArtistMap aam " +
+            "WHERE aam.artwork.exhibition.id = :exhibitionId " +
+            "AND aam.artist.id IN :artistIds")
+    List<Artwork> findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("artistIds") List<UUID> artistIds
+    );
+
     // ==============================================================================
     // 메인 화면 랜덤 페이징 쿼리
     // ==============================================================================
@@ -155,5 +163,4 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     );
 
 }
-
 

@@ -19,7 +19,11 @@ public interface ExhibitionArtistService {
             UUID artistId
     );
     List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId, String sort);
-    ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId);
+    ExhibitionArtistRemoveResponse removeArtistFromExhibition(
+            UUID accountId,
+            UUID exhibitionId,
+            UUID artistId
+    );
     ArtistJoinCodeValidateResponse validateJoinCode(UUID accountId, String joinCode);
     ArtistJoinResponse joinExhibition(UUID accountId, String joinCode, String greeting);
     ExhibitionArtistStatusUpdateResponse updateArtistStatuses(

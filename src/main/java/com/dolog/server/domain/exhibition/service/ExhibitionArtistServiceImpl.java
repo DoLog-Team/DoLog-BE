@@ -8,6 +8,8 @@ import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -49,6 +51,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
     private final AccountRepository accountRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+    private final ArtworkRepository artworkRepository;
 
     // 전시 작가 추가
     @Override
@@ -63,7 +66,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
-        requireCanAddArtist(actor, exhibition);
+        requireCanManageArtists(actor, exhibition);
 
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
@@ -96,7 +99,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         return ExhibitionArtistAddResponse.from(map);
     }
 
-    private void requireCanAddArtist(
+    private void requireCanManageArtists(
             Account actor,
             Exhibition exhibition
     ) {
@@ -110,7 +113,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         }
 
         throw new AccessDeniedException(
-                "자신이 관리하는 전시에만 작가를 추가할 수 있습니다."
+                "자신이 관리하는 전시의 작가만 관리할 수 있습니다."
         );
     }
 
@@ -146,9 +149,22 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         return artists;
     }
 
-    // 전시 작가 삭제
+    // 전시 작가 제외 (참여 이력은 삭제하지 않고 REMOVED로 전환)
     @Override
-    public ExhibitionArtistRemoveResponse removeArtistFromExhibition(UUID exhibitionId, UUID artistId) {
+    public ExhibitionArtistRemoveResponse removeArtistFromExhibition(
+            UUID accountId,
+            UUID exhibitionId,
+            UUID artistId
+    ) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
+
+        requireCanManageArtists(actor, exhibition);
 
         ExhibitionArtistMap map = exhibitionArtistMapRepository
                 .findByExhibitionIdAndArtistId(exhibitionId, artistId)
@@ -156,12 +172,11 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_FOUND
                 ));
 
-        Exhibition exhibition = map.getExhibition();
         Artist artist = map.getArtist();
 
-        // 삭제 (or soft delete)
-        exhibitionArtistMapRepository.delete(map);
-        // map.updateStatus(ExhibitionArtistStatus.REMOVED);
+        requireStatusTransition(map, ExhibitionArtistStatus.REMOVED);
+        map.updateStatus(ExhibitionArtistStatus.REMOVED);
+        cancelArtworkSubmissions(exhibitionId, List.of(artistId));
 
         return ExhibitionArtistRemoveResponse.of(
                 exhibition.getId(),
@@ -264,11 +279,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         // 모든 상태 전이를 먼저 검사하여 일부만 변경되는 상황을 방지한다.
         for (ExhibitionArtistMap map : maps) {
-            if (!map.getStatus().canChangeTo(targetStatus)) {
-                throw new ExhibitionException(
-                        ExhibitionErrorCode.EXHIBITION_ARTIST_STATUS_INVALID
-                );
-            }
+            requireStatusTransition(map, targetStatus);
         }
 
         for (ExhibitionArtistMap map : maps) {
@@ -277,9 +288,35 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         if (targetStatus == ExhibitionArtistStatus.JOINED) {
             createMissingArtistProfiles(exhibition, maps);
+        } else if (targetStatus == ExhibitionArtistStatus.REMOVED) {
+            cancelArtworkSubmissions(exhibitionId, distinctArtistIds);
         }
 
         return new ExhibitionArtistStatusUpdateResponse(maps.size());
+    }
+
+    private void requireStatusTransition(
+            ExhibitionArtistMap map,
+            ExhibitionArtistStatus targetStatus
+    ) {
+        if (!map.getStatus().canChangeTo(targetStatus)) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.EXHIBITION_ARTIST_STATUS_INVALID
+            );
+        }
+    }
+
+    private void cancelArtworkSubmissions(
+            UUID exhibitionId,
+            List<UUID> artistIds
+    ) {
+        List<Artwork> artworks = artworkRepository
+                .findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                        exhibitionId,
+                        artistIds
+                );
+
+        artworks.forEach(Artwork::cancelExhibitionSubmission);
     }
 
     private void requireAllowedTargetStatus(

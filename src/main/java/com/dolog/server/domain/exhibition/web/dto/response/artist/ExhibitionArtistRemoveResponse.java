@@ -23,7 +23,7 @@ public class ExhibitionArtistRemoveResponse {
             UUID artistId,
             String artistName
     ) {
-        String message = artistName + " 님이 " + exhibitionName + "에서 삭제되었습니다.";
+        String message = artistName + " 님이 " + exhibitionName + "에서 제외되었습니다.";
 
         return ExhibitionArtistRemoveResponse.builder()
                 .exhibitionId(exhibitionId)

@@ -27,7 +27,7 @@ public class Artwork extends BaseEntity implements Orderable {
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
+    @JoinColumn(name = "exhibition_id")
     private Exhibition exhibition;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -119,5 +119,10 @@ public class Artwork extends BaseEntity implements Orderable {
 
     public void updateZone(ExhibitionZone zone) {
         this.exhibitionZone = zone;
+    }
+
+    public void cancelExhibitionSubmission() {
+        this.exhibition = null;
+        this.exhibitionZone = null;
     }
 }
