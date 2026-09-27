@@ -126,6 +126,7 @@ class SocialLoginTests {
                 .accountStatus(AccountStatus.ACTIVE).build();
         when(accountRepo.findById(accountId)).thenReturn(Optional.of(account));
         when(agreements.hasRequiredAgreement(accountId, "v1.0")).thenReturn(false, true);
+        when(agreements.existsByAccountIdAndTermsVersion(accountId, "v1.0")).thenReturn(false, true);
         assertTrue(service.needsAgreement(accountId));
         assertThrows(BaseException.class, () -> service.agree(accountId,
                 new TermsAgreementRequest("v1.0", false, true, true, false, false, false)));
@@ -145,5 +146,8 @@ class SocialLoginTests {
                 && Boolean.TRUE.equals(saved.getAdKakaoAgreed()) && Boolean.TRUE.equals(saved.getAdSmsAgreed())
                 && "v1.0".equals(saved.getTermsVersion())));
         assertFalse(service.needsAgreement(accountId));
+        assertThrows(BaseException.class, () -> service.agree(accountId,
+                new TermsAgreementRequest("v1.0", true, true, true, false, false, false)));
+        verify(agreements, times(1)).save(any(TermsAgreement.class));
     }
 }

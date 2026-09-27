@@ -12,4 +12,6 @@ public interface TermsAgreementRepository extends JpaRepository<TermsAgreement, 
             + "and t.termsVersion = :termsVersion and t.age14OrOverConfirmed = true "
             + "and t.serviceTermsAgreed = true and t.privacyAgreed = true")
     boolean hasRequiredAgreement(@Param("accountId") UUID accountId, @Param("termsVersion") String termsVersion);
+
+    boolean existsByAccountIdAndTermsVersion(UUID accountId, String termsVersion);
 }
