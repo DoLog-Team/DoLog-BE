@@ -3,6 +3,12 @@ package com.dolog.server.domain.account.web.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.account.service.AuthService;
+import com.dolog.server.domain.account.service.KakaoClient;
+import com.dolog.server.domain.account.entity.enums.SocialProvider;
+import com.dolog.server.domain.account.exception.SocialLoginErrorCode;
+import com.dolog.server.domain.account.web.dto.request.SocialLoginRequest;
+import com.dolog.server.domain.account.web.dto.response.SocialLoginResponse;
+import com.dolog.server.global.exception.BaseException;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.dolog.server.domain.account.web.dto.request.LoginRequest;
@@ -24,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final KakaoClient kakaoClient;
 
     // 로그인
     @Operation(summary = "로그인")
@@ -38,6 +45,16 @@ public class AuthController {
     @PostMapping("/exhibition/login")
     public SuccessResponse<ExhibitionLoginResponse> loginExhibition(@Valid @RequestBody ExhibitionLoginRequest request) {
         return SuccessResponse.ok(authService.loginExhibition(request.getEntryCode()), "전시 어드민 로그인 성공");
+    }
+
+    @Operation(summary = "소셜 로그인/가입")
+    @PostMapping("/social/login")
+    public SuccessResponse<SocialLoginResponse> socialLogin(@Valid @RequestBody SocialLoginRequest request) {
+        if (request.provider() != SocialProvider.KAKAO) {
+            throw new BaseException(SocialLoginErrorCode.PROVIDER_NOT_SUPPORTED);
+        }
+        var profile = kakaoClient.fetchProfile(request.authorizationCode(), request.redirectUri());
+        return SuccessResponse.ok(authService.socialLogin(request.provider(), profile), "소셜 로그인 성공");
     }
 
     // 토큰 재발급
