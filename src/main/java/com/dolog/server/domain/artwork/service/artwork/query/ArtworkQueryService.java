@@ -54,7 +54,9 @@ public class ArtworkQueryService {
     ) {
 
         Specification<Artwork> spec = Specification
-                .where(ArtworkSpecification.withCategory(category))
+                .where(ArtworkSpecification.hasExhibition())
+                .and(ArtworkSpecification.withExhibitionFetch())
+                .and(ArtworkSpecification.withCategory(category))
                 .and(ArtworkSpecification.withSearch(search));
 
         long totalCount = artworkRepository.count(spec);
@@ -102,7 +104,8 @@ public class ArtworkQueryService {
     ) {
 
         Specification<Artwork> spec = Specification
-                .where(ArtworkSpecification.withExhibitionFetch())
+                .where(ArtworkSpecification.hasExhibition())
+                .and(ArtworkSpecification.withExhibitionFetch())
                 .and(ArtworkSpecification.withCategory(category))
                 .and(ArtworkSpecification.withSearch(search));
 
