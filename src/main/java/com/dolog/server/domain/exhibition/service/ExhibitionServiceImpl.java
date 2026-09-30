@@ -372,10 +372,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
         boolean isNew = exhibitionDetailOpt.isEmpty();
 
-        if (isNew && (request.getExhibitionImg() == null || request.getExhibitionImg().isEmpty())) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
-        }
-
         ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() ->
                 ExhibitionDetail.builder()
                         .exhibition(exhibition)
