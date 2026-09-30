@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artist.web.controller;
 
+import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistService;
@@ -7,6 +8,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,9 +24,14 @@ public class ArtistController {
     // 작가 목록 조회
     @Operation(summary = "작가 목록 조회")
     @GetMapping
-    public SuccessResponse<List<ArtistResponse>> getArtists() {
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    public SuccessResponse<ArtistListResponse> getArtists(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         return SuccessResponse.ok(
-                artistService.getArtists(),
+                artistService.getArtists(search, page, size),
                 "작가 목록 조회 성공"
         );
     }
