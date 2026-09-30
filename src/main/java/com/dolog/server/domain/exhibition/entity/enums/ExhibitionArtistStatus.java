@@ -18,6 +18,13 @@ public enum ExhibitionArtistStatus {
         };
     }
 
+    public boolean canBeAddedByAdmin() {
+        return switch (this) {
+            case PENDING, DENIED, WITHDRAWN, REMOVED -> true;
+            case JOINED -> false;
+        };
+    }
+
     public boolean blocksReapplication() {
         return this == PENDING || this == JOINED;
     }

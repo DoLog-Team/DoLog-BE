@@ -75,7 +75,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                 .findByExhibitionIdAndArtistId(exhibitionId, artistId)
                 .orElse(null);
 
-        if (map != null && map.getStatus() == ExhibitionArtistStatus.JOINED) {
+        if (map != null && !map.getStatus().canBeAddedByAdmin()) {
             throw new ExhibitionException(
                     ExhibitionErrorCode.EXHIBITION_ARTIST_ALREADY_EXISTS
             );
