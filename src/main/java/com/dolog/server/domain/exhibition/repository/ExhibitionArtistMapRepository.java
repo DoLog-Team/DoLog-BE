@@ -42,6 +42,7 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
         LEFT JOIN ArtistProfile p
             ON p.artist = a AND p.exhibition.id = :exhibitionId
         WHERE m.exhibition.id = :exhibitionId
+                AND m.status = com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
         """)
     List<ExhibitionArtistListResponse> findArtists(UUID exhibitionId);
 }
