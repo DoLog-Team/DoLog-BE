@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Getter
 @Setter
@@ -43,4 +44,10 @@ public class ExhibitionDetailUpsertRequest {
     private MultipartFile ogImage;
 
     private MultipartFile faviconImg;
+
+    private LocalTime openTime;
+
+    private LocalTime closeTime;
+
+    private String operationNotice;
 }

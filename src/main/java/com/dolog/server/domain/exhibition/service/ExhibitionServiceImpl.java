@@ -372,6 +372,10 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
         boolean isNew = exhibitionDetailOpt.isEmpty();
 
+        if (isNew && (request.getExhibitionImg() == null || request.getExhibitionImg().isEmpty())) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_IMAGE_REQUIRED);
+        }
+
         ExhibitionDetail exhibitionDetail = exhibitionDetailOpt.orElseGet(() ->
                 ExhibitionDetail.builder()
                         .exhibition(exhibition)
@@ -436,7 +440,19 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         ? request.getCopyright()
                         : exhibitionDetail.getCopyright(),
 
-                logoImgUrl
+                logoImgUrl,
+
+                request.getOpenTime() != null
+                        ? request.getOpenTime()
+                        : exhibitionDetail.getOpenTime(),
+
+                request.getCloseTime() != null
+                        ? request.getCloseTime()
+                        : exhibitionDetail.getCloseTime(),
+
+                request.getOperationNotice() != null
+                        ? request.getOperationNotice()
+                        : exhibitionDetail.getOperationNotice()
         );
 
         // ogImage 처리
