@@ -83,7 +83,8 @@ public abstract class OAuthCodeClient {
                 errorBody = null;
             }
             int status = e.getStatusCode().value();
-            log.warn("{} token exchange failed: status={} body={}", provider(), status, e.getResponseBodyAsString());
+            log.warn("{} token exchange failed: status={} error={} error_code={}",
+                    provider(), status, text(errorBody, "error"), text(errorBody, "error_code"));
             throw new BaseException(status == 429
                     ? SocialLoginErrorCode.PROVIDER_UNAVAILABLE : classifyTokenError(status, errorBody));
         } catch (HttpServerErrorException e) {
@@ -104,8 +105,7 @@ public abstract class OAuthCodeClient {
         try {
             user = http.exchange(userUrl, HttpMethod.GET, new HttpEntity<>(userHeaders), JsonNode.class).getBody();
         } catch (HttpClientErrorException e) {
-            log.warn("{} userinfo failed: status={} body={}", provider(), e.getStatusCode().value(),
-                    e.getResponseBodyAsString());
+            log.warn("{} userinfo failed: status={}", provider(), e.getStatusCode().value());
             throw new BaseException(e.getStatusCode().value() == 429
                     ? SocialLoginErrorCode.PROVIDER_UNAVAILABLE : SocialLoginErrorCode.PROVIDER_ERROR);
         } catch (HttpServerErrorException e) {
