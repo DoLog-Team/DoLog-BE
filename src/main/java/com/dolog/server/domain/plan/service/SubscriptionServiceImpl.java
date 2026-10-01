@@ -1,8 +1,10 @@
 package com.dolog.server.domain.plan.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.plan.entity.Plan;
 import com.dolog.server.domain.plan.entity.PlanPrice;
@@ -16,6 +18,7 @@ import com.dolog.server.domain.plan.repository.PlanRepository;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +33,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final ExhibitionRepository exhibitionRepository;
+    private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final PlanRepository planRepository;
 
     @Override
@@ -62,5 +66,21 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription saved = subscriptionRepository.save(subscription);
 
         return SubscriptionCreateResponse.of(saved, planPrice.getPrice());
+    }
+
+    @Override
+    public List<SubscriptionMyResponse> getMySubscriptions(UUID accountId) {
+        return exhibitionRepository.findByAccountId(accountId)
+                .flatMap(exhibition -> subscriptionRepository
+                        .findFirstByExhibitionIdOrderByCreatedAtDesc(exhibition.getId())
+                        .map(subscription -> SubscriptionMyResponse.of(subscription, resolveExhibitionName(exhibition))))
+                .map(List::of)
+                .orElseGet(List::of);
+    }
+
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
+                .map(ExhibitionDetail::getTitle)
+                .orElse(null);
     }
 }
