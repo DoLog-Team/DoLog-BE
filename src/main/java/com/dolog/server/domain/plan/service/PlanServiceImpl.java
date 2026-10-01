@@ -6,6 +6,7 @@ import com.dolog.server.domain.plan.entity.PlanTargetSize;
 import com.dolog.server.domain.plan.repository.PlanRepository;
 import com.dolog.server.domain.plan.web.dto.request.PlanCreateRequest;
 import com.dolog.server.domain.plan.web.dto.response.PlanCreateResponse;
+import com.dolog.server.domain.plan.web.dto.response.PlanListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,5 +54,10 @@ public class PlanServiceImpl implements PlanService {
         Plan saved = planRepository.save(plan);
 
         return PlanCreateResponse.from(saved);
+    }
+
+    @Override
+    public PlanListResponse getPlans() {
+        return PlanListResponse.from(planRepository.findByIsActiveTrueOrderByDisplayOrderAsc());
     }
 }
