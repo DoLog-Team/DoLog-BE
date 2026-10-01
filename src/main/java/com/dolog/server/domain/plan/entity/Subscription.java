@@ -66,8 +66,7 @@ public class Subscription extends BaseEntity {
     }
 
     public void cancelSubscription() {
-        this.status = SubscriptionStatus.CANCELED;
-        this.endedAt = LocalDateTime.now();
+        updateStatus(SubscriptionStatus.CANCELED);
     }
 
     /**

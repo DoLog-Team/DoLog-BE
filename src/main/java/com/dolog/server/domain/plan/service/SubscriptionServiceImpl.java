@@ -38,7 +38,7 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class SubscriptionServiceImpl implements SubscriptionService {
 
-    private static final List<SubscriptionStatus> ACTIVE_STATUSES =
+    private static final List<SubscriptionStatus> ONGOING_STATUSES =
             List.of(SubscriptionStatus.PENDING_PAYMENT, SubscriptionStatus.ACTIVE);
 
     private final SubscriptionRepository subscriptionRepository;
@@ -53,7 +53,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         boolean alreadySubscribed = subscriptionRepository.existsByExhibitionIdAndStatusIn(
-                exhibitionId, ACTIVE_STATUSES
+                exhibitionId, ONGOING_STATUSES
         );
         if (alreadySubscribed) {
             throw new SubscriptionException(SubscriptionErrorCode.ALREADY_SUBSCRIBED);
@@ -82,16 +82,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public List<SubscriptionMyResponse> getMySubscriptions(UUID accountId) {
         return exhibitionRepository.findByAccountId(accountId)
                 .flatMap(exhibition -> subscriptionRepository
-                        .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibition.getId(), ACTIVE_STATUSES)
-                        .map(subscription -> SubscriptionMyResponse.of(subscription, resolveExhibitionName(exhibition))))
+                        .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibition.getId(), ONGOING_STATUSES))
+                .map(this::toResponse)
                 .map(List::of)
                 .orElseGet(List::of);
-    }
-
-    private String resolveExhibitionName(Exhibition exhibition) {
-        return exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
-                .map(ExhibitionDetail::getTitle)
-                .orElse(null);
     }
 
     @Override
@@ -119,9 +113,41 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return SubscriptionPlanChangeResponse.of(subscription, previousPlanId, previousPlanName, changeType);
     }
 
+    @Override
+    @Transactional
+    public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId) {
+        Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
+
+        subscription.cancelSubscription();
+
+        return SubscriptionCancelResponse.from(subscription);
+    }
+
+    @Override
+    public List<SubscriptionMyResponse> getSubscriptions(SubscriptionStatus status) {
+        List<Subscription> subscriptions = status != null
+                ? subscriptionRepository.findByStatusOrderByCreatedAtDesc(status)
+                : subscriptionRepository.findAllByOrderByCreatedAtDesc();
+
+        return subscriptions.stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionStatusUpdateResponse updateStatus(UUID subscriptionId, SubscriptionStatusUpdateRequest request) {
+        Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        subscription.updateStatus(request.getStatus());
+
+        return SubscriptionStatusUpdateResponse.from(subscription);
+    }
+
     private Subscription findCurrentSubscriptionOrThrow(UUID exhibitionId) {
         return subscriptionRepository
-                .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibitionId, ACTIVE_STATUSES)
+                .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibitionId, ONGOING_STATUSES)
                 .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
     }
 
@@ -141,35 +167,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return targetLimit > previousLimit ? PlanChangeType.UPGRADE : PlanChangeType.DOWNGRADE;
     }
 
-    @Override
-    @Transactional
-    public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId) {
-        Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
-
-        subscription.cancelSubscription();
-
-        return SubscriptionCancelResponse.from(subscription);
+    private SubscriptionMyResponse toResponse(Subscription subscription) {
+        return SubscriptionMyResponse.of(subscription, resolveExhibitionName(subscription.getExhibition()));
     }
 
-    @Override
-    public List<SubscriptionMyResponse> getSubscriptions(SubscriptionStatus status) {
-        List<Subscription> subscriptions = status != null
-                ? subscriptionRepository.findByStatusOrderByCreatedAtDesc(status)
-                : subscriptionRepository.findAllByOrderByCreatedAtDesc();
-
-        return subscriptions.stream()
-                .map(subscription -> SubscriptionMyResponse.of(subscription, resolveExhibitionName(subscription.getExhibition())))
-                .toList();
-    }
-
-    @Override
-    @Transactional
-    public SubscriptionStatusUpdateResponse updateStatus(UUID subscriptionId, SubscriptionStatusUpdateRequest request) {
-        Subscription subscription = subscriptionRepository.findById(subscriptionId)
-                .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
-
-        subscription.updateStatus(request.getStatus());
-
-        return SubscriptionStatusUpdateResponse.from(subscription);
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
+                .map(ExhibitionDetail::getTitle)
+                .orElse(null);
     }
 }
