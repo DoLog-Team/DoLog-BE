@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface SubscriptionRepository extends JpaRepository<Subscription, UUID> {
 
-    boolean existsByAccountIdAndStatus(UUID accountId, SubscriptionStatus status);
+    boolean existsByExhibitionIdAndStatus(UUID exhibitionId, SubscriptionStatus status);
 }
