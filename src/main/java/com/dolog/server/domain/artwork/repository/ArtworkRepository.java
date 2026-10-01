@@ -3,6 +3,7 @@ package com.dolog.server.domain.artwork.repository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,7 @@ import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
 
+    @EntityGraph(attributePaths = {"artworkArtistMaps", "artworkArtistMaps.artist"})
     @Query("SELECT DISTINCT aam.artwork FROM ArtworkArtistMap aam " +
             "WHERE aam.artwork.exhibition.id = :exhibitionId " +
             "AND aam.artist.id IN :artistIds")
@@ -163,4 +165,3 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     );
 
 }
-

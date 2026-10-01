@@ -9,9 +9,11 @@ import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
@@ -32,7 +34,9 @@ import java.util.UUID;
 import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -79,10 +83,7 @@ class ExhibitionArtistServiceImplTest {
                 artist,
                 ExhibitionArtistStatus.JOINED
         );
-        Artwork artwork = Artwork.builder()
-                .id(UUID.randomUUID())
-                .exhibition(exhibition)
-                .build();
+        Artwork artwork = artwork(exhibition, artist);
 
         when(accountRepository.findById(ownerId))
                 .thenReturn(Optional.of(owner));
@@ -94,6 +95,10 @@ class ExhibitionArtistServiceImplTest {
                 exhibition.getId(),
                 List.of(artist.getId())
         )).thenReturn(List.of(artwork));
+        when(exhibitionArtistMapRepository.findJoinedArtistIds(
+                eq(exhibition.getId()),
+                anyCollection()
+        )).thenReturn(List.of());
 
         var response = service.removeArtistFromExhibition(
                 ownerId,
@@ -107,6 +112,132 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(artist.getId(), response.getArtistId());
         assertEquals("제외 대상 님이 두록대학교에서 제외되었습니다.", response.getMessage());
         verify(exhibitionArtistMapRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("제외된 작가의 출품작이 없으면 공동 작가 상태를 조회하지 않는다")
+    void skipsArtworkCancellationWhenNoSubmittedArtworkExists() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist artist = artist("제외 대상", "no-artwork@test.com");
+        ExhibitionArtistMap map = map(
+                exhibition,
+                artist,
+                ExhibitionArtistStatus.JOINED
+        );
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(map));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                List.of(artist.getId())
+        )).thenReturn(List.of());
+
+        service.removeArtistFromExhibition(
+                ownerId,
+                exhibition.getId(),
+                artist.getId()
+        );
+
+        assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
+        verify(exhibitionArtistMapRepository, never()).findJoinedArtistIds(
+                eq(exhibition.getId()),
+                anyCollection()
+        );
+    }
+
+    @Test
+    @DisplayName("공동 작가가 참여 중이면 한 작가를 제외해도 공동 작품을 유지한다")
+    void keepsJointArtworkWhenCoArtistRemainsJoined() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist removedArtist = artist("제외 대상", "removed-joint@test.com");
+        Artist joinedArtist = artist("참여 유지", "joined-joint@test.com");
+        ExhibitionArtistMap removedMap = map(
+                exhibition,
+                removedArtist,
+                ExhibitionArtistStatus.JOINED
+        );
+        Artwork artwork = artwork(exhibition, removedArtist, joinedArtist);
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                removedArtist.getId()
+        )).thenReturn(Optional.of(removedMap));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                List.of(removedArtist.getId())
+        )).thenReturn(List.of(artwork));
+        when(exhibitionArtistMapRepository.findJoinedArtistIds(
+                eq(exhibition.getId()),
+                anyCollection()
+        )).thenReturn(List.of(joinedArtist.getId()));
+
+        service.removeArtistFromExhibition(
+                ownerId,
+                exhibition.getId(),
+                removedArtist.getId()
+        );
+
+        assertEquals(ExhibitionArtistStatus.REMOVED, removedMap.getStatus());
+        assertSame(exhibition, artwork.getExhibition());
+        assertNotNull(artwork.getExhibitionZone());
+    }
+
+    @Test
+    @DisplayName("공동 작가가 모두 제외되면 공동 작품의 출품을 취소한다")
+    void cancelsJointArtworkWhenAllCoArtistsAreRemoved() {
+        UUID ownerId = UUID.randomUUID();
+        Exhibition exhibition = exhibition(ownerId);
+        Artist firstArtist = artist("제외 대상 A", "removed-a@test.com");
+        Artist secondArtist = artist("제외 대상 B", "removed-b@test.com");
+        ExhibitionArtistMap firstMap = map(
+                exhibition,
+                firstArtist,
+                ExhibitionArtistStatus.JOINED
+        );
+        ExhibitionArtistMap secondMap = map(
+                exhibition,
+                secondArtist,
+                ExhibitionArtistStatus.JOINED
+        );
+        Artwork artwork = artwork(exhibition, firstArtist, secondArtist);
+        List<UUID> artistIds = List.of(firstArtist.getId(), secondArtist.getId());
+
+        when(exhibitionArtistMapRepository
+                .findAllByExhibitionIdAndArtistIdIn(
+                        eq(exhibition.getId()),
+                        anyCollection()
+                ))
+                .thenReturn(List.of(firstMap, secondMap));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                artistIds
+        )).thenReturn(List.of(artwork));
+        when(exhibitionArtistMapRepository.findJoinedArtistIds(
+                eq(exhibition.getId()),
+                anyCollection()
+        )).thenReturn(List.of());
+
+        service.updateArtistStatuses(
+                ownerId,
+                exhibition.getId(),
+                artistIds,
+                ExhibitionArtistStatus.REMOVED
+        );
+
+        assertEquals(ExhibitionArtistStatus.REMOVED, firstMap.getStatus());
+        assertEquals(ExhibitionArtistStatus.REMOVED, secondMap.getStatus());
+        assertNull(artwork.getExhibition());
+        assertNull(artwork.getExhibitionZone());
     }
 
     @Test
@@ -490,10 +621,7 @@ class ExhibitionArtistServiceImplTest {
                 artist,
                 ExhibitionArtistStatus.JOINED
         );
-        Artwork artwork = Artwork.builder()
-                .id(UUID.randomUUID())
-                .exhibition(exhibition)
-                .build();
+        Artwork artwork = artwork(exhibition, artist);
 
         when(exhibitionArtistMapRepository
                 .findAllByExhibitionIdAndArtistIdIn(
@@ -505,6 +633,10 @@ class ExhibitionArtistServiceImplTest {
                 exhibition.getId(),
                 List.of(artist.getId())
         )).thenReturn(List.of(artwork));
+        when(exhibitionArtistMapRepository.findJoinedArtistIds(
+                eq(exhibition.getId()),
+                anyCollection()
+        )).thenReturn(List.of());
 
         service.updateArtistStatuses(
                 ownerId,
@@ -656,5 +788,28 @@ class ExhibitionArtistServiceImplTest {
                 .artist(artist)
                 .status(status)
                 .build();
+    }
+
+    private Artwork artwork(Exhibition exhibition, Artist... artists) {
+        Artwork artwork = Artwork.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .exhibitionZone(ExhibitionZone.builder()
+                        .id(UUID.randomUUID())
+                        .exhibition(exhibition)
+                        .build())
+                .build();
+
+        for (Artist artist : artists) {
+            artwork.getArtworkArtistMaps().add(
+                    ArtworkArtistMap.builder()
+                            .artwork(artwork)
+                            .artist(artist)
+                            .artistRole("공동 작가")
+                            .build()
+            );
+        }
+
+        return artwork;
     }
 }

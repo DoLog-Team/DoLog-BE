@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -45,4 +46,17 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
                 AND m.status = com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
         """)
     List<ExhibitionArtistListResponse> findArtists(UUID exhibitionId);
+
+    @Query("""
+        SELECT m.artist.id
+        FROM ExhibitionArtistMap m
+        WHERE m.exhibition.id = :exhibitionId
+          AND m.artist.id IN :artistIds
+          AND m.status =
+              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+        """)
+    List<UUID> findJoinedArtistIds(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("artistIds") Collection<UUID> artistIds
+    );
 }

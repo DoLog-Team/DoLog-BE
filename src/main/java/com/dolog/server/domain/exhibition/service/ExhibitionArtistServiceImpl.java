@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -308,15 +309,36 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
     private void cancelArtworkSubmissions(
             UUID exhibitionId,
-            List<UUID> artistIds
+            List<UUID> removedArtistIds
     ) {
         List<Artwork> artworks = artworkRepository
                 .findSubmittedArtworksByExhibitionIdAndArtistIdIn(
                         exhibitionId,
-                        artistIds
+                        removedArtistIds
                 );
 
-        artworks.forEach(Artwork::cancelExhibitionSubmission);
+        if (artworks.isEmpty()) {
+            return;
+        }
+
+        Set<UUID> coArtistIds = artworks.stream()
+                .flatMap(artwork -> artwork.getArtworkArtistMaps().stream())
+                .map(map -> map.getArtist().getId())
+                .collect(Collectors.toSet());
+
+        Set<UUID> joinedArtistIds = new HashSet<>(
+                exhibitionArtistMapRepository.findJoinedArtistIds(
+                        exhibitionId,
+                        coArtistIds
+                )
+        );
+
+        artworks.stream()
+                .filter(artwork -> artwork.getArtworkArtistMaps().stream()
+                        .noneMatch(map ->
+                                joinedArtistIds.contains(map.getArtist().getId())
+                        ))
+                .forEach(Artwork::cancelExhibitionSubmission);
     }
 
     private void requireAllowedTargetStatus(
