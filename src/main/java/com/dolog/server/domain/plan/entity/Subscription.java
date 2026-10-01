@@ -69,4 +69,12 @@ public class Subscription extends BaseEntity {
         this.status = SubscriptionStatus.CANCELED;
         this.endedAt = LocalDateTime.now();
     }
+
+    /**
+     * 배치로 자연 만료 처리할 때 사용. endedAt은 이미 가입 시점에 계획된 값이라 건드리지 않음
+     * (updateStatus()는 조기종료 시나리오를 가정해 endedAt을 현재 시각으로 덮어쓰므로 여기선 쓰지 않음).
+     */
+    public void markAsExpired() {
+        this.status = SubscriptionStatus.EXPIRED;
+    }
 }
