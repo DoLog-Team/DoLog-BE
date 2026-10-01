@@ -19,6 +19,7 @@ import com.dolog.server.domain.plan.repository.PlanRepository;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionPlanChangeRequest;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionCancelResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionPlanChangeResponse;
@@ -79,7 +80,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public List<SubscriptionMyResponse> getMySubscriptions(UUID accountId) {
         return exhibitionRepository.findByAccountId(accountId)
                 .flatMap(exhibition -> subscriptionRepository
-                        .findFirstByExhibitionIdOrderByCreatedAtDesc(exhibition.getId())
+                        .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibition.getId(), ACTIVE_STATUSES)
                         .map(subscription -> SubscriptionMyResponse.of(subscription, resolveExhibitionName(exhibition))))
                 .map(List::of)
                 .orElseGet(List::of);
@@ -136,5 +137,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             return PlanChangeType.UPGRADE;
         }
         return targetLimit > previousLimit ? PlanChangeType.UPGRADE : PlanChangeType.DOWNGRADE;
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId) {
+        Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
+
+        subscription.cancelSubscription();
+
+        return SubscriptionCancelResponse.from(subscription);
     }
 }

@@ -3,6 +3,7 @@ package com.dolog.server.domain.plan.web.controller;
 import com.dolog.server.domain.plan.service.SubscriptionService;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionPlanChangeRequest;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionCancelResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionPlanChangeResponse;
@@ -57,5 +58,14 @@ public class SubscriptionController {
     ) {
         SubscriptionPlanChangeResponse data = subscriptionService.changePlan(exhibitionId, request);
         return SuccessResponse.ok(data, "구독 플랜 변경이 완료되었습니다.");
+    }
+
+    @Operation(summary = "구독 해지")
+    @PatchMapping("/exhibitions/{exhibitionId}/subscriptions/current/cancel")
+    public SuccessResponse<SubscriptionCancelResponse> cancelSubscription(
+            @PathVariable UUID exhibitionId
+    ) {
+        SubscriptionCancelResponse data = subscriptionService.cancelSubscription(exhibitionId);
+        return SuccessResponse.ok(data, "구독 해지가 완료되었습니다.");
     }
 }

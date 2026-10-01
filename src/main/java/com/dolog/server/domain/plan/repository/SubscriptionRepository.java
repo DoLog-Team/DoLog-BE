@@ -14,8 +14,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
 
     boolean existsByExhibitionIdAndStatusIn(UUID exhibitionId, Collection<SubscriptionStatus> statuses);
 
-    Optional<Subscription> findFirstByExhibitionIdOrderByCreatedAtDesc(UUID exhibitionId);
-
     Optional<Subscription> findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(
             UUID exhibitionId, Collection<SubscriptionStatus> statuses);
 }
