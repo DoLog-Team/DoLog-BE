@@ -6,8 +6,10 @@ import com.dolog.server.domain.plan.entity.PlanTargetSize;
 import com.dolog.server.domain.plan.exception.PlanErrorCode;
 import com.dolog.server.domain.plan.exception.PlanException;
 import com.dolog.server.domain.plan.repository.PlanRepository;
+import com.dolog.server.domain.plan.web.dto.request.PlanActiveStatusRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanUpdateRequest;
+import com.dolog.server.domain.plan.web.dto.response.PlanActiveStatusResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanListResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanUpdateResponse;
@@ -98,5 +100,16 @@ public class PlanServiceImpl implements PlanService {
         }
 
         return PlanUpdateResponse.from(plan);
+    }
+
+    @Override
+    @Transactional
+    public PlanActiveStatusResponse updateActiveStatus(UUID planId, PlanActiveStatusRequest request) {
+        Plan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
+
+        plan.updateActiveStatus(request.getIsActive());
+
+        return PlanActiveStatusResponse.from(plan);
     }
 }

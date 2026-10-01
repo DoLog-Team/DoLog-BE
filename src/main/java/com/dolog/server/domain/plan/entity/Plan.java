@@ -58,6 +58,10 @@ public class Plan extends BaseEntity {
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlanTargetSize> targetSizes = new ArrayList<>();
 
+    public void updateActiveStatus(Boolean isActive) {
+        this.isActive = isActive;
+    }
+
     public void updateBasicInfo(String name, String description, Integer maxArtworkCount,
                                  Integer minCommitmentMonths, Boolean isPopular, Integer displayOrder) {
         if (name != null) this.name = name;

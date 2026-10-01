@@ -1,8 +1,10 @@
 package com.dolog.server.domain.plan.web.controller;
 
 import com.dolog.server.domain.plan.service.PlanService;
+import com.dolog.server.domain.plan.web.dto.request.PlanActiveStatusRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanUpdateRequest;
+import com.dolog.server.domain.plan.web.dto.response.PlanActiveStatusResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanListResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanUpdateResponse;
@@ -53,5 +55,16 @@ public class PlanController {
     ) {
         PlanUpdateResponse data = planService.updatePlan(planId, request);
         return SuccessResponse.ok(data, "요금제 수정에 성공했습니다.");
+    }
+
+    @Operation(summary = "요금제 활성 상태 변경")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PatchMapping("/{planId}/active-status")
+    public SuccessResponse<PlanActiveStatusResponse> updateActiveStatus(
+            @PathVariable UUID planId,
+            @Valid @RequestBody PlanActiveStatusRequest request
+    ) {
+        PlanActiveStatusResponse data = planService.updateActiveStatus(planId, request);
+        return SuccessResponse.ok(data, "요금제 활성 상태 변경에 성공했습니다.");
     }
 }
