@@ -19,10 +19,12 @@ import com.dolog.server.domain.plan.repository.PlanRepository;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionPlanChangeRequest;
+import com.dolog.server.domain.plan.web.dto.request.SubscriptionStatusUpdateRequest;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCancelResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionPlanChangeResponse;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionStatusUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -147,5 +149,27 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.cancelSubscription();
 
         return SubscriptionCancelResponse.from(subscription);
+    }
+
+    @Override
+    public List<SubscriptionMyResponse> getSubscriptions(SubscriptionStatus status) {
+        List<Subscription> subscriptions = status != null
+                ? subscriptionRepository.findByStatusOrderByCreatedAtDesc(status)
+                : subscriptionRepository.findAllByOrderByCreatedAtDesc();
+
+        return subscriptions.stream()
+                .map(subscription -> SubscriptionMyResponse.of(subscription, resolveExhibitionName(subscription.getExhibition())))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionStatusUpdateResponse updateStatus(UUID subscriptionId, SubscriptionStatusUpdateRequest request) {
+        Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
+
+        subscription.updateStatus(request.getStatus());
+
+        return SubscriptionStatusUpdateResponse.from(subscription);
     }
 }

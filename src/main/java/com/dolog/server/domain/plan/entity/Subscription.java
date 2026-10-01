@@ -49,6 +49,14 @@ public class Subscription extends BaseEntity {
 
     public void updateStatus(SubscriptionStatus status) {
         this.status = status;
+        if (status == SubscriptionStatus.ACTIVE && this.startedAt == null) {
+            this.startedAt = LocalDateTime.now();
+            this.endedAt = this.startedAt.plusMonths(this.months);
+        }
+        if (status == SubscriptionStatus.CANCELED || status == SubscriptionStatus.EXPIRED) {
+            // 자연 만료 전 조기 해지/종료된 경우, 계획된 만료일(endedAt)을 실제 종료 시각으로 덮어씀
+            this.endedAt = LocalDateTime.now();
+        }
     }
 
     public void changePlan(Plan plan, BillingCycle billingCycle, Integer months) {

@@ -1,12 +1,15 @@
 package com.dolog.server.domain.plan.web.controller;
 
+import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
 import com.dolog.server.domain.plan.service.SubscriptionService;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionPlanChangeRequest;
+import com.dolog.server.domain.plan.web.dto.request.SubscriptionStatusUpdateRequest;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCancelResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionPlanChangeResponse;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionStatusUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -67,5 +71,26 @@ public class SubscriptionController {
     ) {
         SubscriptionCancelResponse data = subscriptionService.cancelSubscription(exhibitionId);
         return SuccessResponse.ok(data, "구독 해지가 완료되었습니다.");
+    }
+
+    @Operation(summary = "전체 구독 현황 조회 (두록 어드민)")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @GetMapping("/subscriptions")
+    public SuccessResponse<List<SubscriptionMyResponse>> getSubscriptions(
+            @RequestParam(required = false) SubscriptionStatus status
+    ) {
+        List<SubscriptionMyResponse> data = subscriptionService.getSubscriptions(status);
+        return SuccessResponse.ok(data, "구독 현황 조회에 성공했습니다.");
+    }
+
+    @Operation(summary = "구독 상태 수동 조정 (두록 어드민)")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PatchMapping("/subscriptions/{subscriptionId}/status")
+    public SuccessResponse<SubscriptionStatusUpdateResponse> updateStatus(
+            @PathVariable UUID subscriptionId,
+            @Valid @RequestBody SubscriptionStatusUpdateRequest request
+    ) {
+        SubscriptionStatusUpdateResponse data = subscriptionService.updateStatus(subscriptionId, request);
+        return SuccessResponse.ok(data, "구독 상태가 변경되었습니다.");
     }
 }
