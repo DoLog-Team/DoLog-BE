@@ -42,6 +42,12 @@ public class PlanPrice extends BaseEntity {
     @Column(nullable = false)
     private Integer months;
 
+    public void update(BigDecimal price, BigDecimal discountRate, Integer months) {
+        this.price = price;
+        this.discountRate = discountRate;
+        this.months = months;
+    }
+
     public BigDecimal resolveDiscountedPrice() {
         if (discountRate == null) {
             return price;

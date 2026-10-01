@@ -1,5 +1,7 @@
 package com.dolog.server.domain.plan.entity;
 
+import com.dolog.server.domain.plan.entity.enums.BillingCycle;
+import com.dolog.server.domain.plan.entity.enums.TargetSize;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -55,4 +57,39 @@ public class Plan extends BaseEntity {
     @Builder.Default
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlanTargetSize> targetSizes = new ArrayList<>();
+
+    public void updateBasicInfo(String name, String description, Integer maxArtworkCount,
+                                 Integer minCommitmentMonths, Boolean isPopular, Integer displayOrder) {
+        if (name != null) this.name = name;
+        if (description != null) this.description = description;
+        if (maxArtworkCount != null) this.maxArtworkCount = maxArtworkCount;
+        if (minCommitmentMonths != null) this.minCommitmentMonths = minCommitmentMonths;
+        if (isPopular != null) this.isPopular = isPopular;
+        if (displayOrder != null) this.displayOrder = displayOrder;
+    }
+
+    public void replaceTargetSizes(List<TargetSize> newTargetSizes) {
+        this.targetSizes.clear();
+        newTargetSizes.forEach(targetSize -> this.targetSizes.add(
+                PlanTargetSize.builder().plan(this).targetSize(targetSize).build()
+        ));
+    }
+
+    public void upsertPrice(BillingCycle billingCycle, BigDecimal price, BigDecimal discountRate, Integer months) {
+        this.prices.stream()
+                .filter(planPrice -> planPrice.getBillingCycle() == billingCycle)
+                .findFirst()
+                .ifPresentOrElse(
+                        existing -> existing.update(price, discountRate, months),
+                        () -> this.prices.add(
+                                PlanPrice.builder()
+                                        .plan(this)
+                                        .billingCycle(billingCycle)
+                                        .price(price)
+                                        .discountRate(discountRate)
+                                        .months(months)
+                                        .build()
+                        )
+                );
+    }
 }
