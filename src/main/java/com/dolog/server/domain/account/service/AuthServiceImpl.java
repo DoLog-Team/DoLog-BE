@@ -21,6 +21,8 @@ import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import com.dolog.server.global.jwt.JwtTokenProvider;
 import com.dolog.server.domain.account.exception.InvalidLoginException;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -83,9 +85,23 @@ public class AuthServiceImpl implements AuthService {
             if (profile.email() != null && accountRepository.existsByEmail(profile.email())) {
                 throw new BaseException(SocialLoginErrorCode.EMAIL_ALREADY_LINKED);
             }
-            return accountRepository.saveAndFlush(Account.builder()
-                    .email(profile.email()).socialProvider(provider.name()).socialProviderId(profile.providerId())
-                    .role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+            try {
+                return accountRepository.saveAndFlush(Account.builder()
+                        .email(profile.email()).socialProvider(provider.name()).socialProviderId(profile.providerId())
+                        .role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+            } catch (DataIntegrityViolationException e) {
+                for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+                    if (cause instanceof ConstraintViolationException violation) {
+                        String constraint = violation.getConstraintName();
+                        // V1의 accounts.email UNIQUE. MySQL은 테이블 이름을 붙여 반환할 수도 있다.
+                        if ("UKn7ihswpy07ci568w34q0oi8he".equals(constraint)
+                                || "accounts.UKn7ihswpy07ci568w34q0oi8he".equals(constraint)) {
+                            throw new BaseException(SocialLoginErrorCode.EMAIL_ALREADY_LINKED);
+                        }
+                    }
+                }
+                throw e;
+            }
         });
         if (account.getRole() != Role.ARTIST_ADMIN) {
             throw new BaseException(SocialLoginErrorCode.TARGET_ROLE_NOT_ALLOWED);
