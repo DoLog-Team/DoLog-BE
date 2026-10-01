@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.UUID;
 
 @Entity
@@ -40,4 +41,14 @@ public class PlanPrice extends BaseEntity {
 
     @Column(nullable = false)
     private Integer months;
+
+    public BigDecimal resolveDiscountedPrice() {
+        if (discountRate == null) {
+            return price;
+        }
+        BigDecimal rate = BigDecimal.ONE.subtract(
+                discountRate.divide(BigDecimal.valueOf(100))
+        );
+        return price.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+    }
 }
