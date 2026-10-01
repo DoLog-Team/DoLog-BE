@@ -9,6 +9,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.plan.entity.Plan;
 import com.dolog.server.domain.plan.entity.PlanPrice;
 import com.dolog.server.domain.plan.entity.Subscription;
+import com.dolog.server.domain.plan.entity.enums.PlanChangeType;
 import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
 import com.dolog.server.domain.plan.exception.PlanErrorCode;
 import com.dolog.server.domain.plan.exception.PlanException;
@@ -17,19 +18,25 @@ import com.dolog.server.domain.plan.exception.SubscriptionException;
 import com.dolog.server.domain.plan.repository.PlanRepository;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
+import com.dolog.server.domain.plan.web.dto.request.SubscriptionPlanChangeRequest;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionPlanChangeResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class SubscriptionServiceImpl implements SubscriptionService {
+
+    private static final List<SubscriptionStatus> ACTIVE_STATUSES =
+            List.of(SubscriptionStatus.PENDING_PAYMENT, SubscriptionStatus.ACTIVE);
 
     private final SubscriptionRepository subscriptionRepository;
     private final ExhibitionRepository exhibitionRepository;
@@ -43,7 +50,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         boolean alreadySubscribed = subscriptionRepository.existsByExhibitionIdAndStatusIn(
-                exhibitionId, List.of(SubscriptionStatus.PENDING_PAYMENT, SubscriptionStatus.ACTIVE)
+                exhibitionId, ACTIVE_STATUSES
         );
         if (alreadySubscribed) {
             throw new SubscriptionException(SubscriptionErrorCode.ALREADY_SUBSCRIBED);
@@ -82,5 +89,52 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
                 .map(ExhibitionDetail::getTitle)
                 .orElse(null);
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionPlanChangeResponse changePlan(UUID exhibitionId, SubscriptionPlanChangeRequest request) {
+        Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
+
+        Plan previousPlan = subscription.getPlan();
+        UUID previousPlanId = previousPlan.getId();
+        String previousPlanName = previousPlan.getName();
+
+        Plan targetPlan = planRepository.findById(request.getTargetPlanId())
+                .orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
+
+        PlanPrice targetPrice = targetPlan.findPriceByCycle(request.getBillingCycle())
+                .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.PLAN_PRICE_NOT_FOUND));
+
+        PlanChangeType changeType = resolveChangeType(previousPlan, targetPlan);
+
+        subscription.changePlan(targetPlan, request.getBillingCycle(), targetPrice.getMonths());
+
+        // TODO: Artwork 도메인에 "플랜 한도 초과 미노출" 자동 전환 기능이 생기면 여기서 호출 연동 필요
+        // (다운그레이드 시 연결 순서 기준 초과분 자동 미노출 / 업그레이드 시 자동 재공개 — 피그마 "작품 수 초과에 따른 예외처리" 참고)
+
+        return SubscriptionPlanChangeResponse.of(subscription, previousPlanId, previousPlanName, changeType);
+    }
+
+    private Subscription findCurrentSubscriptionOrThrow(UUID exhibitionId) {
+        return subscriptionRepository
+                .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibitionId, ACTIVE_STATUSES)
+                .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
+    }
+
+    private PlanChangeType resolveChangeType(Plan previousPlan, Plan targetPlan) {
+        Integer previousLimit = previousPlan.getMaxArtworkCount();
+        Integer targetLimit = targetPlan.getMaxArtworkCount();
+
+        if (Objects.equals(previousLimit, targetLimit)) {
+            return PlanChangeType.SAME;
+        }
+        if (previousLimit == null) {
+            return PlanChangeType.DOWNGRADE;
+        }
+        if (targetLimit == null) {
+            return PlanChangeType.UPGRADE;
+        }
+        return targetLimit > previousLimit ? PlanChangeType.UPGRADE : PlanChangeType.DOWNGRADE;
     }
 }

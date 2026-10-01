@@ -2,8 +2,10 @@ package com.dolog.server.domain.plan.web.controller;
 
 import com.dolog.server.domain.plan.service.SubscriptionService;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
+import com.dolog.server.domain.plan.web.dto.request.SubscriptionPlanChangeRequest;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionPlanChangeResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,5 +47,15 @@ public class SubscriptionController {
     ) {
         List<SubscriptionMyResponse> data = subscriptionService.getMySubscriptions(user.getId());
         return SuccessResponse.ok(data, "내 구독 목록 조회에 성공했습니다.");
+    }
+
+    @Operation(summary = "구독 플랜 변경")
+    @PatchMapping("/exhibitions/{exhibitionId}/subscriptions/current/plan")
+    public SuccessResponse<SubscriptionPlanChangeResponse> changePlan(
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody SubscriptionPlanChangeRequest request
+    ) {
+        SubscriptionPlanChangeResponse data = subscriptionService.changePlan(exhibitionId, request);
+        return SuccessResponse.ok(data, "구독 플랜 변경이 완료되었습니다.");
     }
 }
