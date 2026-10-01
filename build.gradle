@@ -68,7 +68,7 @@ dependencies {
 
 	// Swagger
 	// Spring Boot 3.5와 함께 갱신한 springdoc 버전
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.9.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.9.1'
 
 	// JWT (JJWT) — api/impl/jackson은 반드시 동일 버전으로 유지할 것
 	implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
@@ -76,11 +76,11 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 
 	//S3
-	implementation 'software.amazon.awssdk:s3:2.54.1'
+	implementation 'software.amazon.awssdk:s3:2.54.16'
 
 	// 이미지 처리 및 WebP 변환을 위한 라이브러리
-	implementation 'com.sksamuel.scrimage:scrimage-core:4.6.7'
-	implementation 'com.sksamuel.scrimage:scrimage-webp:4.6.7'
+	implementation 'com.sksamuel.scrimage:scrimage-core:4.6.8'
+	implementation 'com.sksamuel.scrimage:scrimage-webp:4.6.8'
 }
 
 dependencyManagement {
