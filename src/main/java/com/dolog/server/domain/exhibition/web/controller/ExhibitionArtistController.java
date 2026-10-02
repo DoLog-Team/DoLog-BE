@@ -132,7 +132,7 @@ public class ExhibitionArtistController {
     }
 
     @Operation(summary = "전시 참여 작가 상태 일괄 변경")
-    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
     @PatchMapping("/{exhibitionId}/artists/status")
     public SuccessResponse<ExhibitionArtistStatusUpdateResponse>
     updateArtistStatuses(

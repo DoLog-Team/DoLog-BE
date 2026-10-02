@@ -250,14 +250,14 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             List<UUID> artistIds,
             ExhibitionArtistStatus targetStatus
     ) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(
                         ExhibitionErrorCode.EXHIBITION_NOT_FOUND
                 ));
-
-        if (!exhibition.getAccount().getId().equals(accountId)) {
-            throw new AccessDeniedException("자신이 관리하는 전시의 참여 상태만 변경할 수 있습니다.");
-        }
+        requireCanManageArtists(actor, exhibition);
 
         requireAllowedTargetStatus(targetStatus);
 
