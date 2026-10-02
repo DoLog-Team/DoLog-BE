@@ -13,6 +13,7 @@ import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
+import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -28,6 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -197,6 +199,7 @@ class ExhibitionArtistServiceImplTest {
     void cancelsJointArtworkWhenAllCoArtistsAreRemoved() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist firstArtist = artist("제외 대상 A", "removed-a@test.com");
         Artist secondArtist = artist("제외 대상 B", "removed-b@test.com");
         ExhibitionArtistMap firstMap = map(
@@ -478,6 +481,7 @@ class ExhibitionArtistServiceImplTest {
     void acceptsPendingArtistsAndCreatesOnlyMissingProfiles() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist firstArtist = artist("첫 번째", "first@test.com");
         Artist secondArtist = artist("두 번째", "second@test.com");
         ExhibitionArtistMap firstMap = map(
@@ -540,6 +544,7 @@ class ExhibitionArtistServiceImplTest {
     void rejectsWholeRequestWhenAnyTransitionIsInvalid() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist pendingArtist = artist("대기", "pending@test.com");
         Artist joinedArtist = artist("참여", "joined@test.com");
         ExhibitionArtistMap pendingMap = map(
@@ -584,6 +589,7 @@ class ExhibitionArtistServiceImplTest {
     void deniesPendingArtistWithoutCreatingProfile() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist artist = artist("거절 대상", "denied@test.com");
         ExhibitionArtistMap map = map(
                 exhibition,
@@ -611,10 +617,44 @@ class ExhibitionArtistServiceImplTest {
     }
 
     @Test
+    @DisplayName("두록 관리자는 자신이 소유하지 않은 전시의 작가 상태도 변경할 수 있다")
+    void dologAdminCanUpdateArtistStatusesForAnyExhibition() {
+        UUID ownerId = UUID.randomUUID();
+        UUID dologAdminId = UUID.randomUUID();
+        Exhibition exhibition = exhibition(ownerId);
+        mockAccount(dologAdminId, Role.DOLOG_ADMIN);
+        Artist artist = artist("거절 대상", "dolog-status@test.com");
+        ExhibitionArtistMap map = map(
+                exhibition,
+                artist,
+                ExhibitionArtistStatus.PENDING
+        );
+
+        when(exhibitionArtistMapRepository
+                .findAllByExhibitionIdAndArtistIdIn(
+                        eq(exhibition.getId()),
+                        anyCollection()
+                ))
+                .thenReturn(List.of(map));
+
+        var response = service.updateArtistStatuses(
+                dologAdminId,
+                exhibition.getId(),
+                List.of(artist.getId()),
+                ExhibitionArtistStatus.DENIED
+        );
+
+        assertEquals(1, response.updatedCount());
+        assertEquals(ExhibitionArtistStatus.DENIED, map.getStatus());
+        verifyNoInteractions(artistProfileRepository);
+    }
+
+    @Test
     @DisplayName("참여 중인 작가는 관리자에 의해 제외 상태로 변경될 수 있다")
     void removesJoinedArtist() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist artist = artist("제외 대상", "removed@test.com");
         ExhibitionArtistMap map = map(
                 exhibition,
@@ -655,12 +695,14 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("다른 전시 관리자의 전시 상태를 변경할 수 없다")
     void rejectsDifferentExhibitionOwner() {
         UUID ownerId = UUID.randomUUID();
+        UUID actorId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(actorId, Role.EXHIBITION_ADMIN);
 
         assertThrows(
                 AccessDeniedException.class,
                 () -> service.updateArtistStatuses(
-                        UUID.randomUUID(),
+                        actorId,
                         exhibition.getId(),
                         List.of(UUID.randomUUID()),
                         ExhibitionArtistStatus.JOINED
@@ -676,6 +718,7 @@ class ExhibitionArtistServiceImplTest {
     void rejectsUnsupportedTargetStatus() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(ownerId, Role.EXHIBITION_ADMIN);
 
         for (ExhibitionArtistStatus targetStatus : List.of(
                 ExhibitionArtistStatus.PENDING,
@@ -706,6 +749,7 @@ class ExhibitionArtistServiceImplTest {
     void rejectsWholeRequestWhenAnyArtistMapIsMissing() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = exhibition(ownerId);
+        mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist existingArtist = artist("신청자", "applicant@test.com");
         ExhibitionArtistMap existingMap = map(
                 exhibition,
@@ -738,6 +782,140 @@ class ExhibitionArtistServiceImplTest {
         verifyNoInteractions(artistProfileRepository);
     }
 
+    @Test
+    @DisplayName("참여 코드는 앞뒤 공백을 제거하고 대문자로 정규화해 검증한다")
+    void normalizesJoinCodeWhenValidating() {
+        UUID accountId = UUID.randomUUID();
+        Artist artist = artist("신청 작가", "join-validate@test.com");
+        Exhibition exhibition = joinableExhibition(
+                "2345ABCD",
+                null
+        );
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionRepository.findByArtistJoinCode("2345ABCD"))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.empty());
+
+        var response = service.validateJoinCode(
+                accountId,
+                "  2345abcd  "
+        );
+
+        assertEquals(exhibition.getId(), response.exhibitionId());
+        assertEquals("졸업전시", response.exhibitionTitle());
+        verify(exhibitionRepository).findByArtistJoinCode("2345ABCD");
+    }
+
+    @Test
+    @DisplayName("신규 작가는 PENDING 상태로 전시 참여를 신청한다")
+    void appliesToExhibitionAsPending() {
+        UUID accountId = UUID.randomUUID();
+        Artist artist = artist("신청 작가", "join-new@test.com");
+        Exhibition exhibition = joinableExhibition(
+                "2345ABCD",
+                null
+        );
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionRepository.findByArtistJoinCode("2345ABCD"))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.empty());
+        when(exhibitionArtistMapRepository.save(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.joinExhibition(
+                accountId,
+                "2345ABCD",
+                "  참여하고 싶습니다  "
+        );
+
+        ArgumentCaptor<ExhibitionArtistMap> mapCaptor =
+                ArgumentCaptor.forClass(ExhibitionArtistMap.class);
+        verify(exhibitionArtistMapRepository).save(mapCaptor.capture());
+
+        ExhibitionArtistMap savedMap = mapCaptor.getValue();
+        assertEquals(ExhibitionArtistStatus.PENDING, savedMap.getStatus());
+        assertEquals("참여하고 싶습니다", savedMap.getGreeting());
+        assertSame(exhibition, savedMap.getExhibition());
+        assertSame(artist, savedMap.getArtist());
+        assertEquals(exhibition.getId(), response.exhibitionId());
+        assertEquals(ExhibitionArtistStatus.PENDING, response.status());
+    }
+
+    @Test
+    @DisplayName("거절된 작가는 기존 참여 관계를 PENDING 상태로 되돌려 재신청한다")
+    void reappliesWithExistingArtistMap() {
+        UUID accountId = UUID.randomUUID();
+        Artist artist = artist("재신청 작가", "join-reapply@test.com");
+        Exhibition exhibition = joinableExhibition(
+                "2345ABCD",
+                null
+        );
+        ExhibitionArtistMap existingMap = ExhibitionArtistMap.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .artist(artist)
+                .status(ExhibitionArtistStatus.DENIED)
+                .greeting("기존 인사말")
+                .build();
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionRepository.findByArtistJoinCode("2345ABCD"))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(existingMap));
+
+        var response = service.joinExhibition(
+                accountId,
+                "2345ABCD",
+                "  다시 신청합니다  "
+        );
+
+        assertEquals(ExhibitionArtistStatus.PENDING, existingMap.getStatus());
+        assertEquals("다시 신청합니다", existingMap.getGreeting());
+        assertEquals(ExhibitionArtistStatus.PENDING, response.status());
+        verify(exhibitionArtistMapRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("만료된 참여 코드로는 검증할 수 없다")
+    void rejectsExpiredJoinCode() {
+        UUID accountId = UUID.randomUUID();
+        Artist artist = artist("신청 작가", "join-expired@test.com");
+        Exhibition exhibition = joinableExhibition(
+                "2345ABCD",
+                LocalDateTime.now().minusMinutes(1)
+        );
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionRepository.findByArtistJoinCode("2345ABCD"))
+                .thenReturn(Optional.of(exhibition));
+
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.validateJoinCode(accountId, "2345ABCD")
+        );
+
+        assertEquals(
+                ExhibitionErrorCode.ARTIST_JOIN_CODE_EXPIRED,
+                exception.getErrorCode()
+        );
+        verifyNoInteractions(exhibitionArtistMapRepository);
+    }
+
     private Exhibition exhibition(UUID ownerId) {
         Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
 
@@ -754,12 +932,36 @@ class ExhibitionArtistServiceImplTest {
         return exhibition;
     }
 
+    private Exhibition joinableExhibition(
+            String artistJoinCode,
+            LocalDateTime artistJoinCodeExpiresAt
+    ) {
+        ExhibitionDetail detail = ExhibitionDetail.builder()
+                .title("졸업전시")
+                .build();
+
+        return Exhibition.builder()
+                .id(UUID.randomUUID())
+                .artistJoinCode(artistJoinCode)
+                .artistJoinCodeExpiresAt(artistJoinCodeExpiresAt)
+                .univName("두록대학교")
+                .deptName("시각디자인학과")
+                .slug("join-" + UUID.randomUUID())
+                .exhibitionDetail(detail)
+                .build();
+    }
+
     private Account account(UUID accountId, Role role) {
         return Account.builder()
                 .id(accountId)
                 .role(role)
                 .accountStatus(AccountStatus.ACTIVE)
                 .build();
+    }
+
+    private void mockAccount(UUID accountId, Role role) {
+        when(accountRepository.findById(accountId))
+                .thenReturn(Optional.of(account(accountId, role)));
     }
 
     private Artist artist(String name, String email) {

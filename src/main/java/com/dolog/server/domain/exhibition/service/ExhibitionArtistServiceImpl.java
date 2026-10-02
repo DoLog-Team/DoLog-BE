@@ -395,7 +395,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             );
         }
 
-        String normalized = rawCode.toUpperCase(Locale.ROOT);
+        String normalized = rawCode.strip().toUpperCase(Locale.ROOT);
 
         if (!normalized.matches("[2-9A-HJ-KM-NP-Z]{8}")) {
             throw new ExhibitionException(
