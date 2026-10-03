@@ -91,3 +91,5 @@ INFRA.md
 # Share onboarding docs while keeping other local docs excluded.
 !/docs/onboarding/
 !/docs/onboarding/**
+
+info/
