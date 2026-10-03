@@ -12,10 +12,7 @@ import com.dolog.server.domain.artist.exception.artistError.ArtistHasLinkedDataE
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
-import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistListItemResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
+import com.dolog.server.domain.artist.web.dto.response.*;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
@@ -225,12 +222,12 @@ public class ArtistServiceImpl implements ArtistService {
     // 작가 상세 조회
     @Override
     @Transactional(readOnly = true)
-    public ArtistResponse getArtist(UUID artistId) {
+    public ArtistPublicResponse getArtist(UUID artistId) {
 
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        return ArtistResponse.from(artist);
+        return ArtistPublicResponse.from(artist);
     }
 
 
