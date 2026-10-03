@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.web.dto.request.basic;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -49,5 +50,6 @@ public class ExhibitionDetailUpsertRequest {
 
     private LocalTime closeTime;
 
+    @Size(max = 255, message = "운영 안내는 255자 이하로 입력해주세요.")
     private String operationNotice;
 }
