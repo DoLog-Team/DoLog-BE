@@ -18,6 +18,7 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
     Optional<Exhibition> findByEntryCode(String entryCode);
     Optional<Exhibition> findByAccountId(UUID accountId);
     boolean existsByEntryCodeOrArtistJoinCode(String entryCode, String artistJoinCode);
+    Optional<Exhibition> findByArtistJoinCode(String artistJoinCode);
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Exhibition e where e.id = :id")
