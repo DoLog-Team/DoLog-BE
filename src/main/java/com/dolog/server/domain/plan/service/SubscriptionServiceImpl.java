@@ -64,7 +64,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     @Transactional
     public SubscriptionCreateResponse createSubscription(UUID exhibitionId, UUID accountId, SubscriptionCreateRequest request) {
-        Exhibition exhibition = findOwnedExhibitionOrThrow(exhibitionId, accountId);
+        // 잠금을 먼저 걸어야, 동시에 들어온 신청이 서로의 PENDING_PAYMENT 구독을 보지 못하는 상황을 막을 수 있다
+        Exhibition exhibition = lockOwnedExhibitionOrThrow(exhibitionId, accountId);
 
         boolean alreadySubscribed = subscriptionRepository.existsByExhibitionIdAndStatusIn(
                 exhibitionId, ONGOING_STATUSES
