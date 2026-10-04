@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -42,5 +43,11 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void markAllAsRead(UUID accountId) {
         notificationRepository.markAllAsRead(accountId);
+    }
+
+    @Override
+    @Transactional
+    public long deleteNotificationsCreatedBefore(LocalDateTime threshold) {
+        return notificationRepository.deleteByCreatedAtBefore(threshold);
     }
 }
