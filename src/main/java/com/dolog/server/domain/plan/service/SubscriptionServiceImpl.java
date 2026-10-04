@@ -76,6 +76,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         Plan plan = planRepository.findById(request.getPlanId())
                 .orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
+        requireActivePlan(plan);
 
         PlanPrice planPrice = plan.findPriceByCycle(request.getBillingCycle())
                 .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.PLAN_PRICE_NOT_FOUND));
@@ -116,6 +117,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         Plan targetPlan = planRepository.findById(request.getTargetPlanId())
                 .orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
+
+        requireActivePlan(targetPlan);
 
         PlanPrice targetPrice = targetPlan.findPriceByCycle(request.getBillingCycle())
                 .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.PLAN_PRICE_NOT_FOUND));
@@ -243,6 +246,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
         }
         return exhibition;
+    }
+
+    // 비활성(is_active=false) 요금제는 신규 신청과 플랜 변경에서 막음
+    private void requireActivePlan(Plan plan) {
+        if (!Boolean.TRUE.equals(plan.getIsActive())) {
+            throw new SubscriptionException(SubscriptionErrorCode.PLAN_NOT_ACTIVE);
+        }
     }
 
     private Exhibition findOwnedExhibitionOrThrow(UUID exhibitionId, UUID accountId) {
