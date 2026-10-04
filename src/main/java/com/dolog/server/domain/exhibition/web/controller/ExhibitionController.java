@@ -209,4 +209,16 @@ public class ExhibitionController {
         ExhibitionPublishResponse data = exhibitionService.extendExpiresAt(exhibitionId, request.getExpiresAt());
         return SuccessResponse.ok(data, "게시 기간 연장 성공");
     }
+
+    // 전시 어드민 홈 통합 조회 (전시 정보 보기 화면 최초 호출용)
+    @Operation(summary = "전시 어드민 홈 통합 조회")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @GetMapping("/{exhibitionId}/admin-home")
+    public SuccessResponse<ExhibitionAdminHomeResponse> getAdminHome(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId
+    ) {
+        ExhibitionAdminHomeResponse data = exhibitionService.getAdminHome(exhibitionId, user.getId());
+        return SuccessResponse.ok(data, "전시 어드민 홈 조회 성공");
+    }
 }

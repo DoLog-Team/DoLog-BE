@@ -14,6 +14,8 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionCustomThemeRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
@@ -50,6 +52,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final SubscriptionRepository subscriptionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final ExhibitionMapRepository exhibitionMapRepository;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
     private final FileService fileService;
     private final AccountRepository accountRepository;
@@ -549,5 +552,29 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         exhibition.extendExpiresAt(expiresAt);
 
         return ExhibitionPublishResponse.from(exhibition);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ExhibitionAdminHomeResponse getAdminHome(UUID exhibitionId, UUID accountId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+
+        ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
+                .orElse(null);
+
+        String planName = subscriptionRepository
+                .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibitionId, List.of(SubscriptionStatus.ACTIVE))
+                .map(subscription -> subscription.getPlan().getName())
+                .orElse(null);
+
+        long joinedCount = exhibitionArtistMapRepository.countByExhibitionIdAndStatus(exhibitionId, ExhibitionArtistStatus.JOINED);
+        long pendingCount = exhibitionArtistMapRepository.countByExhibitionIdAndStatus(exhibitionId, ExhibitionArtistStatus.PENDING);
+
+        return ExhibitionAdminHomeResponse.of(exhibition, detail, planName, joinedCount, pendingCount);
     }
 }
