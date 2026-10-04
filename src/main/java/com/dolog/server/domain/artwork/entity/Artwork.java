@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.entity;
 
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.global.entity.BaseEntity;
@@ -8,6 +9,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -71,10 +74,64 @@ public class Artwork extends BaseEntity implements Orderable {
     @Column(name = "order_index")
     private Integer orderIndex;
 
+    @Column(name = "short_intro")
+    private String shortIntro;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal width;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal height;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal depth;
+
+    @Column(name = "production_start_year")
+    private Integer productionStartYear;
+
+    @Column(name = "production_start_month")
+    private Integer productionStartMonth;
+
+    @Column(name = "production_start_day")
+    private Integer productionStartDay;
+
+    @Column(name = "production_end_year")
+    private Integer productionEndYear;
+
+    @Column(name = "production_end_month")
+    private Integer productionEndMonth;
+
+    @Column(name = "production_end_day")
+    private Integer productionEndDay;
+
+    @Column(name = "purchase_chat_url")
+    private String purchaseChatUrl;
+
+    @Column(name = "show_purchase_button")
+    private Boolean showPurchaseButton;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ArtworkStatus status = ArtworkStatus.DRAFT;
+
+    @Column(name = "hidden_at")
+    private LocalDateTime hiddenAt;
+
+    @Builder.Default
+    @Column(name = "view_count", nullable = false)
+    private long viewCount = 0L;
+
     @Builder.Default
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
+
+    @Builder.Default
+    @BatchSize(size = 100)
+    @OneToMany(mappedBy = "artwork", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    private List<ArtworkMaterial> materials = new ArrayList<>();
 
 
     /**
@@ -103,6 +160,42 @@ public class Artwork extends BaseEntity implements Orderable {
         if (locationMap != null) this.locationMap = locationMap;
         if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
         if (youtubeUrl != null) this.youtubeUrl = youtubeUrl;
+    }
+
+    public void changeStatus(ArtworkStatus status) {
+        this.status = status;
+    }
+
+    public void hide(LocalDateTime hiddenAt) {
+        this.hiddenAt = hiddenAt;
+    }
+
+    public void unhide() {
+        this.hiddenAt = null;
+    }
+
+    public boolean isHidden() {
+        return hiddenAt != null;
+    }
+
+    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 숨김이면 비노출
+    public boolean isVisibleOnDolog() {
+        return status == ArtworkStatus.PUBLISHED;
+    }
+
+    public boolean isVisibleOnExhibition() {
+        return isVisibleOnDolog() && !isHidden();
+    }
+
+    public void replaceMaterials(List<String> names) {
+        this.materials.clear();
+        for (int i = 0; i < names.size(); i++) {
+            this.materials.add(ArtworkMaterial.builder()
+                    .artwork(this)
+                    .name(names.get(i))
+                    .orderIndex(i + 1)
+                    .build());
+        }
     }
 
 
