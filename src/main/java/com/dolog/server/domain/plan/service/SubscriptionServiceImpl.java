@@ -223,6 +223,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         subscription.updateStatus(request.getStatus());
 
+        // 이미 게시된 전시라면, 구독이 활성화되는 시점에 전시 만료일을 구독 종료일로 맞춘다
+        if (subscription.getStatus() == SubscriptionStatus.ACTIVE && subscription.getExhibition().getPublishedAt() != null) {
+            subscription.getExhibition().applySubscriptionEnd(subscription.getEndedAt());
+        }
+
         return SubscriptionStatusUpdateResponse.from(subscription);
     }
 
