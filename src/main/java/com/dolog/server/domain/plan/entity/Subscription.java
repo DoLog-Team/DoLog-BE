@@ -7,7 +7,9 @@ import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Entity
@@ -47,11 +49,15 @@ public class Subscription extends BaseEntity {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
+    // 신청 시점의 실제 결제금액 스냅샷 (price × (1 - discountRate/100))
+    @Column(name = "paid_amount", precision = 10, scale = 2)
+    private BigDecimal paidAmount;
+
     public void updateStatus(SubscriptionStatus status) {
         this.status = status;
         if (status == SubscriptionStatus.ACTIVE && this.startedAt == null) {
             this.startedAt = LocalDateTime.now();
-            this.endedAt = this.startedAt.plusMonths(this.months);
+            this.endedAt = calculatePlannedEnd(this.startedAt, this.months);
         }
         if (status == SubscriptionStatus.CANCELED || status == SubscriptionStatus.EXPIRED) {
             // 자연 만료 전 조기 해지/종료된 경우, 계획된 만료일(endedAt)을 실제 종료 시각으로 덮어씀
@@ -65,8 +71,20 @@ public class Subscription extends BaseEntity {
         this.months = months;
     }
 
-    public void cancelSubscription() {
-        updateStatus(SubscriptionStatus.CANCELED);
+    /**
+     * 해지 시 종료 시각을 지정한다. ACTIVE 구독은 유예기간 끝(23:59:59)을, 미결제 구독은 해지 시각을 넘긴다.
+     */
+    public void cancelSubscription(LocalDateTime endedAt) {
+        this.status = SubscriptionStatus.CANCELED;
+        this.endedAt = endedAt;
+    }
+
+    /**
+     * 구독 시작일부터 months개월 뒤 전날 23:59:59까지를 계획 종료 시각으로 본다.
+     * 예: 10/4 시작, 1개월 → 11/3 23:59:59
+     */
+    public static LocalDateTime calculatePlannedEnd(LocalDateTime startedAt, Integer months) {
+        return startedAt.toLocalDate().plusMonths(months).minusDays(1).atTime(LocalTime.of(23, 59, 59));
     }
 
     /**

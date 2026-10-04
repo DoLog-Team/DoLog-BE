@@ -9,26 +9,37 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.plan.entity.Plan;
 import com.dolog.server.domain.plan.entity.PlanPrice;
 import com.dolog.server.domain.plan.entity.Subscription;
+import com.dolog.server.domain.plan.entity.SubscriptionRefund;
+import com.dolog.server.domain.plan.entity.SystemSetting;
 import com.dolog.server.domain.plan.entity.enums.PlanChangeType;
+import com.dolog.server.domain.plan.entity.enums.RefundStatus;
 import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
 import com.dolog.server.domain.plan.exception.PlanErrorCode;
 import com.dolog.server.domain.plan.exception.PlanException;
 import com.dolog.server.domain.plan.exception.SubscriptionErrorCode;
 import com.dolog.server.domain.plan.exception.SubscriptionException;
 import com.dolog.server.domain.plan.repository.PlanRepository;
+import com.dolog.server.domain.plan.repository.SubscriptionRefundRepository;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
+import com.dolog.server.domain.plan.repository.SystemSettingRepository;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionPlanChangeRequest;
+import com.dolog.server.domain.plan.web.dto.request.SubscriptionPolicyUpdateRequest;
 import com.dolog.server.domain.plan.web.dto.request.SubscriptionStatusUpdateRequest;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCancelResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionMyResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionPlanChangeResponse;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionPolicyResponse;
+import com.dolog.server.domain.plan.web.dto.response.SubscriptionRefundResponse;
 import com.dolog.server.domain.plan.web.dto.response.SubscriptionStatusUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -41,7 +52,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private static final List<SubscriptionStatus> ONGOING_STATUSES =
             List.of(SubscriptionStatus.PENDING_PAYMENT, SubscriptionStatus.ACTIVE);
 
+    public static final String CANCEL_GRACE_DAYS_KEY = "SUBSCRIPTION_CANCEL_GRACE_DAYS";
+
     private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionRefundRepository subscriptionRefundRepository;
+    private final SystemSettingRepository systemSettingRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final PlanRepository planRepository;
@@ -70,6 +85,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .plan(plan)
                 .billingCycle(request.getBillingCycle())
                 .months(planPrice.getMonths())
+                .paidAmount(planPrice.resolveDiscountedPrice())
                 .status(SubscriptionStatus.PENDING_PAYMENT)
                 .build();
 
@@ -117,10 +133,75 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Transactional
     public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId) {
         Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
+        LocalDateTime now = LocalDateTime.now();
 
-        subscription.cancelSubscription();
+        // 결제 전 구독은 환불할 금액이 없고, 전시의 만료일도 건드리지 않는다
+        if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
+            subscription.cancelSubscription(now);
+            return SubscriptionCancelResponse.from(subscription, null);
+        }
 
-        return SubscriptionCancelResponse.from(subscription);
+        // 해지 후 유예기간 끝(해당 날짜 23:59:59)까지 사용 가능, 그 이후 전시는 만료된다
+        LocalDateTime usageEndAt = LocalDate.now().plusDays(getCancelGraceDays()).atTime(LocalTime.of(23, 59, 59));
+
+        // 환불 계산은 계획된 종료일(endedAt)이 바뀌기 전에 해야 한다. 사용 일수는 해지한 날까지만 센다
+        SubscriptionRefund refund = SubscriptionRefund.calculate(subscription, now, now);
+        subscriptionRefundRepository.save(refund);
+
+        subscription.cancelSubscription(usageEndAt);
+        subscription.getExhibition().applySubscriptionEnd(usageEndAt);
+
+        return SubscriptionCancelResponse.from(subscription, refund.getRefundAmount());
+    }
+
+    @Override
+    public SubscriptionPolicyResponse getCancelPolicy() {
+        return SubscriptionPolicyResponse.of(getCancelGraceDays());
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionPolicyResponse updateCancelPolicy(SubscriptionPolicyUpdateRequest request) {
+        int days = request.getCancelGraceDays();
+
+        SystemSetting setting = systemSettingRepository.findById(CANCEL_GRACE_DAYS_KEY)
+                .orElseGet(() -> SystemSetting.builder().key(CANCEL_GRACE_DAYS_KEY).value("0").build());
+        setting.updateValue(String.valueOf(days));
+        systemSettingRepository.save(setting);
+
+        return SubscriptionPolicyResponse.of(days);
+    }
+
+    @Override
+    public List<SubscriptionRefundResponse> getRefunds(RefundStatus status) {
+        List<SubscriptionRefund> refunds = status != null
+                ? subscriptionRefundRepository.findByStatusOrderByRequestedAtDesc(status)
+                : subscriptionRefundRepository.findAllByOrderByRequestedAtDesc();
+
+        return refunds.stream()
+                .map(SubscriptionRefundResponse::from)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public SubscriptionRefundResponse completeRefund(UUID refundId) {
+        SubscriptionRefund refund = subscriptionRefundRepository.findById(refundId)
+                .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_REFUND_NOT_FOUND));
+
+        if (refund.getStatus() == RefundStatus.COMPLETED) {
+            throw new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_REFUND_ALREADY_COMPLETED);
+        }
+
+        refund.complete(LocalDateTime.now());
+
+        return SubscriptionRefundResponse.from(refund);
+    }
+
+    private int getCancelGraceDays() {
+        return systemSettingRepository.findById(CANCEL_GRACE_DAYS_KEY)
+                .map(setting -> Integer.parseInt(setting.getValue()))
+                .orElse(0);
     }
 
     @Override
