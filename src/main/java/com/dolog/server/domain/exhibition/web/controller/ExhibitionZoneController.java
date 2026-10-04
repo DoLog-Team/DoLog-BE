@@ -4,12 +4,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionZoneService;
+import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneBulkSaveRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCreateResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
+import com.dolog.server.global.security.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,6 +39,19 @@ public class ExhibitionZoneController {
     ) {
         ExhibitionZoneListResponse data = exhibitionZoneService.getZones(exhibitionId);
         return SuccessResponse.ok(data, "전시 구역 조회가 완료되었습니다.");
+    }
+
+    // 작품 그룹 일괄 저장 (본인 전시 어드민)
+    @Operation(summary = "작품 그룹 일괄 저장")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @PutMapping("/{exhibitionId}/zones")
+    public SuccessResponse<ExhibitionZoneListResponse> saveZones(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExhibitionZoneBulkSaveRequest request
+    ) {
+        ExhibitionZoneListResponse data = exhibitionZoneService.saveZones(exhibitionId, user.getId(), request);
+        return SuccessResponse.ok(data, "작품 그룹 저장 성공");
     }
 
     // 전시 구역 생성
