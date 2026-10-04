@@ -11,6 +11,7 @@ import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.account.repository.TermsAgreementRepository;
 import com.dolog.server.domain.account.service.AuthServiceImpl;
+import com.dolog.server.domain.account.service.GoogleClient;
 import com.dolog.server.domain.account.service.KakaoClient;
 import com.dolog.server.domain.account.service.SocialProfile;
 import com.dolog.server.domain.account.service.TermsAgreementService;
@@ -20,6 +21,8 @@ import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.global.jwt.JwtTokenProvider;
 import com.dolog.server.global.jwt.JwtUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -29,6 +32,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,7 +43,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
-// 카카오 통신·소셜 계정 처리·약관 동의 단위 테스트. Spring 컨텍스트 없이 실행한다.
+// 카카오·구글 통신, 소셜 계정 처리, 약관 동의 단위 테스트. Spring 컨텍스트 없이 실행한다.
 class SocialLoginTests {
 
     @Test
@@ -80,6 +84,54 @@ class SocialLoginTests {
     }
 
     @Test
+    @DisplayName("구글 인가 코드를 교환하고 검증된 이메일만 프로필에 담는다.")
+    void googleExchangesCodeAndAcceptsOnlyVerifiedEmail() {
+        var http = new RestTemplate();
+        var server = MockRestServiceServer.bindTo(http).build();
+        String redirectUri = "http://localhost:3000/oauth/callback/google";
+        var client = new GoogleClient(http, "client-id", "client-secret", redirectUri);
+
+        var rejected = assertThrows(BaseException.class,
+                () -> client.fetchProfile("code", "http://localhost:3000/oauth/callback/kakao"));
+        assertEquals(SocialLoginErrorCode.INVALID_REDIRECT_URI, rejected.getErrorCode());
+
+        server.expect(requestTo("https://oauth2.googleapis.com/token"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().string(containsString("grant_type=authorization_code")))
+                .andExpect(content().string(containsString(
+                        "redirect_uri=http%3A%2F%2Flocalhost%3A3000%2Foauth%2Fcallback%2Fgoogle")))
+                .andRespond(withSuccess("{\"access_token\":\"provider-token\",\"id_token\":\"x.y.z\"}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://openidconnect.googleapis.com/v1/userinfo"))
+                .andExpect(header("Authorization", "Bearer provider-token"))
+                .andRespond(withSuccess("{\"sub\":\"1097\",\"name\":\"작가\",\"email\":\"x@example.com\","
+                        + "\"email_verified\":false}", MediaType.APPLICATION_JSON));
+
+        var profile = client.fetchProfile("code", redirectUri);
+        assertEquals("1097", profile.providerId());
+        assertEquals("작가", profile.name());
+        assertNull(profile.email());
+        server.verify();
+
+        server.reset();
+        server.expect(requestTo("https://oauth2.googleapis.com/token"))
+                .andRespond(withSuccess("{\"access_token\":\"provider-token\"}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo("https://openidconnect.googleapis.com/v1/userinfo"))
+                .andExpect(header("Authorization", "Bearer provider-token"))
+                .andRespond(withSuccess("{\"sub\":\"1097\",\"email\":\"x@example.com\","
+                        + "\"email_verified\":true}", MediaType.APPLICATION_JSON));
+        assertEquals("x@example.com", client.fetchProfile("verified-code", redirectUri).email());
+        server.verify();
+
+        server.reset();
+        server.expect(requestTo("https://oauth2.googleapis.com/token"))
+                .andRespond(withBadRequest().body("{\"error\":\"invalid_grant\",\"error_description\":\"Bad Request\"}"));
+        var invalidCode = assertThrows(BaseException.class, () -> client.fetchProfile("used-code", redirectUri));
+        assertEquals(SocialLoginErrorCode.INVALID_AUTHORIZATION_CODE, invalidCode.getErrorCode());
+        server.verify();
+    }
+
+    @Test
     @DisplayName("최초 소셜 로그인은 ARTIST_ADMIN 계정을 만들고 기존 토큰 발급을 재사용한다.")
     void socialLoginCreatesAccountAndReusesTokenIssuance() {
         var accountRepo = mock(AccountRepository.class);
@@ -114,6 +166,35 @@ class SocialLoginTests {
         assertTrue(new ObjectMapper().valueToTree(result).path("isFirstLogin").asBoolean());
         verify(accountRepo).saveAndFlush(argThat(created -> created.getPassword() == null
                 && created.getRole() == Role.ARTIST_ADMIN && created.getAccountStatus() == AccountStatus.ACTIVE));
+
+        when(accountRepo.findBySocialProviderAndSocialProviderId("GOOGLE", "999")).thenReturn(Optional.empty());
+        when(accountRepo.existsByEmail("verified@example.com")).thenReturn(true);
+        var linked = assertThrows(BaseException.class, () -> auth.socialLogin(SocialProvider.GOOGLE,
+                new SocialProfile("999", null, "verified@example.com")));
+        assertEquals(SocialLoginErrorCode.EMAIL_ALREADY_LINKED, linked.getErrorCode());
+
+        // 사전 조회 후 다른 요청이 같은 이메일을 저장한 상황을 재현한다.
+        when(accountRepo.existsByEmail("verified@example.com")).thenReturn(false);
+        clearInvocations(jwtProvider, tokenRepo);
+        for (String constraint : new String[]{"UKn7ihswpy07ci568w34q0oi8he",
+                "accounts.UKn7ihswpy07ci568w34q0oi8he"}) {
+            var duplicate = new DataIntegrityViolationException("duplicate",
+                    new ConstraintViolationException("duplicate", new SQLException(), constraint));
+            doThrow(duplicate).when(accountRepo).saveAndFlush(any(Account.class));
+            var concurrent = assertThrows(BaseException.class, () -> auth.socialLogin(SocialProvider.GOOGLE,
+                    new SocialProfile("999", null, "verified@example.com")));
+            assertEquals(SocialLoginErrorCode.EMAIL_ALREADY_LINKED, concurrent.getErrorCode());
+        }
+        // 다른 제약 위반이나 제약 이름을 알 수 없는 오류는 이메일 충돌로 오인하지 않는다.
+        for (String constraint : new String[]{"uk_accounts_social_identity", null}) {
+            var other = new DataIntegrityViolationException("other",
+                    new ConstraintViolationException("other", new SQLException(), constraint));
+            doThrow(other).when(accountRepo).saveAndFlush(any(Account.class));
+            assertSame(other, assertThrows(DataIntegrityViolationException.class,
+                    () -> auth.socialLogin(SocialProvider.GOOGLE,
+                            new SocialProfile("999", null, "verified@example.com"))));
+        }
+        verifyNoInteractions(jwtProvider, tokenRepo);
     }
 
     @Test

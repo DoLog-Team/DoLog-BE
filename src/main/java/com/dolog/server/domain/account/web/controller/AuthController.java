@@ -3,7 +3,7 @@ package com.dolog.server.domain.account.web.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.account.service.AuthService;
-import com.dolog.server.domain.account.service.KakaoClient;
+import com.dolog.server.domain.account.service.OAuthCodeClient;
 import com.dolog.server.domain.account.entity.enums.SocialProvider;
 import com.dolog.server.domain.account.exception.SocialLoginErrorCode;
 import com.dolog.server.domain.account.web.dto.request.SocialLoginRequest;
@@ -19,18 +19,27 @@ import com.dolog.server.domain.account.web.dto.response.LoginResponse;
 import com.dolog.server.domain.account.web.dto.response.TokenResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Tag(name = "account")
 @RestController
 @RequestMapping("/auth")
-@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-    private final KakaoClient kakaoClient;
+    private final Map<SocialProvider, OAuthCodeClient> socialClients;
+
+    public AuthController(AuthService authService, List<OAuthCodeClient> socialClients) {
+        this.authService = authService;
+        this.socialClients = socialClients.stream()
+                .collect(Collectors.toUnmodifiableMap(OAuthCodeClient::provider, Function.identity()));
+    }
 
     // 로그인
     @Operation(summary = "로그인")
@@ -50,10 +59,11 @@ public class AuthController {
     @Operation(summary = "소셜 로그인/가입")
     @PostMapping("/social/login")
     public SuccessResponse<SocialLoginResponse> socialLogin(@Valid @RequestBody SocialLoginRequest request) {
-        if (request.provider() != SocialProvider.KAKAO) {
+        var client = socialClients.get(request.provider());
+        if (client == null) {
             throw new BaseException(SocialLoginErrorCode.PROVIDER_NOT_SUPPORTED);
         }
-        var profile = kakaoClient.fetchProfile(request.authorizationCode(), request.redirectUri());
+        var profile = client.fetchProfile(request.authorizationCode(), request.redirectUri());
         return SuccessResponse.ok(authService.socialLogin(request.provider(), profile), "소셜 로그인 성공");
     }
 
