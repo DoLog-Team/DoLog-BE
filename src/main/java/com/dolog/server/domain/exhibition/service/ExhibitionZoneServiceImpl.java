@@ -46,6 +46,16 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         return ExhibitionZoneListResponse.from(sortedZones);
     }
 
+    // 두록 어드민은 모든 전시를, 전시 어드민은 본인 전시만 다룰 수 있다
+    private void requireOwnerUnlessDologAdmin(Exhibition exhibition, UUID accountId, boolean isDologAdmin) {
+        if (isDologAdmin) {
+            return;
+        }
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+    }
+
     // 작품 그룹 일괄 저장: 요청 목록으로 전체를 교체한다
     @Override
     public ExhibitionZoneListResponse saveZones(UUID exhibitionId, UUID accountId, ExhibitionZoneBulkSaveRequest request) {
@@ -98,9 +108,10 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
     }
 
     @Override
-    public ExhibitionZoneCreateResponse createZone(UUID exhibitionId, ExhibitionZoneCreateRequest request) {
+    public ExhibitionZoneCreateResponse createZone(UUID exhibitionId, UUID accountId, boolean isDologAdmin, ExhibitionZoneCreateRequest request) {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+        requireOwnerUnlessDologAdmin(exhibition, accountId, isDologAdmin);
 
         ExhibitionZone zone = ExhibitionZone.builder()
                 .exhibition(exhibition)
@@ -115,9 +126,10 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
     }
 
     @Override
-    public ExhibitionZoneUpdateResponse updateZone(UUID zoneId, ExhibitionZoneUpdateRequest request) {
+    public ExhibitionZoneUpdateResponse updateZone(UUID zoneId, UUID accountId, boolean isDologAdmin, ExhibitionZoneUpdateRequest request) {
         ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+        requireOwnerUnlessDologAdmin(zone.getExhibition(), accountId, isDologAdmin);
 
         zone.update(request.getName(), TextUtils.normalizeNewlines(request.getDescription()), request.getOrderId());
 
@@ -125,9 +137,10 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
     }
 
     @Override
-    public void deleteZone(UUID zoneId) {
+    public void deleteZone(UUID zoneId, UUID accountId, boolean isDologAdmin) {
         ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+        requireOwnerUnlessDologAdmin(zone.getExhibition(), accountId, isDologAdmin);
 
         exhibitionZoneRepository.delete(zone);
     }
