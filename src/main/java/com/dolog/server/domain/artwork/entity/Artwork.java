@@ -5,6 +5,7 @@ import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.global.entity.BaseEntity;
 import com.dolog.server.global.order.Orderable;
+import com.dolog.server.global.util.TextUtils;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.BatchSize;
@@ -162,6 +163,47 @@ public class Artwork extends BaseEntity implements Orderable {
         if (youtubeUrl != null) this.youtubeUrl = youtubeUrl;
     }
 
+    // 아래 update 메서드들은 PATCH 용으로 null(안 보냄)은 무시하고, 선택 문자열의 빈 값은 비우기(null)로 본다.
+    public void updateText(String title, String category, String description, String shortIntro) {
+        if (title != null) this.title = title;
+        if (category != null) this.category = TextUtils.blankToNull(category);
+        if (description != null) this.description = description;
+        if (shortIntro != null) this.shortIntro = TextUtils.blankToNull(shortIntro);
+    }
+
+    public void updateSize(BigDecimal width, BigDecimal height, BigDecimal depth) {
+        if (width != null) this.width = width;
+        if (height != null) this.height = height;
+        if (depth != null) this.depth = depth;
+    }
+
+    public void updateProductionPeriod(Integer startYear, Integer startMonth, Integer startDay,
+                                       Integer endYear, Integer endMonth, Integer endDay) {
+        if (startYear != null) this.productionStartYear = startYear;
+        if (startMonth != null) this.productionStartMonth = startMonth;
+        if (startDay != null) this.productionStartDay = startDay;
+        if (endYear != null) this.productionEndYear = endYear;
+        if (endMonth != null) this.productionEndMonth = endMonth;
+        if (endDay != null) this.productionEndDay = endDay;
+    }
+
+    public void updatePurchaseInfo(String purchaseUrl, String purchaseChatUrl,
+                                   Boolean showPurchaseButton, String youtubeUrl) {
+        if (purchaseUrl != null) this.purchaseUrl = TextUtils.blankToNull(purchaseUrl);
+        if (purchaseChatUrl != null) this.purchaseChatUrl = TextUtils.blankToNull(purchaseChatUrl);
+        if (showPurchaseButton != null) this.showPurchaseButton = showPurchaseButton;
+        if (youtubeUrl != null) this.youtubeUrl = TextUtils.blankToNull(youtubeUrl);
+    }
+
+    public void updateMainImg(String mainImg) {
+        if (mainImg != null) this.mainImg = mainImg;
+    }
+
+    public boolean isLinkedTo(UUID artistId) {
+        return artworkArtistMaps.stream()
+                .anyMatch(map -> map.getArtist().getId().equals(artistId));
+    }
+
     public void changeStatus(ArtworkStatus status) {
         this.status = status;
     }
@@ -187,12 +229,18 @@ public class Artwork extends BaseEntity implements Orderable {
         return isVisibleOnDolog() && !isHidden();
     }
 
+    // 공백 이름은 버린다. multipart 에서 빈 값 하나만 보내면 재료 전체 삭제가 된다.
     public void replaceMaterials(List<String> names) {
+        List<String> trimmed = names.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .map(String::trim)
+                .toList();
+
         this.materials.clear();
-        for (int i = 0; i < names.size(); i++) {
+        for (int i = 0; i < trimmed.size(); i++) {
             this.materials.add(ArtworkMaterial.builder()
                     .artwork(this)
-                    .name(names.get(i))
+                    .name(trimmed.get(i))
                     .orderIndex(i + 1)
                     .build());
         }
