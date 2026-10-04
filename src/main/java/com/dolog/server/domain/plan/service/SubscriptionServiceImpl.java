@@ -124,6 +124,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         subscription.changePlan(targetPlan, request.getBillingCycle(), targetPrice.getMonths());
 
+        // 결제 전에는 바뀐 플랜 기준 금액으로 결제되므로 결제금액도 갱신한다 (활성 구독은 차액 정산 정책 확정 후 처리)
+        if (subscription.getStatus() == SubscriptionStatus.PENDING_PAYMENT) {
+            subscription.updatePaidAmount(targetPrice.resolveDiscountedPrice());
+        }
+
         // TODO: Artwork 도메인에 "플랜 한도 초과 미노출" 자동 전환 기능이 생기면 여기서 호출 연동 필요
         // (다운그레이드 시 연결 순서 기준 초과분 자동 미노출 / 업그레이드 시 자동 재공개 — 피그마 "작품 수 초과에 따른 예외처리" 참고)
 
