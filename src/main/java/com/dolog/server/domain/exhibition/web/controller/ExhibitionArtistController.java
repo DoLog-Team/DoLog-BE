@@ -23,7 +23,6 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.util.List;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -37,7 +36,7 @@ public class ExhibitionArtistController {
     // 전시 참여 작가 목록 조회
     @Operation(summary = "전시 참여 작가 목록 조회")
     @GetMapping("/{exhibitionId}/artists")
-    public SuccessResponse<List<ExhibitionArtistListResponse>> getArtists(
+    public SuccessResponse<ExhibitionArtistListResponse> getArtists(
             @PathVariable UUID exhibitionId,
             @RequestParam(defaultValue = "NAME") String sort
     ) {

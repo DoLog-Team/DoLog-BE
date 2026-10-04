@@ -18,6 +18,7 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
@@ -120,7 +121,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
     // 전시 작가 리스트 조회
     @Override
     @Transactional(readOnly = true)
-    public List<ExhibitionArtistListResponse> getArtistsByExhibition(
+    public ExhibitionArtistListResponse getArtistsByExhibition(
             UUID exhibitionId,
             String sort
     ) {
@@ -129,24 +130,24 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
         }
 
-        List<ExhibitionArtistListResponse> artists =
+        List<ExhibitionArtistItemResponse> artists =
                 exhibitionArtistMapRepository.findArtists(exhibitionId);
 
         // 랜덤 정렬
         if ("RANDOM".equalsIgnoreCase(sort)) {
             Collections.shuffle(artists);
-            return artists;
+            return ExhibitionArtistListResponse.from(artists);
         }
 
         // 기본: 가나다순
         artists.sort(
                 Comparator.comparing(
-                        ExhibitionArtistListResponse::getNameKo,
+                        ExhibitionArtistItemResponse::getNameKo,
                         Comparator.nullsLast(String::compareTo)
                 )
         );
 
-        return artists;
+        return ExhibitionArtistListResponse.from(artists);
     }
 
     // 전시 작가 제외 (참여 이력은 삭제하지 않고 REMOVED로 전환)

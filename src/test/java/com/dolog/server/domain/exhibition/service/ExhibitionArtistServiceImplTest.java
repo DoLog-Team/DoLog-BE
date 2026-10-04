@@ -20,6 +20,7 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -72,6 +74,78 @@ class ExhibitionArtistServiceImplTest {
 
     @InjectMocks
     private ExhibitionArtistServiceImpl service;
+
+    @Test
+    @DisplayName("전시 참여 작가 목록은 이름순으로 정렬하고 전체 인원 수를 반환한다")
+    void returnsArtistsSortedByNameWithTotalCount() {
+        UUID exhibitionId = UUID.randomUUID();
+        ExhibitionArtistItemResponse first =
+                new ExhibitionArtistItemResponse(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "김두록",
+                        "Dolog Kim",
+                        "https://cdn.test/first.webp"
+                );
+        ExhibitionArtistItemResponse second =
+                new ExhibitionArtistItemResponse(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "박두록",
+                        null,
+                        null
+                );
+
+        when(exhibitionRepository.existsById(exhibitionId))
+                .thenReturn(true);
+        when(exhibitionArtistMapRepository.findArtists(exhibitionId))
+                .thenReturn(new ArrayList<>(List.of(second, first)));
+
+        var response = service.getArtistsByExhibition(
+                exhibitionId,
+                "NAME"
+        );
+
+        assertEquals(List.of(first, second), response.getArtists());
+        assertEquals(2, response.getTotalCount());
+        verify(exhibitionArtistMapRepository).findArtists(exhibitionId);
+    }
+
+    @Test
+    @DisplayName("RANDOM 정렬에서도 참여 작가 목록과 전체 인원 수를 반환한다")
+    void returnsArtistsWithTotalCountWhenRandomSortRequested() {
+        UUID exhibitionId = UUID.randomUUID();
+        ExhibitionArtistItemResponse first =
+                new ExhibitionArtistItemResponse(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "김두록",
+                        null,
+                        null
+                );
+        ExhibitionArtistItemResponse second =
+                new ExhibitionArtistItemResponse(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "박두록",
+                        null,
+                        null
+                );
+
+        when(exhibitionRepository.existsById(exhibitionId))
+                .thenReturn(true);
+        when(exhibitionArtistMapRepository.findArtists(exhibitionId))
+                .thenReturn(new ArrayList<>(List.of(first, second)));
+
+        var response = service.getArtistsByExhibition(
+                exhibitionId,
+                "RANDOM"
+        );
+
+        assertEquals(2, response.getArtists().size());
+        assertTrue(response.getArtists().containsAll(List.of(first, second)));
+        assertEquals(2, response.getTotalCount());
+    }
 
     @Test
     @DisplayName("DELETE 제외는 참여 행을 유지한 채 REMOVED로 전환하고 출품작 연결을 해제한다")

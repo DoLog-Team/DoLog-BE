@@ -17,7 +17,10 @@ public interface ExhibitionArtistService {
             UUID exhibitionId,
             UUID artistId
     );
-    List<ExhibitionArtistListResponse> getArtistsByExhibition(UUID exhibitionId, String sort);
+    ExhibitionArtistListResponse getArtistsByExhibition(
+            UUID exhibitionId,
+            String sort
+    );
     void removeArtistFromExhibition(
             UUID accountId,
             UUID exhibitionId,

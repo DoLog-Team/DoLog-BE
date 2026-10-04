@@ -3,7 +3,6 @@ package com.dolog.server.domain.artist.repository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

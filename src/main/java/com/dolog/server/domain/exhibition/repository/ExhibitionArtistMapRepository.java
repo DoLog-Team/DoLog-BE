@@ -2,7 +2,7 @@ package com.dolog.server.domain.exhibition.repository;
 
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,22 +30,21 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     );
 
     @Query("""
-        SELECT new com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse(
-            a.id,
+        SELECT new com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse(
             p.id,
+            a.id,
             a.nameKo,
             a.nameEn,
-            p.profileImg,
-            p.isPublic
+            p.profileImg
         )
         FROM ExhibitionArtistMap m
         JOIN m.artist a
-        LEFT JOIN ArtistProfile p
+        JOIN ArtistProfile p
             ON p.artist = a AND p.exhibition.id = :exhibitionId
         WHERE m.exhibition.id = :exhibitionId
                 AND m.status = com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
         """)
-    List<ExhibitionArtistListResponse> findArtists(UUID exhibitionId);
+    List<ExhibitionArtistItemResponse> findArtists(UUID exhibitionId);
 
     @Query("""
         SELECT m.artist.id
