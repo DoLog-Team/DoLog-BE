@@ -1,10 +1,11 @@
 package com.dolog.server.domain.exhibition.web.dto.request.artist;
 
-import lombok.Getter;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.UUID;
 
-@Getter
-public class AddArtistRequest {
-    private UUID artistId;
+public record AddArtistRequest(
+        @NotNull(message = "추가할 작가 ID를 입력해주세요.")
+        UUID artistId
+) {
 }

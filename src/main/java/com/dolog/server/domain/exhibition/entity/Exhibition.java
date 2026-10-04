@@ -40,6 +40,9 @@ public class Exhibition extends BaseEntity {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
+    @Column(name = "artist_join_code_expires_at")
+    private LocalDateTime artistJoinCodeExpiresAt;
+
     public void reissueEntryCode(String code, LocalDateTime codeExpiresAt) {
         this.entryCode = code;
         this.entryCodeExpiresAt = codeExpiresAt;
@@ -58,6 +61,23 @@ public class Exhibition extends BaseEntity {
     public void requireEntryCodeValid() {
         if (entryCodeExpiresAt != null && !entryCodeExpiresAt.isAfter(LocalDateTime.now())) {
             throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_EXPIRED);
+        }
+    }
+
+    public void reissueArtistJoinCode(
+            String artistJoinCode,
+            LocalDateTime artistJoinCodeExpiresAt
+    ) {
+        this.artistJoinCode = artistJoinCode;
+        this.artistJoinCodeExpiresAt = artistJoinCodeExpiresAt;
+    }
+
+    public void requireArtistJoinCodeValid() {
+        if (artistJoinCodeExpiresAt != null
+                && !artistJoinCodeExpiresAt.isAfter(LocalDateTime.now())) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.ARTIST_JOIN_CODE_EXPIRED
+            );
         }
     }
 

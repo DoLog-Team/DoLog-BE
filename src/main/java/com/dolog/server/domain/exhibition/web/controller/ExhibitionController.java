@@ -1,15 +1,11 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
-import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionMetaUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.basic.EntryCodeRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.service.ExhibitionService;
-import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
@@ -165,5 +161,26 @@ public class ExhibitionController {
     ) throws java.io.IOException {
         ExhibitionDetailUpsertResponse data = exhibitionService.upsertExhibitionDetail(exhibitionId, request);
         return SuccessResponse.ok(data);
+    }
+
+    @Operation(summary = "작가 참여 코드 발급·재발급")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PostMapping("/{exhibitionId}/artist-join-code")
+    public ResponseEntity<SuccessResponse<ArtistJoinCodeResponse>>
+    reissueArtistJoinCode(
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ArtistJoinCodeRequest request
+    ) {
+        ArtistJoinCodeResponse response =
+                exhibitionService.reissueArtistJoinCode(
+                        exhibitionId,
+                        request.getExpiresAt()
+                );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(
+                        response,
+                        "작가 참여 코드 재발급 성공"
+                ));
     }
 }
