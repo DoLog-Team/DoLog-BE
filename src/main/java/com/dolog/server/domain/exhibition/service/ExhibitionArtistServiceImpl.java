@@ -156,13 +156,16 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             UUID exhibitionId,
             UUID artistId
     ) {
-        Account actor = accountRepository.findById(accountId)
-                .orElseThrow(JwtInvalidException::new);
-
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+        // 같은 전시의 작가 변경 요청을 직렬화한다.
+        // 관련 정보를 조회하기 전에 반드시 잠금을 먼저 획득한다.
+        Exhibition exhibition = exhibitionRepository
+                .findByIdForUpdate(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(
                         ExhibitionErrorCode.EXHIBITION_NOT_FOUND
                 ));
+
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
 
         requireCanManageArtists(actor, exhibition);
 
@@ -240,13 +243,16 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             List<UUID> artistIds,
             ExhibitionArtistStatus targetStatus
     ) {
-        Account actor = accountRepository.findById(accountId)
-                .orElseThrow(JwtInvalidException::new);
-
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+        // DELETE와 동일한 전시 행을 먼저 잠근다.
+        Exhibition exhibition = exhibitionRepository
+                .findByIdForUpdate(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(
                         ExhibitionErrorCode.EXHIBITION_NOT_FOUND
                 ));
+
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+
         requireCanManageArtists(actor, exhibition);
 
         requireAllowedTargetStatus(targetStatus);

@@ -63,7 +63,7 @@ class ExhibitionServiceImplTest {
                 .artistJoinCode("2345ABCD")
                 .build();
 
-        when(exhibitionRepository.findForCodeUpdate(exhibitionId))
+        when(exhibitionRepository.findByIdForUpdate(exhibitionId))
                 .thenReturn(Optional.of(exhibition));
         when(exhibitionRepository.existsByEntryCodeOrArtistJoinCode(
                 anyString(),

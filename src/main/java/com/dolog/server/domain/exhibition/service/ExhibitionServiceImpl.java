@@ -314,7 +314,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         if (expiresAt != null && !expiresAt.isAfter(LocalDateTime.now())) {
             throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_EXPIRY_INVALID);
         }
-        Exhibition exhibition = exhibitionRepository.findForCodeUpdate(exhibitionId)
+        Exhibition exhibition = exhibitionRepository.findByIdForUpdate(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
         exhibition.reissueEntryCode(generateCode(), expiresAt);
         return new EntryCodeResponse(exhibition.getEntryCode(), exhibition.getEntryCodeExpiresAt());
@@ -501,7 +501,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         }
 
         Exhibition exhibition =
-                exhibitionRepository.findForCodeUpdate(exhibitionId)
+                exhibitionRepository.findByIdForUpdate(exhibitionId)
                         .orElseThrow(() -> new ExhibitionException(
                                 ExhibitionErrorCode.EXHIBITION_NOT_FOUND
                         ));
