@@ -9,6 +9,7 @@ import com.dolog.server.domain.account.service.AccountService;
 import com.dolog.server.domain.account.service.TermsAgreementService;
 import com.dolog.server.domain.account.web.dto.request.TermsAgreementRequest;
 import com.dolog.server.domain.account.web.dto.response.TermsAgreementResponse;
+import com.dolog.server.domain.account.web.dto.response.TermsAgreementDetailResponse;
 import com.dolog.server.domain.account.web.dto.request.AdminCreateRequest;
 import com.dolog.server.domain.account.web.dto.request.ChangePasswordRequest;
 import com.dolog.server.domain.account.web.dto.response.AccountResponse;
@@ -57,6 +58,14 @@ public class AccountController {
     @GetMapping("/me")
     public SuccessResponse<MyAccountResponse> getMyAccount(@AuthenticationPrincipal CustomUserDetails user) {
         return SuccessResponse.ok(accountService.getMyAccount(user.getId()), "계정 정보 조회 성공");
+    }
+
+    @Operation(summary = "내 최신 약관 동의 내역 조회")
+    @GetMapping("/me/terms")
+    @PreAuthorize("hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN')")
+    public SuccessResponse<TermsAgreementDetailResponse> getTermsAgreement(
+            @AuthenticationPrincipal CustomUserDetails user) {
+        return SuccessResponse.ok(termsAgreementService.getLatestAgreement(user.getId()), "약관 동의 내역 조회 성공");
     }
 
     @Operation(summary = "내 약관 동의 저장")

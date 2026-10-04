@@ -235,4 +235,38 @@ class SocialLoginTests {
                 new TermsAgreementRequest("v1.0", true, true, true, false, false, false)));
         verify(agreements, times(1)).save(any(TermsAgreement.class));
     }
+    @Test
+    @DisplayName("최신 약관 조회는 저장된 항목을 반환하며 이력이 없으면 404다.")
+    void latestAgreementReturnsStoredConsentsAndRejectsMissingHistory() {
+        var agreements = mock(TermsAgreementRepository.class);
+        // 설정 버전이 바뀌거나 비어 있어도 기존 동의 내역은 조회할 수 있다.
+        var service = new TermsAgreementService(agreements, mock(AccountRepository.class), "");
+        UUID accountId = UUID.randomUUID();
+        var agreedAt = LocalDateTime.of(2026, 10, 4, 12, 0);
+        when(agreements.findFirstByAccountIdOrderByAgreedAtDescIdDesc(accountId))
+                .thenReturn(Optional.of(TermsAgreement.builder().termsVersion("old")
+                        .agreedAt(agreedAt).age14OrOverConfirmed(true)
+                        .serviceTermsAgreed(true).privacyAgreed(true).privacy3rdPartyAgreed(false)
+                        .promotionAgreed(null).marketingAgreed(true)
+                        .adEmailAgreed(true).adKakaoAgreed(false).adSmsAgreed(null).build()));
+        var result = service.getLatestAgreement(accountId);
+        assertEquals(agreedAt, result.agreedAt());
+        assertEquals("old", result.terms().termsVersion());
+        assertTrue(result.terms().age14OrOverConfirmed());
+        assertTrue(result.terms().serviceTermsAgreed());
+        assertTrue(result.terms().privacyAgreed());
+        assertFalse(result.terms().privacy3rdPartyAgreed());
+        assertNull(result.terms().promotionAgreed());
+        assertEquals(Boolean.TRUE, result.terms().marketingAgreed());
+        assertEquals(Boolean.TRUE, result.terms().adEmailAgreed());
+        assertEquals(Boolean.FALSE, result.terms().adKakaoAgreed());
+        assertNull(result.terms().adSmsAgreed());
+        UUID otherAccountId = UUID.randomUUID();
+        var error = assertThrows(BaseException.class, () -> service.getLatestAgreement(otherAccountId));
+        assertEquals(com.dolog.server.domain.account.exception.AccountErrorCode.TERMS_NOT_FOUND,
+                error.getErrorCode());
+        assertEquals(404, error.getErrorCode().getHttpStatus());
+        verify(agreements, never()).save(any());
+    }
+
 }
