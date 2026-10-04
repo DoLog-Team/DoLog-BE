@@ -20,6 +20,8 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
+import org.springframework.data.domain.PageImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -914,6 +918,142 @@ class ExhibitionArtistServiceImplTest {
                 exception.getErrorCode()
         );
         verifyNoInteractions(exhibitionArtistMapRepository);
+    }
+
+    @Test
+    @DisplayName("전시 관리자는 상태와 검색 조건으로 자신의 전시 작가를 조회한다")
+    void getsArtistsForManagementWithFilters() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+
+        LocalDateTime appliedAt = LocalDateTime.now();
+        ExhibitionArtistManageItemResponse item =
+                new ExhibitionArtistManageItemResponse(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "김지우",
+                        "Jiwoo Kim",
+                        "profile.jpg",
+                        ExhibitionArtistStatus.PENDING,
+                        "전시에 참여하고 싶습니다.",
+                        appliedAt
+                );
+
+        PageRequest pageable = PageRequest.of(0, 10);
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(exhibitionArtistMapRepository.findArtistsForManagement(
+                exhibition.getId(),
+                ExhibitionArtistStatus.PENDING,
+                "지우",
+                pageable
+        )).thenReturn(new PageImpl<>(
+                List.of(item),
+                pageable,
+                1
+        ));
+
+        var response = service.getArtistsForManagement(
+                ownerId,
+                exhibition.getId(),
+                ExhibitionArtistStatus.PENDING,
+                "  지우  ",
+                0,
+                10
+        );
+
+        assertEquals(1, response.artists().size());
+        assertEquals(item, response.artists().get(0));
+        assertEquals(1, response.totalElements());
+        assertEquals(1, response.totalPages());
+
+        verify(exhibitionArtistMapRepository).findArtistsForManagement(
+                exhibition.getId(),
+                ExhibitionArtistStatus.PENDING,
+                "지우",
+                pageable
+        );
+    }
+
+    @Test
+    @DisplayName("전시 관리자는 다른 관리자의 전시 작가 목록을 조회할 수 없다")
+    void exhibitionAdminCannotGetArtistsFromAnotherExhibition() {
+        UUID actorId = UUID.randomUUID();
+        Account actor = account(actorId, Role.EXHIBITION_ADMIN);
+
+        // actorId와 다른 ID를 소유자로 지정한다.
+        Exhibition exhibition = exhibition(UUID.randomUUID());
+
+        when(accountRepository.findById(actorId))
+                .thenReturn(Optional.of(actor));
+
+        assertThrows(
+                AccessDeniedException.class,
+                () -> service.getArtistsForManagement(
+                        actorId,
+                        exhibition.getId(),
+                        null,
+                        null,
+                        0,
+                        10
+                )
+        );
+
+        verify(
+                exhibitionArtistMapRepository,
+                never()
+        ).findArtistsForManagement(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("음수 페이지로 관리자용 작가 목록을 조회할 수 없다")
+    void rejectsNegativePage() {
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.getArtistsForManagement(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        null,
+                        null,
+                        -1,
+                        10
+                )
+        );
+
+        assertEquals(
+                ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID,
+                exception.getErrorCode()
+        );
+
+        verifyNoInteractions(
+                accountRepository,
+                exhibitionRepository,
+                exhibitionArtistMapRepository
+        );
+    }
+
+    @Test
+    @DisplayName("한 번에 100명을 초과하여 조회할 수 없다")
+    void rejectsTooLargePageSize() {
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.getArtistsForManagement(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        null,
+                        null,
+                        0,
+                        101
+                )
+        );
+
+        assertEquals(
+                ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID,
+                exception.getErrorCode()
+        );
     }
 
     private Exhibition exhibition(UUID ownerId) {

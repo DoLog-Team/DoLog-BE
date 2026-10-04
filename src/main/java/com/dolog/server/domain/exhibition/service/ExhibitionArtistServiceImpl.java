@@ -17,10 +17,7 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.*;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
@@ -29,6 +26,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -294,6 +293,54 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         }
 
         return new ExhibitionArtistStatusUpdateResponse(maps.size());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    // 관리자용 작가 목록을 조회하기 전에 요청값과 권한을 검사하고, 검색 조건을 정리한 뒤 페이지 단위로 조회
+    public ExhibitionArtistManageListResponse getArtistsForManagement(
+            UUID accountId,
+            UUID exhibitionId,
+            ExhibitionArtistStatus status,
+            String search,
+            int page,
+            int size
+    ) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID
+            );
+        }
+
+        // 요청을 보낸 사용자 정보 조회
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+
+        // 관리 대상 전시가 실제로 존재하는지 확인
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
+
+        // DOLOG_ADMIN이거나 해당 전시 ADMIN인지 확인
+        requireCanManageArtists(actor, exhibition);
+
+        String normalizedSearch =
+                search == null || search.isBlank() ? null : search.trim();
+
+        Page<ExhibitionArtistManageItemResponse> result =
+                exhibitionArtistMapRepository.findArtistsForManagement(
+                        exhibitionId,
+                        status,
+                        normalizedSearch,
+                        PageRequest.of(page, size)
+                );
+
+        return new ExhibitionArtistManageListResponse(
+                result.getContent(),
+                result.getTotalElements(),
+                result.getTotalPages()
+        );
     }
 
     private void requireStatusTransition(

@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -31,5 +32,14 @@ public interface ExhibitionArtistService {
             UUID exhibitionId,
             List<UUID> artistIds,
             ExhibitionArtistStatus status
+    );
+
+    ExhibitionArtistManageListResponse getArtistsForManagement(
+            UUID accountId,
+            UUID exhibitionId,
+            ExhibitionArtistStatus status,
+            String search,
+            int page,
+            int size
     );
 }
