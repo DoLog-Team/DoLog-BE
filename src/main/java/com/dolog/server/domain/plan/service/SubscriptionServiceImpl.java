@@ -63,9 +63,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionCreateResponse createSubscription(UUID exhibitionId, SubscriptionCreateRequest request) {
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+    public SubscriptionCreateResponse createSubscription(UUID exhibitionId, UUID accountId, SubscriptionCreateRequest request) {
+        // 잠금을 먼저 걸어야, 동시에 들어온 신청이 서로의 PENDING_PAYMENT 구독을 보지 못하는 상황을 막을 수 있다
+        Exhibition exhibition = lockOwnedExhibitionOrThrow(exhibitionId, accountId);
 
         boolean alreadySubscribed = subscriptionRepository.existsByExhibitionIdAndStatusIn(
                 exhibitionId, ONGOING_STATUSES
@@ -76,6 +76,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         Plan plan = planRepository.findById(request.getPlanId())
                 .orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
+        requireActivePlan(plan);
 
         PlanPrice planPrice = plan.findPriceByCycle(request.getBillingCycle())
                 .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.PLAN_PRICE_NOT_FOUND));
@@ -106,7 +107,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionPlanChangeResponse changePlan(UUID exhibitionId, SubscriptionPlanChangeRequest request) {
+    public SubscriptionPlanChangeResponse changePlan(UUID exhibitionId, UUID accountId, SubscriptionPlanChangeRequest request) {
+        findOwnedExhibitionOrThrow(exhibitionId, accountId);
         Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
 
         Plan previousPlan = subscription.getPlan();
@@ -116,12 +118,19 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Plan targetPlan = planRepository.findById(request.getTargetPlanId())
                 .orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
+        requireActivePlan(targetPlan);
+
         PlanPrice targetPrice = targetPlan.findPriceByCycle(request.getBillingCycle())
                 .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.PLAN_PRICE_NOT_FOUND));
 
         PlanChangeType changeType = resolveChangeType(previousPlan, targetPlan);
 
         subscription.changePlan(targetPlan, request.getBillingCycle(), targetPrice.getMonths());
+
+        // 결제 전에는 바뀐 플랜 기준 금액으로 결제되므로 결제금액도 갱신한다 (활성 구독은 차액 정산 정책 확정 후 처리)
+        if (subscription.getStatus() == SubscriptionStatus.PENDING_PAYMENT) {
+            subscription.updatePaidAmount(targetPrice.resolveDiscountedPrice());
+        }
 
         // TODO: Artwork 도메인에 "플랜 한도 초과 미노출" 자동 전환 기능이 생기면 여기서 호출 연동 필요
         // (다운그레이드 시 연결 순서 기준 초과분 자동 미노출 / 업그레이드 시 자동 재공개 — 피그마 "작품 수 초과에 따른 예외처리" 참고)
@@ -131,7 +140,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId) {
+    public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId, UUID accountId) {
+        lockOwnedExhibitionOrThrow(exhibitionId, accountId);
         Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
         LocalDateTime now = LocalDateTime.now();
 
@@ -229,6 +239,35 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         return SubscriptionStatusUpdateResponse.from(subscription);
+    }
+
+    // 전시 행에 쓰기 락을 걸어, 같은 전시의 해지 요청이 동시에 처리되지 않게 한다
+    // 먼저 들어온 요청이 구독을 해지하면, 뒤의 요청은 해지된 구독을 보고 404를 받는다
+    private Exhibition lockOwnedExhibitionOrThrow(UUID exhibitionId, UUID accountId) {
+        Exhibition exhibition = exhibitionRepository.findForCodeUpdate(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+        return exhibition;
+    }
+
+    // 비활성(is_active=false) 요금제는 신규 신청과 플랜 변경에서 막음
+    private void requireActivePlan(Plan plan) {
+        if (!Boolean.TRUE.equals(plan.getIsActive())) {
+            throw new SubscriptionException(SubscriptionErrorCode.PLAN_NOT_ACTIVE);
+        }
+    }
+
+    private Exhibition findOwnedExhibitionOrThrow(UUID exhibitionId, UUID accountId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+        return exhibition;
     }
 
     private Subscription findCurrentSubscriptionOrThrow(UUID exhibitionId) {
