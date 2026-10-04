@@ -63,9 +63,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionCreateResponse createSubscription(UUID exhibitionId, SubscriptionCreateRequest request) {
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+    public SubscriptionCreateResponse createSubscription(UUID exhibitionId, UUID accountId, SubscriptionCreateRequest request) {
+        Exhibition exhibition = findOwnedExhibitionOrThrow(exhibitionId, accountId);
 
         boolean alreadySubscribed = subscriptionRepository.existsByExhibitionIdAndStatusIn(
                 exhibitionId, ONGOING_STATUSES
@@ -106,7 +105,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionPlanChangeResponse changePlan(UUID exhibitionId, SubscriptionPlanChangeRequest request) {
+    public SubscriptionPlanChangeResponse changePlan(UUID exhibitionId, UUID accountId, SubscriptionPlanChangeRequest request) {
+        findOwnedExhibitionOrThrow(exhibitionId, accountId);
         Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
 
         Plan previousPlan = subscription.getPlan();
@@ -131,7 +131,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId) {
+    public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId, UUID accountId) {
+        findOwnedExhibitionOrThrow(exhibitionId, accountId);
         Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
         LocalDateTime now = LocalDateTime.now();
 
@@ -224,6 +225,16 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscription.updateStatus(request.getStatus());
 
         return SubscriptionStatusUpdateResponse.from(subscription);
+    }
+
+    private Exhibition findOwnedExhibitionOrThrow(UUID exhibitionId, UUID accountId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+        return exhibition;
     }
 
     private Subscription findCurrentSubscriptionOrThrow(UUID exhibitionId) {

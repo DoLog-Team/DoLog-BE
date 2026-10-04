@@ -39,12 +39,14 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
 
     @Operation(summary = "전시 구독 신청")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
     @PostMapping("/exhibitions/{exhibitionId}/subscriptions")
     public ResponseEntity<SuccessResponse<SubscriptionCreateResponse>> createSubscription(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId,
             @Valid @RequestBody SubscriptionCreateRequest request
     ) {
-        SubscriptionCreateResponse data = subscriptionService.createSubscription(exhibitionId, request);
+        SubscriptionCreateResponse data = subscriptionService.createSubscription(exhibitionId, user.getId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(SuccessResponse.created(data, "전시 구독 신청이 완료되었습니다."));
     }
@@ -59,21 +61,25 @@ public class SubscriptionController {
     }
 
     @Operation(summary = "구독 플랜 변경")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
     @PatchMapping("/exhibitions/{exhibitionId}/subscriptions/current/plan")
     public SuccessResponse<SubscriptionPlanChangeResponse> changePlan(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId,
             @Valid @RequestBody SubscriptionPlanChangeRequest request
     ) {
-        SubscriptionPlanChangeResponse data = subscriptionService.changePlan(exhibitionId, request);
+        SubscriptionPlanChangeResponse data = subscriptionService.changePlan(exhibitionId, user.getId(), request);
         return SuccessResponse.ok(data, "구독 플랜 변경이 완료되었습니다.");
     }
 
     @Operation(summary = "구독 해지")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
     @PatchMapping("/exhibitions/{exhibitionId}/subscriptions/current/cancel")
     public SuccessResponse<SubscriptionCancelResponse> cancelSubscription(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId
     ) {
-        SubscriptionCancelResponse data = subscriptionService.cancelSubscription(exhibitionId);
+        SubscriptionCancelResponse data = subscriptionService.cancelSubscription(exhibitionId, user.getId());
         return SuccessResponse.ok(data, "구독 해지가 완료되었습니다.");
     }
 
