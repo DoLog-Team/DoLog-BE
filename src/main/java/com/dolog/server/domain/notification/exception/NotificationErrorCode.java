@@ -10,7 +10,8 @@ import static com.dolog.server.global.constant.StaticValue.*;
 @AllArgsConstructor
 public enum NotificationErrorCode implements BaseResponseCode {
 
-    NOTIFICATION_NOT_FOUND("NOTIFICATION_404_1", NOT_FOUND, "알림을 찾을 수 없습니다.");
+    NOTIFICATION_NOT_FOUND("NOTIFICATION_404_1", NOT_FOUND, "알림을 찾을 수 없습니다."),
+    NOTIFICATION_SIZE_INVALID("NOTIFICATION_400_1", BAD_REQUEST, "size는 1 이상 100 이하여야 합니다.");
 
     private final String code;
     private final int httpStatus;

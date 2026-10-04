@@ -1,18 +1,18 @@
 package com.dolog.server.domain.notification.service;
 
+import com.dolog.server.domain.notification.web.dto.response.NotificationListResponse;
 import com.dolog.server.domain.notification.web.dto.response.NotificationResponse;
 
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.List;
 import java.util.UUID;
 
 public interface NotificationService {
 
-    // 내 알림 목록 (최신순)
-    List<NotificationResponse> getMyNotifications(UUID accountId);
+    // 내 알림 목록 (최신순, size개까지) + 읽지 않은 알림 수
+    NotificationListResponse getMyNotifications(UUID accountId, int size);
 
     // 내 알림 한 건 읽음 처리
     NotificationResponse markAsRead(UUID notificationId, UUID accountId);
