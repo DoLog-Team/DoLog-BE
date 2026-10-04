@@ -21,6 +21,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -73,6 +74,36 @@ class ExhibitionArtistControllerTest {
         assertEquals(exhibitionArtistId, response.getBody().getData().exhibitionArtistId());
         assertEquals(ExhibitionArtistStatus.JOINED, response.getBody().getData().status());
         verify(exhibitionArtistService).addArtistToExhibition(
+                accountId,
+                exhibitionId,
+                artistId
+        );
+    }
+
+    @Test
+    @DisplayName("전시 작가 제외는 path의 artistId를 사용하고 data 없이 200을 반환한다")
+    void removesArtistAndReturnsEmptyResponse() {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        CustomUserDetails user = new CustomUserDetails(
+                accountId,
+                1L,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_EXHIBITION_ADMIN"))
+        );
+
+        SuccessResponse<Void> response = controller.removeArtist(
+                user,
+                exhibitionId,
+                artistId
+        );
+
+        assertEquals(200, response.getHttpStatus());
+        assertEquals("SUCCESS_200", response.getCode());
+        assertEquals("전시 작가 삭제 성공", response.getMessage());
+        assertNull(response.getData());
+        verify(exhibitionArtistService).removeArtistFromExhibition(
                 accountId,
                 exhibitionId,
                 artistId

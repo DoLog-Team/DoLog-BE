@@ -6,10 +6,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistStatusUpdateRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.artist.RemoveArtistRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
@@ -75,20 +73,22 @@ public class ExhibitionArtistController {
     //전시 작가 제외
     @Operation(summary = "전시 작가 제외")
     @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
-    @DeleteMapping("/{exhibitionId}/artists")
-    public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
+    @DeleteMapping("/{exhibitionId}/artists/{artistId}")
+    public SuccessResponse<Void> removeArtist(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId,
-            @Valid @RequestBody RemoveArtistRequest request
+            @PathVariable UUID artistId
     ) {
-        ExhibitionArtistRemoveResponse data =
-                exhibitionArtistService.removeArtistFromExhibition(
-                        user.getId(),
-                        exhibitionId,
-                        request.getArtistId()
-                );
+        exhibitionArtistService.removeArtistFromExhibition(
+                user.getId(),
+                exhibitionId,
+                artistId
+        );
 
-        return SuccessResponse.ok(data);
+        return SuccessResponse.ok(
+                null,
+                "전시 작가 삭제 성공"
+        );
     }
 
     @Operation(summary = "작가 참여 코드 검증")
