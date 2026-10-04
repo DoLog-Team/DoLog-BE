@@ -71,6 +71,10 @@ public class Subscription extends BaseEntity {
         this.months = months;
     }
 
+    public void updatePaidAmount(BigDecimal paidAmount) {
+        this.paidAmount = paidAmount;
+    }
+
     /**
      * 해지 시 종료 시각을 지정한다. ACTIVE 구독은 유예기간 끝(23:59:59)을, 미결제 구독은 해지 시각을 넘긴다.
      */

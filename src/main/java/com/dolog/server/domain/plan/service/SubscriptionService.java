@@ -18,10 +18,10 @@ import java.util.List;
 import java.util.UUID;
 
 public interface SubscriptionService {
-    SubscriptionCreateResponse createSubscription(UUID exhibitionId, SubscriptionCreateRequest request);
+    SubscriptionCreateResponse createSubscription(UUID exhibitionId, UUID accountId, SubscriptionCreateRequest request);
     List<SubscriptionMyResponse> getMySubscriptions(UUID accountId);
-    SubscriptionPlanChangeResponse changePlan(UUID exhibitionId, SubscriptionPlanChangeRequest request);
-    SubscriptionCancelResponse cancelSubscription(UUID exhibitionId);
+    SubscriptionPlanChangeResponse changePlan(UUID exhibitionId, UUID accountId, SubscriptionPlanChangeRequest request);
+    SubscriptionCancelResponse cancelSubscription(UUID exhibitionId, UUID accountId);
     List<SubscriptionMyResponse> getSubscriptions(SubscriptionStatus status);
     SubscriptionStatusUpdateResponse updateStatus(UUID subscriptionId, SubscriptionStatusUpdateRequest request);
 
