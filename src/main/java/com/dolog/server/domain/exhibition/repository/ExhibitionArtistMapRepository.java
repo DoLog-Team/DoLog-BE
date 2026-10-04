@@ -66,40 +66,45 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     @Query(
             value = """
                 SELECT new com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse(
-                    m.id,
                     a.id,
-                    p.id,
                     a.nameKo,
-                    a.nameEn,
-                    p.profileImg,
-                    m.status,
+                    acc.email,
                     m.greeting,
-                    m.createdAt
+                    CASE
+                        WHEN m.status = com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+                        THEN COUNT(DISTINCT aam.artwork.id)
+                        ELSE NULL
+                    END
                 )
                 FROM ExhibitionArtistMap m
                 JOIN m.artist a
-                LEFT JOIN ArtistProfile p
-                    ON p.artist = a
-                    AND p.exhibition.id = :exhibitionId
+                LEFT JOIN a.account acc
+                LEFT JOIN ArtworkArtistMap aam
+                    ON aam.artist = a
+                    AND aam.artwork.exhibition.id = :exhibitionId
                 WHERE m.exhibition.id = :exhibitionId
                   AND (:status IS NULL OR m.status = :status)
                   AND (
                       :search IS NULL
                       OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%'))
                       OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%'))
+                      OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%'))
                   )
+                GROUP BY m.id, a.id, a.nameKo, acc.email, m.greeting, m.status, m.createdAt
                 ORDER BY m.createdAt DESC, m.id DESC
                 """,
             countQuery = """
                 SELECT COUNT(m)
                 FROM ExhibitionArtistMap m
                 JOIN m.artist a
+                LEFT JOIN a.account acc
                 WHERE m.exhibition.id = :exhibitionId
                   AND (:status IS NULL OR m.status = :status)
                   AND (
                       :search IS NULL
                       OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%'))
                       OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%'))
+                      OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%'))
                   )
                 """
     )

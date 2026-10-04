@@ -927,18 +927,13 @@ class ExhibitionArtistServiceImplTest {
         Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
         Exhibition exhibition = exhibition(ownerId);
 
-        LocalDateTime appliedAt = LocalDateTime.now();
         ExhibitionArtistManageItemResponse item =
                 new ExhibitionArtistManageItemResponse(
                         UUID.randomUUID(),
-                        UUID.randomUUID(),
-                        UUID.randomUUID(),
                         "김지우",
-                        "Jiwoo Kim",
-                        "profile.jpg",
-                        ExhibitionArtistStatus.PENDING,
+                        "jiwoo@test.com",
                         "전시에 참여하고 싶습니다.",
-                        appliedAt
+                        (Integer) null
                 );
 
         PageRequest pageable = PageRequest.of(0, 10);
@@ -967,7 +962,7 @@ class ExhibitionArtistServiceImplTest {
 
         assertEquals(1, response.artists().size());
         assertEquals(item, response.artists().get(0));
-        assertEquals(1, response.totalElements());
+        assertEquals(1, response.totalCount());
         assertEquals(1, response.totalPages());
 
         verify(exhibitionArtistMapRepository).findArtistsForManagement(
@@ -995,7 +990,7 @@ class ExhibitionArtistServiceImplTest {
                 () -> service.getArtistsForManagement(
                         actorId,
                         exhibition.getId(),
-                        null,
+                        ExhibitionArtistStatus.PENDING,
                         null,
                         0,
                         10
@@ -1016,7 +1011,7 @@ class ExhibitionArtistServiceImplTest {
                 () -> service.getArtistsForManagement(
                         UUID.randomUUID(),
                         UUID.randomUUID(),
-                        null,
+                        ExhibitionArtistStatus.PENDING,
                         null,
                         -1,
                         10
@@ -1043,7 +1038,7 @@ class ExhibitionArtistServiceImplTest {
                 () -> service.getArtistsForManagement(
                         UUID.randomUUID(),
                         UUID.randomUUID(),
-                        null,
+                        ExhibitionArtistStatus.PENDING,
                         null,
                         0,
                         101
@@ -1053,6 +1048,33 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(
                 ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID,
                 exception.getErrorCode()
+        );
+    }
+
+    @Test
+    @DisplayName("관리자용 목록은 PENDING과 JOINED 상태만 조회할 수 있다")
+    void rejectsUnsupportedManagementStatus() {
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.getArtistsForManagement(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        ExhibitionArtistStatus.DENIED,
+                        null,
+                        0,
+                        10
+                )
+        );
+
+        assertEquals(
+                ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID,
+                exception.getErrorCode()
+        );
+
+        verifyNoInteractions(
+                accountRepository,
+                exhibitionRepository,
+                exhibitionArtistMapRepository
         );
     }
 

@@ -4,7 +4,7 @@ import java.util.List;
 
 public record ExhibitionArtistManageListResponse(
         List<ExhibitionArtistManageItemResponse> artists,
-        long totalElements,
+        int totalCount,
         int totalPages
 ) {
 }

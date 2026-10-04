@@ -1,7 +1,9 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
 import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
@@ -57,7 +59,9 @@ class ExhibitionArtistControllerSecurityTest {
         mockMvc.perform(get(
                         "/api/exhibitions/{exhibitionId}/artists/manage",
                         exhibitionId
-                ).contextPath("/api"))
+                )
+                        .contextPath("/api")
+                        .param("status", "PENDING"))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(exhibitionArtistService);
@@ -74,6 +78,7 @@ class ExhibitionArtistControllerSecurityTest {
                         exhibitionId
                 )
                         .contextPath("/api")
+                        .param("status", "PENDING")
                         .with(user(userDetails(accountId, Role.ARTIST_ADMIN))))
                 .andExpect(status().isForbidden());
 
@@ -85,12 +90,24 @@ class ExhibitionArtistControllerSecurityTest {
     void exhibitionAdminCanGetArtistsForManagement() throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID exhibitionId = UUID.randomUUID();
-        ExhibitionArtistManageListResponse serviceResponse = emptyResponse();
+        UUID artistId = UUID.randomUUID();
+        ExhibitionArtistManageListResponse serviceResponse =
+                new ExhibitionArtistManageListResponse(
+                        List.of(new ExhibitionArtistManageItemResponse(
+                                artistId,
+                                "김두록",
+                                "dolog@gmail.com",
+                                "2021112489 / 김두록입니다.",
+                                2
+                        )),
+                        1,
+                        1
+                );
 
         when(exhibitionArtistService.getArtistsForManagement(
                 accountId,
                 exhibitionId,
-                null,
+                ExhibitionArtistStatus.PENDING,
                 null,
                 0,
                 10
@@ -101,15 +118,23 @@ class ExhibitionArtistControllerSecurityTest {
                         exhibitionId
                 )
                         .contextPath("/api")
+                        .param("status", "PENDING")
                         .with(user(userDetails(accountId, Role.EXHIBITION_ADMIN))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.totalElements").value(0))
-                .andExpect(jsonPath("$.data.totalPages").value(0));
+                .andExpect(jsonPath("$.data.artists[0].artistId").value(artistId.toString()))
+                .andExpect(jsonPath("$.data.artists[0].nameKo").value("김두록"))
+                .andExpect(jsonPath("$.data.artists[0].email").value("dolog@gmail.com"))
+                .andExpect(jsonPath("$.data.artists[0].greeting").value("2021112489 / 김두록입니다."))
+                .andExpect(jsonPath("$.data.artists[0].artworkCount").value(2))
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.totalElements").doesNotExist())
+                .andExpect(jsonPath("$.data.artists[0].status").doesNotExist());
 
         verify(exhibitionArtistService).getArtistsForManagement(
                 accountId,
                 exhibitionId,
-                null,
+                ExhibitionArtistStatus.PENDING,
                 null,
                 0,
                 10
@@ -126,7 +151,7 @@ class ExhibitionArtistControllerSecurityTest {
         when(exhibitionArtistService.getArtistsForManagement(
                 accountId,
                 exhibitionId,
-                null,
+                ExhibitionArtistStatus.PENDING,
                 null,
                 0,
                 10
@@ -137,19 +162,37 @@ class ExhibitionArtistControllerSecurityTest {
                         exhibitionId
                 )
                         .contextPath("/api")
+                        .param("status", "PENDING")
                         .with(user(userDetails(accountId, Role.DOLOG_ADMIN))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.totalElements").value(0))
+                .andExpect(jsonPath("$.data.totalCount").value(0))
                 .andExpect(jsonPath("$.data.totalPages").value(0));
 
         verify(exhibitionArtistService).getArtistsForManagement(
                 accountId,
                 exhibitionId,
-                null,
+                ExhibitionArtistStatus.PENDING,
                 null,
                 0,
                 10
         );
+    }
+
+    @Test
+    @DisplayName("관리자용 전시 작가 목록 조회 시 참여 상태는 필수다")
+    void statusIsRequiredForManagementList() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        mockMvc.perform(get(
+                        "/api/exhibitions/{exhibitionId}/artists/manage",
+                        exhibitionId
+                )
+                        .contextPath("/api")
+                        .with(user(userDetails(accountId, Role.EXHIBITION_ADMIN))))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(exhibitionArtistService);
     }
 
     private CustomUserDetails userDetails(UUID accountId, Role role) {

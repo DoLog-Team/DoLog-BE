@@ -159,7 +159,7 @@ public class ExhibitionArtistController {
     public SuccessResponse<ExhibitionArtistManageListResponse> getArtistsForManagement(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID exhibitionId,
-            @RequestParam(required = false) ExhibitionArtistStatus status,
+            @RequestParam ExhibitionArtistStatus status,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -176,7 +176,7 @@ public class ExhibitionArtistController {
 
         return SuccessResponse.ok(
                 response,
-                "관리자용 전시 참여 작가 목록 조회 성공"
+                "전시 작가 관리 목록 조회 성공"
         );
     }
 }

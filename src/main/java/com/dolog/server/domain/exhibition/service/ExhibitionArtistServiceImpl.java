@@ -306,7 +306,12 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             int page,
             int size
     ) {
-        if (page < 0 || size < 1 || size > 100) {
+        if (status == null
+                || (status != ExhibitionArtistStatus.PENDING
+                && status != ExhibitionArtistStatus.JOINED)
+                || page < 0
+                || size < 1
+                || size > 100) {
             throw new ExhibitionException(
                     ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID
             );
@@ -338,7 +343,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         return new ExhibitionArtistManageListResponse(
                 result.getContent(),
-                result.getTotalElements(),
+                Math.toIntExact(result.getTotalElements()),
                 result.getTotalPages()
         );
     }

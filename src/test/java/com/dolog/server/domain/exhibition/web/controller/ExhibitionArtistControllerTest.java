@@ -121,7 +121,7 @@ class ExhibitionArtistControllerTest {
 
         assertEquals(200, response.getHttpStatus());
         assertEquals(
-                "관리자용 전시 참여 작가 목록 조회 성공",
+                "전시 작가 관리 목록 조회 성공",
                 response.getMessage()
         );
         assertEquals(serviceResponse, response.getData());

@@ -1,19 +1,28 @@
 package com.dolog.server.domain.exhibition.web.dto.response.artist;
 
-import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
-
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record ExhibitionArtistManageItemResponse(
-        UUID exhibitionArtistId,
         UUID artistId,
-        UUID profileId,
         String nameKo,
-        String nameEn,
-        String profileImg,
-        ExhibitionArtistStatus status,
+        String email,
         String greeting,
-        LocalDateTime appliedAt
+        Integer artworkCount
 ) {
+    // JPQL COUNT 결과(Long)를 API 명세의 int 타입(Integer)으로 변환한다.
+    public ExhibitionArtistManageItemResponse(
+            UUID artistId,
+            String nameKo,
+            String email,
+            String greeting,
+            Long artworkCount
+    ) {
+        this(
+                artistId,
+                nameKo,
+                email,
+                greeting,
+                artworkCount == null ? null : Math.toIntExact(artworkCount)
+        );
+    }
 }
