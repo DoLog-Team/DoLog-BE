@@ -98,4 +98,37 @@ class ArtworkTest {
                 artwork.getMaterials().stream().map(ArtworkMaterial::getOrderIndex).toList());
         assertTrue(artwork.getMaterials().stream().allMatch(m -> m.getArtwork() == artwork));
     }
+
+    @Test
+    @DisplayName("재료 이름은 앞뒤 공백을 지우고 빈 이름은 버린다")
+    void replaceMaterialsDropsBlankNames() {
+        Artwork artwork = Artwork.builder().build();
+
+        artwork.replaceMaterials(java.util.Arrays.asList(" 백자토 ", "", null, "  ", "유약"));
+
+        assertEquals(List.of("백자토", "유약"),
+                artwork.getMaterials().stream().map(ArtworkMaterial::getName).toList());
+        assertEquals(List.of(1, 2),
+                artwork.getMaterials().stream().map(ArtworkMaterial::getOrderIndex).toList());
+    }
+
+    @Test
+    @DisplayName("PATCH 용 update 메서드는 null 인 값은 건드리지 않는다")
+    void updateMethodsIgnoreNull() {
+        Artwork artwork = Artwork.builder().title("제목").category("분류").description("설명")
+                .shortIntro("소개").purchaseUrl("https://buy").showPurchaseButton(true).build();
+
+        artwork.updateText(null, "새 분류", null, null);
+        artwork.updatePurchaseInfo(null, "https://chat", null, null);
+        artwork.updateMainImg(null);
+
+        assertEquals("제목", artwork.getTitle());
+        assertEquals("새 분류", artwork.getCategory());
+        assertEquals("설명", artwork.getDescription());
+        assertEquals("소개", artwork.getShortIntro());
+        assertEquals("https://buy", artwork.getPurchaseUrl());
+        assertEquals("https://chat", artwork.getPurchaseChatUrl());
+        assertTrue(artwork.getShowPurchaseButton());
+        assertNull(artwork.getMainImg());
+    }
 }
