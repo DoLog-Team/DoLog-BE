@@ -34,4 +34,7 @@ public interface ExhibitionService {
 
     // 전시 Meta 정보 관련
     ExhibitionMetaResponse updateExhibitionMeta(UUID exhibitionId, ExhibitionMetaUpdateRequest request) throws IOException;
+
+    // 작가 전시 참여 코드
+    ArtistJoinCodeResponse reissueArtistJoinCode(UUID exhibitionId, LocalDateTime expiresAt);
 }

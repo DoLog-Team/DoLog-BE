@@ -45,4 +45,9 @@ public class ArtworkSpecification {
             return cb.conjunction();
         };
     }
+
+    public static Specification<Artwork> hasExhibition() {
+        return (root, query, cb) ->
+                cb.isNotNull(root.get("exhibition"));
+    }
 }

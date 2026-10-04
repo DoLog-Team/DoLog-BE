@@ -5,14 +5,23 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
-import com.dolog.server.domain.exhibition.web.dto.request.artist.RemoveArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistStatusUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistRemoveResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.dolog.server.domain.artist.web.dto.request.ArtistJoinCodeValidateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
+import com.dolog.server.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.dolog.server.domain.artist.web.dto.request.ArtistJoinRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.UUID;
@@ -40,32 +49,108 @@ public class ExhibitionArtistController {
 
     //전시 작가 추가
     @Operation(summary = "전시 작가 추가")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
     @PostMapping("/{exhibitionId}/artists")
-    public SuccessResponse<ExhibitionArtistAddResponse> addArtist(
+    public ResponseEntity<SuccessResponse<ExhibitionArtistAddResponse>> addArtist(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId,
-            @RequestBody AddArtistRequest request
+            @Valid @RequestBody AddArtistRequest request
     ) {
         ExhibitionArtistAddResponse data =
-                exhibitionArtistService.addArtistToExhibition(exhibitionId, request.getArtistId());
+                exhibitionArtistService.addArtistToExhibition(
+                        user.getId(),
+                        exhibitionId,
+                        request.artistId()
+                );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(
+                        data,
+                        "전시 작가 추가 성공"
+                ));
+    }
+
+    //전시 작가 제외
+    @Operation(summary = "전시 작가 제외")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
+    @DeleteMapping("/{exhibitionId}/artists/{artistId}")
+    public SuccessResponse<Void> removeArtist(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId,
+            @PathVariable UUID artistId
+    ) {
+        exhibitionArtistService.removeArtistFromExhibition(
+                user.getId(),
+                exhibitionId,
+                artistId
+        );
 
         return SuccessResponse.ok(
-                data,
-                "작가가 전시에 추가되었습니다."
+                null,
+                "전시 작가 삭제 성공"
         );
     }
 
-    //전시 작가 삭제
-    @Operation(summary = "전시 작가 삭제")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
-    @DeleteMapping("/{exhibitionId}/artists")
-    public SuccessResponse<ExhibitionArtistRemoveResponse> removeArtist(
-            @PathVariable UUID exhibitionId,
-            @RequestBody RemoveArtistRequest request
+    @Operation(summary = "작가 참여 코드 검증")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @PostMapping("/join/validate")
+    public SuccessResponse<ArtistJoinCodeValidateResponse> validateJoinCode(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @Valid @RequestBody ArtistJoinCodeValidateRequest request
     ) {
-        ExhibitionArtistRemoveResponse data =
-                exhibitionArtistService.removeArtistFromExhibition(exhibitionId, request.getArtistId());
+        ArtistJoinCodeValidateResponse data =
+                exhibitionArtistService.validateJoinCode(
+                        user.getId(),
+                        request.joinCode()
+                );
 
-        return SuccessResponse.ok(data);
+        return SuccessResponse.ok(
+                data,
+                "작가 참여 코드 확인 성공"
+        );
+    }
+
+    @Operation(summary = "작가 전시 참여 신청")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @PostMapping("/join")
+    public ResponseEntity<SuccessResponse<ArtistJoinResponse>> joinExhibition(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @Valid @RequestBody ArtistJoinRequest request
+    ) {
+        ArtistJoinResponse data =
+                exhibitionArtistService.joinExhibition(
+                        user.getId(),
+                        request.joinCode(),
+                        request.greeting()
+                );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(
+                        data,
+                        "전시 참여 신청 성공"
+                ));
+    }
+
+    @Operation(summary = "전시 참여 작가 상태 일괄 변경")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
+    @PatchMapping("/{exhibitionId}/artists/status")
+    public SuccessResponse<ExhibitionArtistStatusUpdateResponse>
+    updateArtistStatuses(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExhibitionArtistStatusUpdateRequest request
+    ) {
+        ExhibitionArtistStatusUpdateResponse data =
+                exhibitionArtistService.updateArtistStatuses(
+                        user.getId(),
+                        exhibitionId,
+                        request.artistIds(),
+                        request.status()
+                );
+
+        return SuccessResponse.ok(
+                data,
+                "전시 참여 작가 상태 변경 성공"
+        );
     }
 }

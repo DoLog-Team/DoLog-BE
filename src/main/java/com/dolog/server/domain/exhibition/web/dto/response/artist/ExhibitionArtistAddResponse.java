@@ -1,31 +1,20 @@
 package com.dolog.server.domain.exhibition.web.dto.response.artist;
 
-import lombok.Builder;
-import lombok.Getter;
+import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 
 import java.util.UUID;
 
-@Getter
-@Builder
-public class ExhibitionArtistAddResponse {
-
-    private UUID exhibitionId;
-    private String exhibitionName;
-
-    private UUID artistId;
-    private String artistName;
-
-    public static ExhibitionArtistAddResponse of(
-            UUID exhibitionId,
-            String exhibitionName,
-            UUID artistId,
-            String artistName
+public record ExhibitionArtistAddResponse(
+        UUID exhibitionArtistId,
+        ExhibitionArtistStatus status
+) {
+    public static ExhibitionArtistAddResponse from(
+            ExhibitionArtistMap exhibitionArtist
     ) {
-        return ExhibitionArtistAddResponse.builder()
-                .exhibitionId(exhibitionId)
-                .exhibitionName(exhibitionName)
-                .artistId(artistId)
-                .artistName(artistName)
-                .build();
+        return new ExhibitionArtistAddResponse(
+                exhibitionArtist.getId(),
+                exhibitionArtist.getStatus()
+        );
     }
 }

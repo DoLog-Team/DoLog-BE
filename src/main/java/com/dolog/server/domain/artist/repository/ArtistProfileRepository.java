@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,13 +28,66 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
     Optional<ArtistProfile> findByIdWithDetails(@Param("profileId") UUID profileId);
 
     // 전시 ID로 프로필 목록 찾기
-    List<ArtistProfile> findAllByExhibitionId(UUID exhibitionId);
+    @Query("""
+        SELECT p
+        FROM ArtistProfile p
+        JOIN ExhibitionArtistMap m
+          ON m.artist = p.artist
+         AND m.exhibition = p.exhibition
+        WHERE p.exhibition.id = :exhibitionId
+          AND m.status =
+              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+        """)
+    List<ArtistProfile> findAllByExhibitionId(
+            @Param("exhibitionId") UUID exhibitionId
+    );
 
     Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
 
-    @Query("SELECT p FROM ArtistProfile p WHERE p.exhibition.id = :exhibitionId AND p.nameKo < :nameKo ORDER BY p.nameKo DESC")
-    List<ArtistProfile> findPrevProfile(@Param("exhibitionId") UUID exhibitionId, @Param("nameKo") String nameKo, Pageable pageable);
+    @Query("""
+            SELECT p.artist.id
+            FROM ArtistProfile p
+            WHERE p.exhibition.id = :exhibitionId
+              AND p.artist.id IN :artistIds
+            """)
+    List<UUID> findArtistIdsByExhibitionIdAndArtistIdIn(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("artistIds") Collection<UUID> artistIds
+    );
 
-    @Query("SELECT p FROM ArtistProfile p WHERE p.exhibition.id = :exhibitionId AND p.nameKo > :nameKo ORDER BY p.nameKo ASC")
-    List<ArtistProfile> findNextProfile(@Param("exhibitionId") UUID exhibitionId, @Param("nameKo") String nameKo, Pageable pageable);
+    @Query("""
+        SELECT p
+        FROM ArtistProfile p
+        JOIN ExhibitionArtistMap m
+          ON m.artist = p.artist
+         AND m.exhibition = p.exhibition
+        WHERE p.exhibition.id = :exhibitionId
+          AND m.status =
+              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+          AND p.nameKo < :nameKo
+        ORDER BY p.nameKo DESC
+        """)
+    List<ArtistProfile> findPrevProfile(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("nameKo") String nameKo,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT p
+        FROM ArtistProfile p
+        JOIN ExhibitionArtistMap m
+          ON m.artist = p.artist
+         AND m.exhibition = p.exhibition
+        WHERE p.exhibition.id = :exhibitionId
+          AND m.status =
+              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+          AND p.nameKo > :nameKo
+        ORDER BY p.nameKo ASC
+        """)
+    List<ArtistProfile> findNextProfile(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("nameKo") String nameKo,
+            Pageable pageable
+    );
 }

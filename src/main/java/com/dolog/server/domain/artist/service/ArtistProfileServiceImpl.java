@@ -176,8 +176,12 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .toList();
 
         // 4. 작품 리스트 변환
+        UUID exhibitionId = profile.getExhibition().getId();
+
         List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses = profile.getArtworkArtistMaps().stream()
                 .map(ArtworkArtistMap::getArtwork)
+                .filter(artwork -> artwork.getExhibition() != null
+                        && exhibitionId.equals(artwork.getExhibition().getId()))
                 .map(artwork -> ArtistProfileDetailResponse.ArtworkSummary.builder()
                         .artworkId(artwork.getId())
                         .title(artwork.getTitle())
@@ -186,7 +190,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .toList();
 
         // 5. prev / next 계산 (DB에서 직접 조회)
-        UUID exhibitionId = profile.getExhibition().getId();
         String currentNameKo = profile.getNameKo();
 
         List<ArtistProfile> prevList = profileRepository.findPrevProfile(exhibitionId, currentNameKo, PageRequest.of(0, 1));
