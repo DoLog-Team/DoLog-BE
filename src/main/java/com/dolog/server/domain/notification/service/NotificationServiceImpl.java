@@ -1,6 +1,9 @@
 package com.dolog.server.domain.notification.service;
 
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.notification.entity.Notification;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.notification.exception.NotificationErrorCode;
 import com.dolog.server.domain.notification.exception.NotificationException;
 import com.dolog.server.domain.notification.repository.NotificationRepository;
@@ -11,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -19,6 +24,7 @@ import java.util.UUID;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
     @Override
     public List<NotificationResponse> getMyNotifications(UUID accountId) {
@@ -49,5 +55,20 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public long deleteNotificationsCreatedBefore(LocalDateTime threshold) {
         return notificationRepository.deleteByCreatedAtBefore(threshold);
+    }
+
+    @Override
+    @Transactional
+    public void notifyJoinedArtists(UUID exhibitionId, NotificationType type, Map<String, String> payload, UUID referenceId) {
+        exhibitionArtistMapRepository.findByExhibitionId(exhibitionId).stream()
+                .filter(map -> map.getStatus() == ExhibitionArtistStatus.JOINED)
+                .map(map -> map.getArtist().getAccount())
+                .filter(Objects::nonNull)
+                .forEach(account -> notificationRepository.save(Notification.builder()
+                        .recipient(account)
+                        .type(type)
+                        .payload(payload)
+                        .referenceId(referenceId)
+                        .build()));
     }
 }

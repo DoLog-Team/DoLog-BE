@@ -1,6 +1,10 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
+import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -26,6 +31,8 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
+    private final NotificationService notificationService;
+    private final ExhibitionDetailRepository exhibitionDetailRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -53,6 +60,13 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
 
         exhibitionZoneRepository.save(zone);
 
+        notificationService.notifyJoinedArtists(
+                exhibitionId,
+                NotificationType.ZONE_CREATED,
+                Map.of("exhibitionName", resolveExhibitionName(exhibition), "zoneName", zone.getName()),
+                exhibitionId
+        );
+
         return ExhibitionZoneCreateResponse.from(zone);
     }
 
@@ -71,6 +85,24 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
 
+        UUID exhibitionId = zone.getExhibition().getId();
+        String exhibitionName = resolveExhibitionName(zone.getExhibition());
+        String zoneName = zone.getName();
+
         exhibitionZoneRepository.delete(zone);
+
+        notificationService.notifyJoinedArtists(
+                exhibitionId,
+                NotificationType.ZONE_DELETED,
+                Map.of("exhibitionName", exhibitionName, "zoneName", zoneName),
+                exhibitionId
+        );
+    }
+
+    // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
+                .map(ExhibitionDetail::getTitle)
+                .orElse(exhibition.getSlug());
     }
 }
