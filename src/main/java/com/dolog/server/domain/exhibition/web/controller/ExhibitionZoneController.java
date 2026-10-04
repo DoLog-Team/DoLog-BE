@@ -5,6 +5,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionZoneService;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneHiddenUpdateRequest;
+import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneHiddenUpdateResponse;
+import com.dolog.server.global.security.CustomUserDetails;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCreateResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneListResponse;
@@ -36,6 +40,22 @@ public class ExhibitionZoneController {
     ) {
         ExhibitionZoneListResponse data = exhibitionZoneService.getZones(exhibitionId);
         return SuccessResponse.ok(data, "전시 구역 조회가 완료되었습니다.");
+    }
+
+    // 작품 그룹 숨김/재공개 (본인 전시 어드민 또는 두록 어드민)
+    @Operation(summary = "작품 그룹 숨김/재공개")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
+    @PatchMapping("/zones/{zoneId}/hidden")
+    public SuccessResponse<ExhibitionZoneHiddenUpdateResponse> changeHidden(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID zoneId,
+            @Valid @RequestBody ExhibitionZoneHiddenUpdateRequest request
+    ) {
+        boolean isDologAdmin = user.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_DOLOG_ADMIN".equals(authority.getAuthority()));
+        ExhibitionZoneHiddenUpdateResponse data = exhibitionZoneService.changeHidden(
+                zoneId, user.getId(), isDologAdmin, request.getHidden());
+        return SuccessResponse.ok(data, "작품 그룹 숨김 상태가 변경되었습니다.");
     }
 
     // 전시 구역 생성

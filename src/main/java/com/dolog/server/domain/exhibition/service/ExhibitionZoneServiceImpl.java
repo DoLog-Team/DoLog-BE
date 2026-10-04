@@ -2,18 +2,19 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
-import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.notification.service.NotificationService;
 import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCreateResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneHiddenUpdateResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneUpdateResponse;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +32,8 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionZoneRepository exhibitionZoneRepository;
-    private final NotificationService notificationService;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -60,13 +61,6 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
 
         exhibitionZoneRepository.save(zone);
 
-        notificationService.notifyJoinedArtists(
-                exhibitionId,
-                NotificationType.ZONE_CREATED,
-                Map.of("exhibitionName", resolveExhibitionName(exhibition), "zoneName", zone.getName()),
-                exhibitionId
-        );
-
         return ExhibitionZoneCreateResponse.from(zone);
     }
 
@@ -85,18 +79,33 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
 
-        UUID exhibitionId = zone.getExhibition().getId();
-        String exhibitionName = resolveExhibitionName(zone.getExhibition());
-        String zoneName = zone.getName();
-
         exhibitionZoneRepository.delete(zone);
+    }
 
-        notificationService.notifyJoinedArtists(
-                exhibitionId,
-                NotificationType.ZONE_DELETED,
-                Map.of("exhibitionName", exhibitionName, "zoneName", zoneName),
-                exhibitionId
-        );
+    // 작품 그룹 숨김/재공개. 상태가 실제로 바뀐 경우에만 참여 작가에게 알림을 보낸다
+    @Override
+    public ExhibitionZoneHiddenUpdateResponse changeHidden(UUID zoneId, UUID accountId, boolean isDologAdmin, boolean hidden) {
+        ExhibitionZone zone = exhibitionZoneRepository.findById(zoneId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
+
+        Exhibition exhibition = zone.getExhibition();
+        if (!isDologAdmin && !exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+
+        boolean changed = zone.isHidden() != hidden;
+        zone.changeHidden(hidden);
+
+        if (changed) {
+            notificationService.notifyJoinedArtists(
+                    exhibition.getId(),
+                    hidden ? NotificationType.ZONE_HIDDEN : NotificationType.ZONE_SHOWN,
+                    Map.of("exhibitionName", resolveExhibitionName(exhibition), "zoneName", zone.getName()),
+                    exhibition.getId()
+            );
+        }
+
+        return ExhibitionZoneHiddenUpdateResponse.from(zone);
     }
 
     // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다

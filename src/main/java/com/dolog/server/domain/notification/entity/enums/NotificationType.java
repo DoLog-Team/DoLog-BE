@@ -9,6 +9,8 @@ public enum NotificationType {
     ARTIST_REMOVED,             // 참여 제외
     ZONE_CREATED,               // 작품 그룹 추가
     ZONE_DELETED,               // 작품 그룹 삭제
+    ZONE_HIDDEN,                // 작품 그룹 숨김
+    ZONE_SHOWN,                 // 작품 그룹 재공개
     ARTWORK_HIDDEN,             // 작품 숨김 처리 (관리자 조치)
 
     // 전시 어드민 알림
