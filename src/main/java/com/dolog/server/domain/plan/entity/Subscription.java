@@ -53,16 +53,11 @@ public class Subscription extends BaseEntity {
     @Column(name = "paid_amount", precision = 10, scale = 2)
     private BigDecimal paidAmount;
 
-    public void updateStatus(SubscriptionStatus status) {
-        this.status = status;
-        if (status == SubscriptionStatus.ACTIVE && this.startedAt == null) {
-            this.startedAt = LocalDateTime.now();
-            this.endedAt = calculatePlannedEnd(this.startedAt, this.months);
-        }
-        if (status == SubscriptionStatus.CANCELED || status == SubscriptionStatus.EXPIRED) {
-            // 자연 만료 전 조기 해지/종료된 경우, 계획된 만료일(endedAt)을 실제 종료 시각으로 덮어씀
-            this.endedAt = LocalDateTime.now();
-        }
+    // 결제 대기 구독을 활성화한다. 시작 시각과 종료 시각을 지금 기준으로 새로 계산한다
+    public void activate() {
+        this.status = SubscriptionStatus.ACTIVE;
+        this.startedAt = LocalDateTime.now();
+        this.endedAt = calculatePlannedEnd(this.startedAt, this.months);
     }
 
     public void changePlan(Plan plan, BillingCycle billingCycle, Integer months) {
