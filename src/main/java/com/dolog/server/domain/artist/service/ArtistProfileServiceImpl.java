@@ -14,7 +14,8 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -31,9 +32,7 @@ import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
-import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
-import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionListItemResponse;
 import com.dolog.server.global.util.FileService;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +43,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.PageRequest;
 
 import java.io.IOException;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -55,7 +53,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final ArtistProfileRepository profileRepository;
     private final AccountRepository accountRepository;
     private final ExhibitionRepository exhibitionRepository;
-    private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final FileService fileService;
@@ -207,21 +204,47 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         throw new ArtistProfileAccessDeniedException();
     }
 
-    // 프로필 목록 조회 (DB 조회용)
+    // 관리자용 프로필 목록 조회
     @Override
     @Transactional(readOnly = true)
-    public List<ArtistProfileResponse> getArtistProfileList(UUID exhibitionId) {
-        List<ArtistProfile> profiles;
+    public ArtistProfileListResponse getArtistProfileList(
+            UUID accountId,
+            UUID exhibitionId
+    ) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
 
-        if (exhibitionId != null) {
-            profiles = profileRepository.findAllByExhibitionId(exhibitionId);
-        } else {
-            profiles = profileRepository.findAll();
+        requireCanManageProfiles(actor, exhibition);
+
+        List<ArtistProfileListItemResponse> profiles =
+                profileRepository.findListItemsByExhibitionId(exhibitionId)
+                        .stream()
+                        .map(ArtistProfileListItemResponse::from)
+                        .toList();
+
+        return ArtistProfileListResponse.builder()
+                .profiles(profiles)
+                .build();
+    }
+
+    private void requireCanManageProfiles(
+            Account actor,
+            Exhibition exhibition
+    ) {
+        if (actor.getRole() == Role.DOLOG_ADMIN) {
+            return;
         }
 
-        return profiles.stream()
-                .map(this::convertToResponse)
-                .toList();
+        if (actor.getRole() == Role.EXHIBITION_ADMIN
+                && exhibition.getAccount().getId().equals(actor.getId())) {
+            return;
+        }
+
+        throw new ArtistProfileAccessDeniedException();
     }
 
     // 프로필 상세 조회
@@ -364,39 +387,4 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .map(ArtistSnsResponse::from)
                 .toList();
     }
-
-
-
-
-    // 응답
-    private ArtistProfileResponse convertToResponse(ArtistProfile profile) {
-        // 1. 프로필에 연결된 전시 본체(Exhibition)를 가져옵니다.
-        Exhibition exhibition = profile.getExhibition();
-
-        // 2. 전시의 상세 정보(ExhibitionDetail)를 찾습니다.
-        var exhibitionDetail = exhibitionDetailRepository.findByExhibition(exhibition)
-                .orElse(null);
-
-        // 엔티티 내부 리스트 사용
-        List<ArtistSnsResponse> snsList = profile.getSnsList().stream()
-                .map(ArtistSnsResponse::from)
-                .toList();
-
-        // 3. ArtistProfileResponse를 빌더로 만듭니다.
-        return ArtistProfileResponse.builder()
-                .profileId(profile.getId())
-                .nameKo(profile.getNameKo())
-                .nameEn(profile.getNameEn())
-                .bio(profile.getBio())
-                .email(profile.getEmail())
-                .profileImg(profile.getProfileImg())
-                .snsList(snsList)
-                .exhibition(ExhibitionListItemResponse.of(
-                        exhibition,
-                        exhibitionDetail,
-                        LocalDate.now()
-                ))
-                .build();
-    }
-
 }

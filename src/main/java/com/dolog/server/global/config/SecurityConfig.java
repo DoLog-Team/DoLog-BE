@@ -61,7 +61,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.HEAD, "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/artist-profiles", "/artist-profiles/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/artist-profiles").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/artist-profiles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artists/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh",
                                 "/auth/social/login", "/auth/exhibition/login").permitAll()

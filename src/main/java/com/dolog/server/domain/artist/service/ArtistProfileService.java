@@ -5,7 +5,7 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,7 +30,10 @@ public interface ArtistProfileService {
     )
             throws IOException;
 
-    List<ArtistProfileResponse> getArtistProfileList(UUID exhibitionId);
+    ArtistProfileListResponse getArtistProfileList(
+            UUID accountId,
+            UUID exhibitionId
+    );
 
     ArtistProfileDetailResponse getArtistProfileDetail(UUID profileId);
 

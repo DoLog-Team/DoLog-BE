@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -59,6 +60,18 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException e) {
         log.error("MethodArgumentTypeMismatchException Error", e);
         ErrorResponse error = ErrorResponse.of(GlobalErrorCode.INVALID_HTTP_MESSAGE_BODY);
+        return ResponseEntity.status(error.getHttpStatus()).body(error);
+    }
+
+    /* 필수 query parameter가 누락된 경우 발생 */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    private ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
+            MissingServletRequestParameterException e
+    ) {
+        log.error("MissingServletRequestParameterException Error", e);
+        ErrorResponse error = ErrorResponse.of(
+                GlobalErrorCode.BAD_REQUEST_ERROR
+        );
         return ResponseEntity.status(error.getHttpStatus()).body(error);
     }
 

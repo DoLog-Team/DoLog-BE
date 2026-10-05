@@ -10,7 +10,6 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
@@ -38,34 +37,22 @@ public class ArtistProfileController {
 
     private final ArtistProfileService artistProfileService;
 
-    /**
-     * 작가 프로필 목록 조회 (전체 조회 및 전시회별 필터링)
-     * GET exhibitions/artists-profiles
-     * GET exhibitions/artists-profiles?exhibitionId={uuid}
-     * * GET exhibitions/artists-profiles?artistProfileId={uuid}
-     */
-    @Operation(summary = "전시 작가(프로필) 목록 조회")
+    @Operation(summary = "관리자용 전시 작가 프로필 목록 조회")
     @GetMapping
+    @PreAuthorize(
+            "hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')"
+    )
     public SuccessResponse<ArtistProfileListResponse> getArtistProfileList(
-            @RequestParam(value = "exhibitionId", required = false) String exhibitionIdStr
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam UUID exhibitionId
     ) {
-        UUID exhibitionId = null;
+        ArtistProfileListResponse response =
+                artistProfileService.getArtistProfileList(
+                        user.getId(),
+                        exhibitionId
+                );
 
-        // "null" 문자열이 들어오거나 비어있는 경우를 방어
-        if (exhibitionIdStr != null && !exhibitionIdStr.isBlank() && !exhibitionIdStr.equals("null")) {
-            exhibitionId = UUID.fromString(exhibitionIdStr);
-        }
-
-        // 서비스 호출 (서비스는 UUID를 받도록 유지)
-        List<ArtistProfileResponse> responses = artistProfileService.getArtistProfileList(exhibitionId);
-
-        // 데이터 포장
-        ArtistProfileListResponse data = ArtistProfileListResponse.builder()
-                .total(responses.size())
-                .artistProfiles(responses)
-                .build();
-
-        return SuccessResponse.ok(data, "작가 프로필 목록 조회 성공");
+        return SuccessResponse.ok(response, "프로필 목록 조회 성공");
     }
 
     // 프로필 상세 조회

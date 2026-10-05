@@ -9,6 +9,7 @@ import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfile
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
+import com.dolog.server.domain.artist.repository.projection.ArtistProfileListItemProjection;
 import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
@@ -16,7 +17,6 @@ import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
-import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.global.util.FileService;
 import org.junit.jupiter.api.DisplayName;
@@ -30,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,9 +56,6 @@ class ArtistProfileServiceImplTest {
 
     @Mock
     private ExhibitionRepository exhibitionRepository;
-
-    @Mock
-    private ExhibitionDetailRepository exhibitionDetailRepository;
 
     @Mock
     private ArtistRepository artistRepository;
@@ -302,6 +302,95 @@ class ArtistProfileServiceImplTest {
         );
     }
 
+    @Test
+    @DisplayName("두록 어드민은 명세 형식의 프로필 목록을 조회할 수 있다")
+    void dologAdminGetsProfileList() {
+        Account dologAdmin = account(Role.DOLOG_ADMIN);
+        Exhibition exhibition = exhibition(
+                account(Role.EXHIBITION_ADMIN)
+        );
+        UUID profileId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        ArtistProfileListItemProjection projection =
+                profileListProjection(profileId, artistId);
+
+        when(accountRepository.findById(dologAdmin.getId()))
+                .thenReturn(Optional.of(dologAdmin));
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+        when(profileRepository.findListItemsByExhibitionId(
+                exhibition.getId()
+        )).thenReturn(List.of(projection));
+
+        var response = service.getArtistProfileList(
+                dologAdmin.getId(),
+                exhibition.getId()
+        );
+
+        assertEquals(1, response.getProfiles().size());
+        var item = response.getProfiles().get(0);
+        assertEquals(profileId, item.getProfileId());
+        assertEquals(artistId, item.getArtistId());
+        assertEquals("김두록", item.getNameKo());
+        assertEquals("Dolog Kim", item.getNameEn());
+        assertEquals("https://cdn.test/profile.webp",
+                item.getProfileImg());
+        assertTrue(item.getIsPublic());
+        assertEquals(120L, item.getViewCount());
+        assertEquals(8, item.getLikeCount());
+    }
+
+    @Test
+    @DisplayName("전시 어드민은 자신이 관리하는 전시의 프로필 목록을 조회할 수 있다")
+    void exhibitionAdminGetsOwnExhibitionProfileList() {
+        Account exhibitionAdmin = account(Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(exhibitionAdmin);
+
+        when(accountRepository.findById(exhibitionAdmin.getId()))
+                .thenReturn(Optional.of(exhibitionAdmin));
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+        when(profileRepository.findListItemsByExhibitionId(
+                exhibition.getId()
+        )).thenReturn(List.of());
+
+        var response = service.getArtistProfileList(
+                exhibitionAdmin.getId(),
+                exhibition.getId()
+        );
+
+        assertTrue(response.getProfiles().isEmpty());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = Role.class,
+            names = {"ARTIST_ADMIN", "EXHIBITION_ADMIN"}
+    )
+    @DisplayName("작가 및 다른 전시 어드민은 프로필 목록을 조회할 수 없다")
+    void unauthorizedActorCannotGetProfileList(Role role) {
+        Account actor = account(role);
+        Exhibition exhibition = exhibition(
+                account(Role.EXHIBITION_ADMIN)
+        );
+
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.getArtistProfileList(
+                        actor.getId(),
+                        exhibition.getId()
+                )
+        );
+
+        verify(profileRepository, never())
+                .findListItemsByExhibitionId(exhibition.getId());
+    }
+
     private void prepareUpdate(
             Account actor,
             ArtistProfile profile
@@ -380,5 +469,23 @@ class ArtistProfileServiceImplTest {
                 .profileImg("https://cdn.test/original.webp")
                 .isPublic(true)
                 .build();
+    }
+
+    private ArtistProfileListItemProjection profileListProjection(
+            UUID profileId,
+            UUID artistId
+    ) {
+        ArtistProfileListItemProjection projection =
+                mock(ArtistProfileListItemProjection.class);
+        when(projection.getProfileId()).thenReturn(profileId.toString());
+        when(projection.getArtistId()).thenReturn(artistId.toString());
+        when(projection.getNameKo()).thenReturn("김두록");
+        when(projection.getNameEn()).thenReturn("Dolog Kim");
+        when(projection.getProfileImg())
+                .thenReturn("https://cdn.test/profile.webp");
+        when(projection.getIsPublic()).thenReturn(true);
+        when(projection.getViewCount()).thenReturn(120L);
+        when(projection.getLikeCount()).thenReturn(8L);
+        return projection;
     }
 }
