@@ -219,6 +219,72 @@ class LikeApiTests {
         assertTrue(artworks.findById(id).isEmpty());
     }
 
+
+    @Test
+    @DisplayName("쿠키가 막힌 환경을 위해 X-Visitor-Id 헤더로 좋아요하고 취소할 수 있다 (DELETE 본문은 유실될 수 있음)")
+    void headerVisitorIdForLikeAndCancel() throws Exception {
+        mvc.perform(likeArtwork(published.getId()).header("X-Visitor-Id", "vis_header"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.visitorId").value("vis_header"));
+
+        mvc.perform(cancelArtwork(published.getId()).header("X-Visitor-Id", "vis_header"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.liked").value(false));
+    }
+
+    @Test
+    @DisplayName("visitorId 쿼리 파라미터로도 취소할 수 있다")
+    void queryVisitorIdForCancel() throws Exception {
+        mvc.perform(likeArtwork(published.getId()).cookie(visitor("vis_query"))).andExpect(status().isCreated());
+
+        mvc.perform(cancelArtwork(published.getId()).param("visitorId", "vis_query"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.likeCount").value(0));
+    }
+
+    @Test
+    @DisplayName("쿠키가 있으면 헤더보다 쿠키가 우선이고, 헤더 값 형식이 잘못되면 400")
+    void cookieOverHeaderAndHeaderFormat() throws Exception {
+        mvc.perform(likeArtwork(published.getId()).cookie(visitor("vis_cookie")).header("X-Visitor-Id", "vis_header"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.visitorId").value("vis_cookie"));
+        mvc.perform(likeArtwork(published.getId()).header("X-Visitor-Id", "bad id!"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("LIKE_003"));
+    }
+
+    @Test
+    @DisplayName("작품과 작가 좋아요의 응답 메시지는 같은 문체를 쓴다")
+    void unifiedMessages() throws Exception {
+        ArtistProfile profile = profile(ExhibitionArtistStatus.JOINED);
+
+        mvc.perform(likeArtwork(published.getId()).cookie(visitor("vis_m")))
+                .andExpect(jsonPath("$.message").value("좋아요가 등록되었습니다."));
+        mvc.perform(cancelArtwork(published.getId()).cookie(visitor("vis_m")))
+                .andExpect(jsonPath("$.message").value("좋아요가 취소되었습니다."));
+        mvc.perform(withApi(post("/api/artist-profiles/{id}/likes", profile.getId())).cookie(visitor("vis_m")))
+                .andExpect(jsonPath("$.message").value("좋아요가 등록되었습니다."));
+        mvc.perform(withApi(delete("/api/artist-profiles/{id}/likes", profile.getId())).cookie(visitor("vis_m")))
+                .andExpect(jsonPath("$.message").value("좋아요가 취소되었습니다."));
+    }
+
+    @Test
+    @DisplayName("좋아요가 여러 개인 작품을 삭제해도 좋아요가 모두 지워진다")
+    void deletingArtworkWithManyLikes() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(likeArtwork(published.getId()).cookie(visitor("vis_many_" + i))).andExpect(status().isCreated());
+        }
+        UUID id = published.getId();
+
+        mvc.perform(delete("/api/artworks/{id}", id).contextPath("/api")
+                        .header("Authorization", "Bearer " + token(artist.getAccount())))
+                .andExpect(status().isOk());
+
+        em.flush();
+        em.clear();
+        assertEquals(0L, artworkLikes.countByArtworkId(id));
+    }
+
     // ---------------- 작가 좋아요 ----------------
 
     @Test
