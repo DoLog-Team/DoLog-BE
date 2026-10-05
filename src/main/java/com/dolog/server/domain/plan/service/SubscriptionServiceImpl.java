@@ -142,7 +142,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Transactional
     public SubscriptionCancelResponse cancelSubscription(UUID exhibitionId, UUID accountId) {
         lockOwnedExhibitionOrThrow(exhibitionId, accountId);
-        Subscription subscription = findCurrentSubscriptionOrThrow(exhibitionId);
+        return cancelOngoing(findCurrentSubscriptionOrThrow(exhibitionId));
+    }
+
+    // 해지 처리. 사용자 해지와 관리자 상태 변경(활성 → 취소)이 같이 쓴다
+    private SubscriptionCancelResponse cancelOngoing(Subscription subscription) {
         LocalDateTime now = LocalDateTime.now();
 
         // 결제 전 구독은 환불할 금액이 없고, 전시의 만료일도 건드리지 않는다
@@ -231,7 +235,33 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new SubscriptionException(SubscriptionErrorCode.SUBSCRIPTION_NOT_FOUND));
 
-        subscription.updateStatus(request.getStatus());
+        SubscriptionStatus current = subscription.getStatus();
+        SubscriptionStatus target = request.getStatus();
+
+        if (current == target) {
+            return SubscriptionStatusUpdateResponse.from(subscription);
+        }
+
+        if (current == SubscriptionStatus.PENDING_PAYMENT && target == SubscriptionStatus.ACTIVE) {
+            // 같은 전시에 이미 활성 구독이 있으면 진행 중 구독이 두 건이 되므로 막는다
+            boolean activeExists = subscriptionRepository.existsByExhibitionIdAndStatus(
+                    subscription.getExhibition().getId(), SubscriptionStatus.ACTIVE);
+            if (activeExists) {
+                throw new SubscriptionException(SubscriptionErrorCode.ALREADY_SUBSCRIBED);
+            }
+            subscription.activate();
+        } else if (current == SubscriptionStatus.PENDING_PAYMENT && target == SubscriptionStatus.CANCELED) {
+            // 결제 전 취소는 환불과 만료일 변경 없이 취소만 한다
+            subscription.cancelSubscription(LocalDateTime.now());
+        } else if (current == SubscriptionStatus.ACTIVE && target == SubscriptionStatus.CANCELED) {
+            // 사용자 해지와 같은 흐름 (환불 기록, 전시 만료일 갱신)
+            cancelOngoing(subscription);
+        } else if (current == SubscriptionStatus.ACTIVE && target == SubscriptionStatus.EXPIRED) {
+            subscription.markAsExpired();
+        } else {
+            // 취소/만료된 구독의 재활성화 등 허용되지 않은 전이
+            throw new SubscriptionException(SubscriptionErrorCode.INVALID_STATUS_TRANSITION);
+        }
 
         return SubscriptionStatusUpdateResponse.from(subscription);
     }

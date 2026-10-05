@@ -15,7 +15,8 @@ public enum SubscriptionErrorCode implements BaseResponseCode {
     ALREADY_SUBSCRIBED("SUBSCRIPTION_400_2", BAD_REQUEST, "이미 진행 중인 구독이 있습니다. 변경은 구독 플랜 변경 API를 이용해주세요."),
     PLAN_NOT_ACTIVE("SUBSCRIPTION_400_3", BAD_REQUEST, "신규 신청이 불가능한 요금제입니다."),
     SUBSCRIPTION_REFUND_NOT_FOUND("SUBSCRIPTION_404_2", NOT_FOUND, "환불 정보를 찾을 수 없습니다."),
-    SUBSCRIPTION_REFUND_ALREADY_COMPLETED("SUBSCRIPTION_409_1", CONFLICT, "이미 환불 완료 처리된 건입니다.");
+    SUBSCRIPTION_REFUND_ALREADY_COMPLETED("SUBSCRIPTION_409_1", CONFLICT, "이미 환불 완료 처리된 건입니다."),
+    INVALID_STATUS_TRANSITION("SUBSCRIPTION_409_2", CONFLICT, "허용되지 않는 구독 상태 변경입니다.");
 
     private final String code;
     private final int httpStatus;
