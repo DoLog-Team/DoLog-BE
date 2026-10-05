@@ -107,6 +107,7 @@ class AccountSchemaTests {
                 .andExpect(status().isForbidden());
         mvc.perform(delete("/api/accounts/me").contextPath("/api")
                 .header("Authorization", "Bearer " + access)).andExpect(status().isOk());
+        entityManager.flush();
         entityManager.clear();
         assertEquals(AccountStatus.WITHDRAWN, accounts.findById(a.getId()).orElseThrow().getAccountStatus());
         assertFalse(tokens.existsById(first.getId()));
