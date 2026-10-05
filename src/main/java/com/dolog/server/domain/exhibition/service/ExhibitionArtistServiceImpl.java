@@ -197,7 +197,8 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         return new ArtistJoinCodeValidateResponse(
                 exhibition.getId(),
-                exhibition.getExhibitionDetail().getTitle()
+                exhibition.getExhibitionDetail().getTitle(),
+                null
         );
     }
 

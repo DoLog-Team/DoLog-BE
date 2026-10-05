@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import com.dolog.server.domain.artist.web.dto.request.ArtistJoinCodeValidateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
@@ -156,6 +158,49 @@ class ExhibitionArtistControllerTest {
                 accountId,
                 exhibitionId,
                 artistId
+        );
+    }
+
+    @Test
+    @DisplayName("참여 코드 검증 응답은 greetingFormat을 null로 포함한다")
+    void validatesJoinCodeWithNullGreetingFormat() {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+        CustomUserDetails user = new CustomUserDetails(
+                accountId,
+                1L,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_ARTIST_ADMIN"))
+        );
+        ArtistJoinCodeValidateResponse serviceResponse =
+                new ArtistJoinCodeValidateResponse(
+                        exhibitionId,
+                        "2026년 두록 졸업 전시회",
+                        null
+                );
+
+        when(exhibitionArtistService.validateJoinCode(
+                accountId,
+                "2345ABCD"
+        )).thenReturn(serviceResponse);
+
+        SuccessResponse<ArtistJoinCodeValidateResponse> response =
+                controller.validateJoinCode(
+                        user,
+                        new ArtistJoinCodeValidateRequest("2345ABCD")
+                );
+
+        assertEquals(200, response.getHttpStatus());
+        assertEquals("SUCCESS_200", response.getCode());
+        assertNull(response.getData().greetingFormat());
+
+        JsonNode data = new ObjectMapper().valueToTree(response.getData());
+        assertTrue(data.has("greetingFormat"));
+        assertTrue(data.get("greetingFormat").isNull());
+
+        verify(exhibitionArtistService).validateJoinCode(
+                accountId,
+                "2345ABCD"
         );
     }
 }

@@ -881,6 +881,7 @@ class ExhibitionArtistServiceImplTest {
 
         assertEquals(exhibition.getId(), response.exhibitionId());
         assertEquals("졸업전시", response.exhibitionTitle());
+        assertNull(response.greetingFormat());
         verify(exhibitionRepository).findByArtistJoinCode("2345ABCD");
     }
 
