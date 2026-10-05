@@ -74,6 +74,23 @@ public class FileService {
         }
     }
 
+    // Retention cleanup must propagate storage errors so the database deletion can be retried.
+    public void deleteOwnedFile(String fileUrl) {
+        java.net.URI uri = java.net.URI.create(fileUrl);
+        java.net.URI owned = java.net.URI.create(s3Client.utilities().getUrl(
+                GetUrlRequest.builder().bucket(bucket).key("retention").build()).toString());
+        String prefix = owned.getPath().substring(0, owned.getPath().lastIndexOf('/') + 1);
+        if (!java.util.Objects.equals(uri.getScheme(), owned.getScheme())
+                || !java.util.Objects.equals(uri.getAuthority(), owned.getAuthority())
+                || !uri.getPath().startsWith(prefix)) {
+            return; // External links and other buckets are not objects owned by this service.
+        }
+        String key = uri.getPath().substring(prefix.length());
+        if (!key.isEmpty()) {
+            s3Client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+        }
+    }
+
     public void deleteFile(String fileUrl) {
         if (fileUrl == null) return;
 

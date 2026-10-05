@@ -269,4 +269,61 @@ class SocialLoginTests {
         verify(agreements, never()).save(any());
     }
 
+    @Test
+    @DisplayName("탈퇴는 공동 작품을 유지하고 본인 연결·세션만 비활성화한다.")
+    void withdrawalRetainsSharedArtworkAndInvalidatesAccount() {
+        var accounts = mock(AccountRepository.class);
+        var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        UUID id = UUID.randomUUID();
+        var account = Account.builder().id(id).role(Role.ARTIST_ADMIN)
+                .accountStatus(AccountStatus.ACTIVE).build();
+        when(accounts.findForWithdrawal(id)).thenReturn(Optional.of(account));
+        byte[] artist = new byte[16];
+        byte[] artwork = new byte[16];
+        when(jdbc.queryForList(contains("FROM artists"), eq(byte[].class), any(byte[].class)))
+                .thenReturn(java.util.List.of(artist));
+        when(jdbc.queryForList(contains("SELECT DISTINCT artwork_id"), eq(byte[].class), any(byte[].class)))
+                .thenReturn(java.util.List.of(artwork));
+        when(jdbc.queryForList(contains("artist_id <>"), any(byte[].class), any(byte[].class)))
+                .thenReturn(java.util.List.of(java.util.Map.of("id", 2L)));
+        var service = new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc);
+        service.withdraw(id);
+        assertEquals(AccountStatus.WITHDRAWN, account.getAccountStatus());
+        assertNotNull(account.getWithdrawnAt());
+        verify(jdbc, never()).update(startsWith("UPDATE artworks "), any(LocalDateTime.class), any(byte[].class));
+        verify(jdbc).update(startsWith("UPDATE artwork_artist_maps "), any(LocalDateTime.class), any(byte[].class));
+        verify(jdbc).update(eq("DELETE FROM refresh_token WHERE account_id = ?"), any(byte[].class));
+        assertThrows(BaseException.class, () -> service.withdraw(id));
+    }
+
+    @Test
+    @DisplayName("마지막 작가 탈퇴는 작품과 BTS 연결을 3개월 보관 대상으로 만든다.")
+    void withdrawalRetainsSoleArtworkForThreeMonths() {
+        var accounts = mock(AccountRepository.class);
+        var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        UUID id = UUID.randomUUID();
+        when(accounts.findForWithdrawal(id)).thenReturn(Optional.of(Account.builder().id(id)
+                .role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build()));
+        when(jdbc.queryForList(contains("FROM artists"), eq(byte[].class), any(byte[].class)))
+                .thenReturn(java.util.List.of(new byte[16]));
+        when(jdbc.queryForList(contains("SELECT DISTINCT artwork_id"), eq(byte[].class), any(byte[].class)))
+                .thenReturn(java.util.List.of(new byte[16]));
+        new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc).withdraw(id);
+        verify(jdbc).update(startsWith("UPDATE artworks "), any(LocalDateTime.class), any(byte[].class));
+        verify(jdbc).update(startsWith("UPDATE bts_artwork_map "), any(LocalDateTime.class), any(byte[].class));
+    }
+
+    @Test
+    @DisplayName("관리자 계정은 서비스에서도 탈퇴를 거절하며 데이터를 변경하지 않는다.")
+    void withdrawalRejectsAdminWithoutSideEffects() {
+        var accounts = mock(AccountRepository.class);
+        var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        UUID id = UUID.randomUUID();
+        when(accounts.findForWithdrawal(id)).thenReturn(Optional.of(Account.builder().id(id)
+                .role(Role.DOLOG_ADMIN).accountStatus(AccountStatus.ACTIVE).build()));
+        var service = new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc);
+        assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> service.withdraw(id));
+        verifyNoInteractions(jdbc);
+    }
+
 }

@@ -76,14 +76,14 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     // 3. 동일 카테고리 내 작가 기준 조회
     // ==============================================================================
     @Query(value = "SELECT DISTINCT a.*, " +
-            "CASE WHEN am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.artwork_id = :artworkId) THEN 2 " +
+            "CASE WHEN am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) THEN 2 " +
             "     WHEN a.category = :category THEN 1 " +
             "     ELSE 0 END as score " +
             "FROM artworks a " +
-            "LEFT JOIN artwork_artist_maps am ON a.id = am.artwork_id " +
-            "WHERE a.exhibition_id = :exhibitionId " +
+            "LEFT JOIN artwork_artist_maps am ON a.id = am.artwork_id AND am.deleted_at IS NULL " +
+            "WHERE a.deleted_at IS NULL AND a.exhibition_id = :exhibitionId " +
             "AND a.id != :artworkId " +
-            "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.artwork_id = :artworkId) OR a.category = :category) " +
+            "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) OR a.category = :category) " +
             "ORDER BY score DESC, a.id DESC",
             nativeQuery = true)
     List<Artwork> findRelatedArtworks(

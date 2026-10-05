@@ -56,6 +56,91 @@ class AccountSchemaTests {
     @Value("${admin.email}") String adminEmail;
     @Value("${admin.password}") String adminPassword;
 
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired jakarta.persistence.EntityManager entityManager;
+    @Autowired com.dolog.server.domain.artist.repository.ArtistRepository artists;
+    @Autowired com.dolog.server.domain.artist.repository.ArtistProfileRepository profiles;
+    @Autowired com.dolog.server.domain.artwork.repository.ArtworkRepository artworks;
+    @Autowired com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository artworkMappings;
+    @Autowired com.dolog.server.domain.bts.repository.BtsRepository btsRepository;
+    @Autowired com.dolog.server.domain.account.service.WithdrawalRetentionJob retention;
+
+    @Test
+    @DisplayName("탈퇴는 공동 작품의 남은 작가만 노출하고 단독 작품·BTS를 3개월 보관한다")
+    void withdrawalRetainsCoauthorAndPurgesExpiredContent() throws Exception {
+        var a = accounts.saveAndFlush(social("GOOGLE", "withdraw-a", "withdraw-a@test.com"));
+        var b = accounts.saveAndFlush(social("GOOGLE", "withdraw-b", "withdraw-b@test.com"));
+        var artistA = artists.saveAndFlush(com.dolog.server.domain.artist.entity.Artist.builder()
+                .account(a).nameKo("A").build());
+        var artistB = artists.saveAndFlush(com.dolog.server.domain.artist.entity.Artist.builder()
+                .account(b).nameKo("B").build());
+        var exhibition = exhibitions.findByEntryCode("DEME2222").orElseThrow();
+        var profileA = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
+                .artist(artistA).exhibition(exhibition).nameKo("A").isPublic(true).build());
+        var profileB = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
+                .artist(artistB).exhibition(exhibition).nameKo("B").isPublic(true).build());
+        var shared = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()
+                .exhibition(exhibition).title("shared").build());
+        var sole = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()
+                .exhibition(exhibition).title("sole").build());
+        for (var artwork : java.util.List.of(shared, sole)) {
+            artworkMappings.saveAndFlush(com.dolog.server.domain.artwork.entity.ArtworkArtistMap.builder()
+                    .artwork(artwork).artist(artistA).artistProfile(profileA).artistRole("AUTHOR").build());
+        }
+        artworkMappings.saveAndFlush(com.dolog.server.domain.artwork.entity.ArtworkArtistMap.builder()
+                .artwork(shared).artist(artistB).artistProfile(profileB).artistRole("AUTHOR").build());
+        var ownBts = btsRepository.saveAndFlush(com.dolog.server.domain.bts.entity.Bts.builder()
+                .exhibition(exhibition).artistProfile(profileA).title("A BTS").build());
+        var otherBts = com.dolog.server.domain.bts.entity.Bts.builder()
+                .exhibition(exhibition).artistProfile(profileB).title("B BTS").build();
+        otherBts.getArtworkMaps().add(com.dolog.server.domain.bts.entity.BtsArtworkMap.builder()
+                .bts(otherBts).artwork(sole).build());
+        btsRepository.saveAndFlush(otherBts);
+        var first = session(a);
+        var second = session(a);
+        String access = jwt.createAccessToken(a.getId(), first.getId());
+        mvc.perform(delete("/api/accounts/me").contextPath("/api")).andExpect(status().isUnauthorized());
+        var admin = accounts.findByEmail(adminEmail).orElseThrow();
+        var adminSession = session(admin);
+        mvc.perform(delete("/api/accounts/me").contextPath("/api")
+                .header("Authorization", "Bearer " + jwt.createAccessToken(admin.getId(), adminSession.getId())))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/accounts/me").contextPath("/api")
+                .header("Authorization", "Bearer " + access)).andExpect(status().isOk());
+        entityManager.clear();
+        assertEquals(AccountStatus.WITHDRAWN, accounts.findById(a.getId()).orElseThrow().getAccountStatus());
+        assertFalse(tokens.existsById(first.getId()));
+        assertFalse(tokens.existsById(second.getId()));
+        assertThrows(JwtInvalidException.class, () -> auth.refresh(first.getToken()));
+        mvc.perform(get("/api/accounts/me").contextPath("/api")
+                .header("Authorization", "Bearer " + access)).andExpect(status().isUnauthorized());
+        assertFalse(artists.existsById(artistA.getId()));
+        assertFalse(profiles.existsById(profileA.getId()));
+        assertTrue(artists.existsById(artistB.getId()));
+        assertFalse(artworks.existsById(sole.getId()));
+        var kept = artworks.findById(shared.getId()).orElseThrow();
+        assertEquals(java.util.List.of("B"), kept.getArtworkArtistMaps().stream()
+                .map(m -> m.getArtist().getNameKo()).toList());
+        assertFalse(btsRepository.existsById(ownBts.getId()));
+        assertTrue(btsRepository.findById(otherBts.getId()).orElseThrow().getArtworkMaps().isEmpty());
+        retention.purgeExpired();
+        assertTrue(accounts.existsById(a.getId()));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
+        // Simulate expiration; the same retained rows are now eligible for physical deletion.
+        var expired = java.time.LocalDateTime.now().minusMonths(3).minusDays(1);
+        for (String table : java.util.List.of("artists", "artist_profiles", "artworks", "artwork_artist_maps", "bts", "bts_artwork_map")) {
+            jdbc.update("UPDATE " + table + " SET deleted_at = ? WHERE deleted_at IS NOT NULL", expired);
+        }
+        jdbc.update("UPDATE accounts SET withdrawn_at = ? WHERE withdrawn_at IS NOT NULL", expired);
+        retention.purgeExpired();
+        entityManager.clear();
+        assertFalse(accounts.existsById(a.getId()));
+        assertTrue(accounts.existsById(b.getId()));
+        assertTrue(artworks.existsById(shared.getId()));
+        assertTrue(btsRepository.existsById(otherBts.getId()));
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
+    }
+
     @Test
     @DisplayName("소셜 사용자 ID는 제공자별로 대소문자를 구분하고 중복을 허용하지 않음.")
     void socialIdentityIsUniqueWithinProvider() {

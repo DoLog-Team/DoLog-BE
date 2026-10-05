@@ -33,6 +33,7 @@ import jakarta.validation.Valid;
 @RequestMapping("/accounts")
 public class AccountController {
 
+    private final com.dolog.server.domain.account.service.AccountWithdrawalService withdrawalService;
     private final AccountService accountService; // 인터페이스 타입으로 DI
     private final TermsAgreementService termsAgreementService;
 
@@ -58,6 +59,14 @@ public class AccountController {
     @GetMapping("/me")
     public SuccessResponse<MyAccountResponse> getMyAccount(@AuthenticationPrincipal CustomUserDetails user) {
         return SuccessResponse.ok(accountService.getMyAccount(user.getId()), "계정 정보 조회 성공");
+    }
+
+    @Operation(summary = "내 계정 탈퇴")
+    @DeleteMapping("/me")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
+        withdrawalService.withdraw(user.getId());
+        return SuccessResponse.ok(null, "계정 탈퇴 성공");
     }
 
     @Operation(summary = "내 최신 약관 동의 내역 조회")
