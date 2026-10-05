@@ -18,6 +18,11 @@ import java.util.UUID;
 public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionArtistMap, UUID> {
 
     boolean existsByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
+    boolean existsByExhibitionIdAndArtistIdAndStatus(
+            UUID exhibitionId,
+            UUID artistId,
+            ExhibitionArtistStatus status
+    );
     List<ExhibitionArtistMap> findByExhibitionId(UUID exhibitionId);
     Optional<ExhibitionArtistMap> findByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
     boolean existsByArtistId(UUID artistId);

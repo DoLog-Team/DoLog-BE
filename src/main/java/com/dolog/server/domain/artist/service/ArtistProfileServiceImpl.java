@@ -1,14 +1,21 @@
 package com.dolog.server.domain.artist.service;
 
+import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.account.entity.enums.Role;
+import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.ArtistSns;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAccessDeniedException;
 import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistNotRegisteredInExhibitionException;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAlreadyExistsException;
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
@@ -16,17 +23,23 @@ import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfile
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistSnsNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
+import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
+import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionListItemResponse;
 import com.dolog.server.global.util.FileService;
+import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.data.domain.PageRequest;
 
@@ -40,6 +53,7 @@ import java.util.UUID;
 public class ArtistProfileServiceImpl implements ArtistProfileService {
 
     private final ArtistProfileRepository profileRepository;
+    private final AccountRepository accountRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final ArtistRepository artistRepository;
@@ -47,23 +61,35 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final FileService fileService;
     private final ArtistSnsRepository artistSnsRepository;
     private final BtsRepository btsRepository;
+    private final ArtistProfileImageValidator profileImageValidator;
 
     // 프로필 생성
     @Transactional
     @Override
-    public ArtistProfileResponse createArtistProfile(UUID exhibitionId, ArtistProfileCreateRequest request) throws IOException {
+    public ArtistProfileCreateResponse createArtistProfile(
+            ArtistProfileCreateRequest request,
+            MultipartFile profileImg
+    ) throws IOException {
 
-        UUID artistId = UUID.fromString(request.getArtistId());
+        UUID exhibitionId = request.getExhibitionId();
+        UUID artistId = request.getArtistId();
 
         // 1. 전시 및 작가 존재 확인
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(ArtistProfileNotFoundException::new);
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
 
         var artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
         // [선 등록 여부 검증] 해당 전시에 등록된 사람인지 확인
-        if (!exhibitionArtistMapRepository.existsByExhibitionIdAndArtistId(exhibitionId, artistId)) {
+        if (!exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibitionId,
+                        artistId,
+                        ExhibitionArtistStatus.JOINED
+                )) {
             throw new ArtistNotRegisteredInExhibitionException();
         }
 
@@ -73,61 +99,112 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         }
 
         // 2. 파일 업로드 및 엔티티 저장
-        String dbImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles");
+        profileImageValidator.validate(profileImg);
+        String dbImageUrl = fileService.uploadFile(
+                profileImg,
+                "artist-profiles"
+        );
+        boolean isPublic = request.getIsPublic() == null
+                || request.getIsPublic();
+
         ArtistProfile profile = ArtistProfile.builder()
-                .artist(artist).exhibition(exhibition)
-                .nameKo(request.getNameKo()).nameEn(request.getNameEn())
-                .bio(TextUtils.normalizeNewlines(request.getBio())).email(request.getEmail())
-                .profileImg(dbImageUrl).isPublic(true).build();
+                .artist(artist)
+                .exhibition(exhibition)
+                .nameKo(request.getNameKo().trim())
+                .nameEn(request.getNameEn())
+                .bio(TextUtils.normalizeNewlines(request.getBio()))
+                .email(request.getEmail())
+                .purchaseContactUrl(request.getPurchaseContactUrl())
+                .profileImg(dbImageUrl)
+                .isPublic(isPublic)
+                .viewCount(0L)
+                .build();
 
         profile.fillDefaultInfoFromArtist();
-        profileRepository.save(profile);
+        ArtistProfile savedProfile = profileRepository.save(profile);
 
         // 3. 응답 반환
-        return convertToResponse(profile);
+        return new ArtistProfileCreateResponse(savedProfile.getId());
     }
 
 
     // 프로필 수정
     @Transactional
     @Override
-    public ArtistProfileResponse updateArtistProfile(UUID profileId, ArtistProfileCreateRequest request) throws IOException {
+    public ArtistProfileUpdateResponse updateArtistProfile(
+            UUID accountId,
+            UUID profileId,
+            ArtistProfileUpdateRequest request,
+            MultipartFile profileImg
+    ) throws IOException {
+
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
 
         // 1. 기존 프로필 조회
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
+        requireCanUpdateProfile(actor, profile);
 
         // 2. 이미지 처리 로직
-        String newImageUrl = profile.getProfileImg(); // 기본값은 기존 이미지 유지
+        profileImageValidator.validate(profileImg);
+        String oldImageUrl = profile.getProfileImg();
+        String newImageUrl = null;
 
-        // 이미지 삭제 플래그가 true
-        if (Boolean.TRUE.equals(request.getIsDeleteImg())) {
-            if (profile.getProfileImg() != null) {
-                fileService.deleteFile(profile.getProfileImg());
-            }
+        // 빈 파일 part는 기존 이미지 삭제로 처리한다.
+        if (profileImg != null && profileImg.isEmpty()) {
             profile.clearProfileImg();
-            newImageUrl = null;
+            fileService.deleteFile(oldImageUrl);
         }
         // 새 파일 (교체)
-        else if (request.getProfileImg() != null && !request.getProfileImg().isEmpty()) {
-            if (profile.getProfileImg() != null) {
-                fileService.deleteFile(profile.getProfileImg());
-            }
-            newImageUrl = fileService.uploadFile(request.getProfileImg(), "artist-profiles");
+        else if (profileImg != null && !profileImg.isEmpty()) {
+            newImageUrl = fileService.uploadFile(
+                    profileImg,
+                    "artist-profiles"
+            );
+            fileService.deleteFile(oldImageUrl);
         }
         // 둘 다 아니면 -> 유지
 
         // 3. 엔티티 업데이트 (선택적 필드 업데이트 방어 코드 적용)
         profile.updateProfile(
-                request.getNameKo() != null ? request.getNameKo() : profile.getNameKo(),
-                request.getNameEn() != null ? request.getNameEn() : profile.getNameEn(),
-                request.getBio() != null ? TextUtils.normalizeNewlines(request.getBio()) : profile.getBio(),
-                request.getEmail() != null ? request.getEmail() : profile.getEmail(),
+                request.getNameKo(),
+                request.getNameEn(),
+                request.getBio() != null
+                        ? TextUtils.normalizeNewlines(request.getBio())
+                        : null,
+                request.getEmail(),
+                request.getPurchaseContactUrl(),
+                request.getIsPublic(),
                 newImageUrl
         );
 
         // 3. 응답 반환
-        return convertToResponse(profile);
+        return new ArtistProfileUpdateResponse(profile.getId());
+    }
+
+    private void requireCanUpdateProfile(
+            Account actor,
+            ArtistProfile profile
+    ) {
+        if (actor.getRole() == Role.DOLOG_ADMIN) {
+            return;
+        }
+
+        if (actor.getRole() == Role.EXHIBITION_ADMIN
+                && profile.getExhibition().getAccount().getId()
+                .equals(actor.getId())) {
+            return;
+        }
+
+        if (actor.getRole() == Role.ARTIST_ADMIN
+                && profile.getArtist().getAccount() != null
+                && profile.getArtist().getAccount().getId()
+                .equals(actor.getId())) {
+            return;
+        }
+
+        throw new ArtistProfileAccessDeniedException();
     }
 
     // 프로필 목록 조회 (DB 조회용)

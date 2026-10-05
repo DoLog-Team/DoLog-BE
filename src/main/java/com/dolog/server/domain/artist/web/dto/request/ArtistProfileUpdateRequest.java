@@ -1,24 +1,18 @@
 package com.dolog.server.domain.artist.web.dto.request;
 
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
-public class ArtistProfileCreateRequest {
-    @NotNull(message = "작가 ID는 필수입니다.")
-    private UUID artistId;
+public class ArtistProfileUpdateRequest {
 
-    @NotNull(message = "전시 ID는 필수입니다.")
-    private UUID exhibitionId;
-
-    @NotBlank(message = "국문 성명은 필수입니다.")
-    @Size(max = 10, message = "국문 성명은 최대 10자까지 입력할 수 있습니다.")
+    @Size(
+            min = 1,
+            max = 10,
+            message = "국문 성명은 1자 이상 10자 이하로 입력해주세요."
+    )
     @Pattern(
             regexp = "^(?=.*[가-힣A-Za-z0-9])[가-힣A-Za-z0-9 ]+$",
             message = "국문 성명은 한글, 영문, 숫자, 띄어쓰기만 사용할 수 있습니다."
