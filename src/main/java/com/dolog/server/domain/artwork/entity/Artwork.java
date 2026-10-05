@@ -262,8 +262,22 @@ public class Artwork extends BaseEntity implements Orderable {
         this.exhibitionZone = zone;
     }
 
+    public void submitTo(Exhibition exhibition, ExhibitionZone zone) {
+        this.exhibition = exhibition;
+        this.exhibitionZone = zone;
+    }
+
+    public void updateLocationMap(String locationMap) {
+        if (locationMap != null) this.locationMap = locationMap;
+    }
+
+    // 전시에 묶인 정보(구역, 순서, 위치 지도, 전시별 프로필, 전시 숨김)는 출품 취소와 함께 비운다.
     public void cancelExhibitionSubmission() {
         this.exhibition = null;
         this.exhibitionZone = null;
+        this.orderIndex = null;
+        this.locationMap = null;
+        this.hiddenAt = null;
+        this.artworkArtistMaps.forEach(map -> map.linkProfile(null));
     }
 }

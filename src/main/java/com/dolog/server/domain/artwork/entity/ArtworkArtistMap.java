@@ -44,6 +44,10 @@ public class ArtworkArtistMap extends BaseEntity {
         }
     }
 
+    public void linkProfile(ArtistProfile profile) {
+        this.artistProfile = profile;
+    }
+
     public void updateArtistProfile(Artist artist, ArtistProfile profile, String role) {
         this.artist = artist;
         this.artistProfile = profile;

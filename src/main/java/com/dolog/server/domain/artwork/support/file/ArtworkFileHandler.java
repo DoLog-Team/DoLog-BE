@@ -22,12 +22,30 @@ public class ArtworkFileHandler {
      * 대표 이미지 업로드. 파일이 없으면 null. 롤백되면 올린 파일을 지운다.
      */
     public String uploadMainImage(MultipartFile file) {
+        return uploadTo(file, "artworks/main");
+    }
+
+    /**
+     * 작품 위치 지도 업로드 (출품 시). 파일이 없으면 null. 롤백되면 올린 파일을 지운다.
+     */
+    public String uploadLocationMap(MultipartFile file) {
+        return uploadTo(file, "artworks/maps");
+    }
+
+    /**
+     * 커밋된 뒤에 파일을 지운다. 트랜잭션 밖이면 바로 지운다.
+     */
+    public void deleteAfterCommit(String fileUrl) {
+        afterCommit(fileUrl);
+    }
+
+    private String uploadTo(MultipartFile file, String folder) {
 
         if (file == null || file.isEmpty()) {
             return null;
         }
 
-        String url = upload(file);
+        String url = upload(file, folder);
         afterRollback(url);
         return url;
     }
@@ -47,10 +65,10 @@ public class ArtworkFileHandler {
         return newUrl;
     }
 
-    private String upload(MultipartFile file) {
+    private String upload(MultipartFile file, String folder) {
 
         try {
-            return fileService.uploadFile(file, "artworks/main");
+            return fileService.uploadFile(file, folder);
         } catch (IOException e) {
             throw new ArtworkException(ArtworkErrorCode.FILE_UPLOAD_ERROR);
         } catch (IllegalArgumentException e) {

@@ -14,7 +14,13 @@ public enum ArtworkErrorCode implements BaseResponseCode { // 인터페이스 �
     INVALID_ORDER_REQUEST(400, "ARTWORK_005", "잘못된 정렬 요청입니다. prev/next는 둘 다 필요합니다."),
     ARTWORK_ARTIST_MAPPING_NOT_FOUND(404, "ARTWORK_006", "작품-작가 매핑 정보를 찾을 수 없습니다."),
     ARTWORK_ARTIST_MISMATCH(403, "ARTWORK_007", "본인 작가 정보로만 작품을 등록할 수 있습니다."),
-    INVALID_IMAGE_FILE(400, "ARTWORK_008", "jpg, jpeg, png, webp 이미지만 올릴 수 있습니다.");
+    INVALID_IMAGE_FILE(400, "ARTWORK_008", "jpg, jpeg, png, webp 이미지만 올릴 수 있습니다."),
+    ARTWORK_ALREADY_SUBMITTED(409, "ARTWORK_009", "이미 전시에 출품된 작품입니다."),
+    ARTWORK_NOT_SUBMITTED(400, "ARTWORK_010", "전시에 출품되지 않은 작품입니다."),
+    ARTIST_NOT_JOINED_EXHIBITION(400, "ARTWORK_011", "참여 중인 전시에만 출품할 수 있습니다."),
+    INVALID_EXHIBITION_ZONE(400, "ARTWORK_012", "해당 전시에 속한 구역이 아닙니다."),
+    REQUIRED_FIELDS_MISSING(400, "ARTWORK_013", "전시에서 정한 필수 항목을 채워야 공개할 수 있습니다."),
+    NOT_EXHIBITION_OWNER(403, "ARTWORK_014", "해당 전시의 관리자만 처리할 수 있습니다.");
 
     private final int httpStatus;
     private final String code;
