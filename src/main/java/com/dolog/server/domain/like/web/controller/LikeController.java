@@ -27,7 +27,7 @@ public class LikeController {
     private final LikeService likeService;
     private final VisitorIdResolver visitorIdResolver;
 
-    @Operation(summary = "작품 좋아요", description = "비로그인 가능. visitor_id 쿠키가 없으면 본문의 visitorId, 둘 다 없으면 새로 발급해 쿠키와 응답으로 내려줍니다.")
+    @Operation(summary = "작품 좋아요", description = "비로그인 가능. visitor_id 쿠키 → X-Visitor-Id 헤더 → visitorId 쿼리 → 본문 순서로 찾고, 모두 없으면 새로 발급해 쿠키와 응답으로 내려줍니다.")
     @PostMapping("/artworks/{artworkId}/likes")
     public ResponseEntity<SuccessResponse<ArtworkLikeResponse>> likeArtwork(
             @PathVariable UUID artworkId,
@@ -39,7 +39,7 @@ public class LikeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data, "좋아요가 등록되었습니다."));
     }
 
-    @Operation(summary = "작품 좋아요 취소", description = "visitor_id 쿠키, 없으면 본문의 visitorId 기준으로 취소합니다.")
+    @Operation(summary = "작품 좋아요 취소", description = "visitor_id 쿠키 → X-Visitor-Id 헤더 → visitorId 쿼리 → 본문 순서로 찾은 방문자의 좋아요를 취소합니다.")
     @DeleteMapping("/artworks/{artworkId}/likes")
     public SuccessResponse<ArtworkLikeResponse> cancelArtworkLike(
             @PathVariable UUID artworkId,
@@ -58,7 +58,7 @@ public class LikeController {
             HttpServletResponse response) {
         String visitorId = visitorIdResolver.resolveOrIssue(request, response, visitorIdOf(body));
         ArtistProfileLikeResponse data = likeService.likeArtistProfile(profileId, visitorId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data, "작가 좋아요 성공"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data, "좋아요가 등록되었습니다."));
     }
 
     @Operation(summary = "작가 좋아요 취소")
@@ -68,7 +68,7 @@ public class LikeController {
             @RequestBody(required = false) LikeRequest body,
             HttpServletRequest request) {
         String visitorId = requireVisitorId(request, body);
-        return SuccessResponse.ok(likeService.cancelArtistProfileLike(profileId, visitorId), "작가 좋아요 취소 성공");
+        return SuccessResponse.ok(likeService.cancelArtistProfileLike(profileId, visitorId), "좋아요가 취소되었습니다.");
     }
 
     private String visitorIdOf(LikeRequest body) {
