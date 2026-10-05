@@ -48,6 +48,10 @@ public class Exhibition extends BaseEntity {
         this.entryCodeExpiresAt = codeExpiresAt;
     }
 
+    public void applySubscriptionEnd(LocalDateTime endAt) {
+        this.expiresAt = endAt;
+    }
+
     public void requireAvailable() {
         if (expiresAt != null && !expiresAt.isAfter(LocalDateTime.now())) {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_EXPIRED);
