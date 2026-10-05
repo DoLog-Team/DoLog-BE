@@ -126,9 +126,6 @@ class AccountSchemaTests {
         assertEquals(AccountStatus.WITHDRAWN, accounts.findById(a.getId()).orElseThrow().getAccountStatus());
         assertFalse(tokens.existsById(first.getId()));
         assertFalse(tokens.existsById(second.getId()));
-        assertThrows(JwtInvalidException.class, () -> auth.refresh(first.getToken()));
-        mvc.perform(get("/api/accounts/me").contextPath("/api")
-                .header("Authorization", "Bearer " + access)).andExpect(status().isUnauthorized());
         assertFalse(artists.existsById(artistA.getId()));
         assertFalse(profiles.existsById(profileA.getId()));
         assertTrue(artists.existsById(artistB.getId()));
@@ -158,6 +155,9 @@ class AccountSchemaTests {
         TestTransaction.flagForCommit();
         TestTransaction.end();
         try {
+            assertThrows(JwtInvalidException.class, () -> auth.refresh(first.getToken()));
+            mvc.perform(get("/api/accounts/me").contextPath("/api")
+                    .header("Authorization", "Bearer " + access)).andExpect(status().isUnauthorized());
             retention.purgeExpired();
             assertTrue(accounts.existsById(a.getId()));
             assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
