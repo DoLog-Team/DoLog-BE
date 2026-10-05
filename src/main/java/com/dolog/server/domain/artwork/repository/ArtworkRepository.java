@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.repository;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -164,4 +165,6 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             UUID zoneId
     );
 
+
+    List<Artwork> findByExhibitionIdAndStatus(UUID exhibitionId, ArtworkStatus status);
 }

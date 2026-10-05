@@ -52,6 +52,24 @@ public class ExhibitionFieldSettings extends BaseEntity {
     @Column(name = "hidden_production_year", nullable = false)
     private boolean hiddenProductionYear;
 
+    public static ExhibitionFieldSettings defaultsFor(Exhibition exhibition) {
+        return ExhibitionFieldSettings.builder().exhibition(exhibition).build();
+    }
+
+    public void update(boolean requiredMainImg, boolean requiredSize, boolean requiredMaterials,
+                       boolean requiredLocationMap, boolean hiddenSize, boolean hiddenMaterials,
+                       boolean hiddenLocationMap, boolean hiddenProductionPeriod, boolean hiddenProductionYear) {
+        this.requiredMainImg = requiredMainImg;
+        this.requiredSize = requiredSize;
+        this.requiredMaterials = requiredMaterials;
+        this.requiredLocationMap = requiredLocationMap;
+        this.hiddenSize = hiddenSize;
+        this.hiddenMaterials = hiddenMaterials;
+        this.hiddenLocationMap = hiddenLocationMap;
+        this.hiddenProductionPeriod = hiddenProductionPeriod;
+        this.hiddenProductionYear = hiddenProductionYear;
+    }
+
     // 사이즈는 가로/세로만 본다. 높이는 부피가 있는 작품만 입력한다.
     public boolean isSatisfiedBy(Artwork artwork) {
         if (requiredMainImg && isBlank(artwork.getMainImg())) return false;
