@@ -269,6 +269,22 @@ class SocialLoginTests {
         verify(agreements, never()).save(any());
     }
 
+    private final com.dolog.server.domain.artist.repository.ArtistRepository withdrawalArtists = mock(com.dolog.server.domain.artist.repository.ArtistRepository.class);
+    private final com.dolog.server.domain.artist.repository.ArtistProfileRepository withdrawalProfiles = mock(com.dolog.server.domain.artist.repository.ArtistProfileRepository.class);
+    private final com.dolog.server.domain.artwork.repository.ArtworkRepository withdrawalArtworks = mock(com.dolog.server.domain.artwork.repository.ArtworkRepository.class);
+    private final com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository withdrawalMaps = mock(com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository.class);
+    private final com.dolog.server.domain.bts.repository.BtsRepository withdrawalBts = mock(com.dolog.server.domain.bts.repository.BtsRepository.class);
+    private final com.dolog.server.domain.bts.repository.BtsArtworkMapRepository withdrawalBtsMaps = mock(com.dolog.server.domain.bts.repository.BtsArtworkMapRepository.class);
+    private final com.dolog.server.domain.account.repository.RefreshTokenRepository withdrawalTokens = mock(com.dolog.server.domain.account.repository.RefreshTokenRepository.class);
+    private final com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository withdrawalExhibitions = mock(com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository.class);
+
+    private com.dolog.server.domain.account.service.AccountWithdrawalService withdrawalService(
+            AccountRepository accounts, org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        return new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc,
+                withdrawalArtists, withdrawalProfiles, withdrawalArtworks, withdrawalMaps,
+                withdrawalBts, withdrawalBtsMaps, withdrawalTokens, withdrawalExhibitions);
+    }
+
     @Test
     @DisplayName("탈퇴는 공동 작품을 유지하고 본인 연결·세션만 비활성화한다.")
     void withdrawalRetainsSharedArtworkAndInvalidatesAccount() {
@@ -286,13 +302,13 @@ class SocialLoginTests {
                 .thenReturn(java.util.List.of(artwork));
         when(jdbc.queryForList(contains("artist_id <>"), any(byte[].class), any(byte[].class)))
                 .thenReturn(java.util.List.of(java.util.Map.of("id", 2L)));
-        var service = new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc);
+        var service = withdrawalService(accounts, jdbc);
         service.withdraw(id);
         assertEquals(AccountStatus.WITHDRAWN, account.getAccountStatus());
         assertNotNull(account.getWithdrawnAt());
-        verify(jdbc, never()).update(startsWith("UPDATE artworks "), any(LocalDateTime.class), any(byte[].class));
-        verify(jdbc).update(startsWith("UPDATE artwork_artist_maps "), any(LocalDateTime.class), any(byte[].class));
-        verify(jdbc).update(eq("DELETE FROM refresh_token WHERE account_id = ?"), any(byte[].class));
+        verify(withdrawalArtworks, never()).hideByIds(any(), any());
+        verify(withdrawalMaps).hideByArtistId(eq(new UUID(0, 0)), any(LocalDateTime.class));
+        verify(withdrawalTokens).deleteAllByAccountId(id);
         assertThrows(BaseException.class, () -> service.withdraw(id));
     }
 
@@ -307,10 +323,10 @@ class SocialLoginTests {
         when(jdbc.queryForList(contains("FROM artists"), eq(byte[].class), any(byte[].class)))
                 .thenReturn(java.util.List.of(new byte[16]));
         when(jdbc.queryForList(contains("SELECT DISTINCT artwork_id"), eq(byte[].class), any(byte[].class)))
-                .thenReturn(java.util.List.of(new byte[16]));
-        new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc).withdraw(id);
-        verify(jdbc).update(startsWith("UPDATE artworks "), any(LocalDateTime.class), any(byte[].class));
-        verify(jdbc).update(startsWith("UPDATE bts_artwork_map "), any(LocalDateTime.class), any(byte[].class));
+                .thenReturn(java.util.List.of(new byte[16], java.nio.ByteBuffer.allocate(16).putLong(0).putLong(1).array()));
+        withdrawalService(accounts, jdbc).withdraw(id);
+        verify(withdrawalArtworks).hideByIds(eq(java.util.List.of(new UUID(0, 0), new UUID(0, 1))), any(LocalDateTime.class));
+        verify(withdrawalBtsMaps).hideByArtworkIds(eq(java.util.List.of(new UUID(0, 0), new UUID(0, 1))), any(LocalDateTime.class));
     }
 
     @Test
@@ -321,9 +337,79 @@ class SocialLoginTests {
         UUID id = UUID.randomUUID();
         when(accounts.findForWithdrawal(id)).thenReturn(Optional.of(Account.builder().id(id)
                 .role(Role.DOLOG_ADMIN).accountStatus(AccountStatus.ACTIVE).build()));
-        var service = new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc);
+        var service = withdrawalService(accounts, jdbc);
         assertThrows(org.springframework.security.access.AccessDeniedException.class, () -> service.withdraw(id));
         verifyNoInteractions(jdbc);
     }
 
+    @Test
+    @DisplayName("보관 만료 한 건이 실패해도 다음 대상을 커밋한 뒤 파일을 삭제한다")
+    void retentionIsolatesFailuresAndDeletesFilesAfterCommit() {
+        var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        var files = mock(com.dolog.server.global.util.FileService.class);
+        var manager = mock(org.springframework.transaction.PlatformTransactionManager.class);
+        var failed = new org.springframework.transaction.support.SimpleTransactionStatus();
+        var succeeded = new org.springframework.transaction.support.SimpleTransactionStatus();
+        var fileTransaction = new org.springframework.transaction.support.SimpleTransactionStatus();
+        when(manager.getTransaction(any())).thenReturn(failed, succeeded, fileTransaction);
+        byte[] first = new byte[]{1};
+        byte[] second = new byte[]{2};
+        when(jdbc.queryForList(startsWith("SELECT id FROM artworks WHERE DATE_ADD"), eq(byte[].class), any()))
+                .thenReturn(java.util.List.of(first, second));
+        when(jdbc.queryForList(contains("WHERE id = ? AND DATE_ADD"), any(byte[].class), any()))
+                .thenReturn(java.util.List.of(java.util.Map.of("id", 1)));
+        when(jdbc.queryForList(eq("SELECT main_img FROM artworks WHERE id = ?"), eq(String.class), any(byte[].class)))
+                .thenReturn(java.util.List.of("https://owned/image"));
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("FK"))
+                .when(jdbc).update(eq("DELETE FROM artworks WHERE id = ?"), eq(first));
+        when(jdbc.queryForList("SELECT id FROM file_deletion_tasks ORDER BY id", Long.class))
+                .thenReturn(java.util.List.of(1L));
+        when(jdbc.queryForList(eq("SELECT file_url FROM file_deletion_tasks WHERE id = ? FOR UPDATE"), eq(String.class), eq(1L)))
+                .thenReturn(java.util.List.of("https://owned/image"));
+        when(jdbc.queryForObject(startsWith("SELECT (SELECT COUNT(*) FROM artworks"), eq(Integer.class),
+                anyString(), anyString(), anyString(), anyString(), anyString())).thenReturn(0);
+
+        new com.dolog.server.domain.account.service.WithdrawalRetentionJob(jdbc, files, manager).purgeExpired();
+
+        var order = inOrder(jdbc, manager, files);
+        order.verify(jdbc).update(eq("INSERT INTO file_deletion_tasks (file_url) VALUES (?)"), eq("https://owned/image"));
+        order.verify(manager).rollback(failed);
+        order.verify(jdbc).update(eq("DELETE FROM artworks WHERE id = ?"), eq(second));
+        order.verify(manager).commit(succeeded);
+        order.verify(files).deleteOwnedFile("https://owned/image");
+        order.verify(jdbc).update("DELETE FROM file_deletion_tasks WHERE id = ?", 1L);
+        order.verify(manager).commit(fileTransaction);
+        verify(manager, times(3)).getTransaction(argThat(definition ->
+                definition.getPropagationBehavior() == org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW));
+    }
+
+    @Test
+    @DisplayName("파일 실패는 다음 파일을 막지 않고 재시도하며 참조 중인 파일은 보존한다")
+    void retentionRetriesFilesAndProtectsReferences() {
+        var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        var files = mock(com.dolog.server.global.util.FileService.class);
+        var manager = mock(org.springframework.transaction.PlatformTransactionManager.class);
+        when(manager.getTransaction(any())).thenAnswer(invocation -> new org.springframework.transaction.support.SimpleTransactionStatus());
+        when(jdbc.queryForList("SELECT id FROM file_deletion_tasks ORDER BY id", Long.class))
+                .thenReturn(java.util.List.of(1L, 2L, 3L), java.util.List.of(1L, 3L));
+        for (long id = 1; id <= 3; id++) {
+            when(jdbc.queryForList(eq("SELECT file_url FROM file_deletion_tasks WHERE id = ? FOR UPDATE"), eq(String.class), eq(id)))
+                    .thenReturn(java.util.List.of("file-" + id));
+        }
+        when(jdbc.queryForObject(startsWith("SELECT (SELECT COUNT(*) FROM artworks"), eq(Integer.class),
+                anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(2).equals("file-3") ? 1 : 0);
+        doThrow(new IllegalStateException("storage unavailable")).doNothing().when(files).deleteOwnedFile("file-1");
+        var job = new com.dolog.server.domain.account.service.WithdrawalRetentionJob(jdbc, files, manager);
+
+        job.purgeExpired();
+        verify(jdbc, never()).update("DELETE FROM file_deletion_tasks WHERE id = ?", 1L);
+        verify(jdbc).update("DELETE FROM file_deletion_tasks WHERE id = ?", 2L);
+        verify(manager).rollback(any());
+        job.purgeExpired();
+        verify(files, times(2)).deleteOwnedFile("file-1");
+        verify(jdbc).update("DELETE FROM file_deletion_tasks WHERE id = ?", 1L);
+        verify(files, never()).deleteOwnedFile("file-3");
+        verify(jdbc, never()).update("DELETE FROM file_deletion_tasks WHERE id = ?", 3L);
+    }
 }

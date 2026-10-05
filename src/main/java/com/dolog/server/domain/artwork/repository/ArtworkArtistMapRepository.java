@@ -24,8 +24,14 @@ public interface ArtworkArtistMapRepository extends JpaRepository<ArtworkArtistM
 
     boolean existsByArtistId(UUID artistId);
     @org.springframework.data.jpa.repository.Modifying
-    @org.springframework.data.jpa.repository.Query("update ArtworkArtistMap m set m.deletedAt = :at where m.artwork.id = :id and m.deletedAt is null")
+    @org.springframework.data.jpa.repository.Query("update ArtworkArtistMap m set m.deletedAt = :at, m.updatedAt = :at where m.artwork.id = :id and m.deletedAt is null")
     void hideByArtworkId(@org.springframework.data.repository.query.Param("id") java.util.UUID id,
                         @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update ArtworkArtistMap e set e.deletedAt = :at, e.updatedAt = :at where e.artist.id = :id and e.deletedAt is null")
+    void hideByArtistId(@org.springframework.data.repository.query.Param("id") java.util.UUID id,
+            @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
 
 }

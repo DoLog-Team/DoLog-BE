@@ -164,4 +164,10 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             UUID zoneId
     );
 
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update Artwork e set e.deletedAt = :at, e.updatedAt = :at where e.id in :ids and e.deletedAt is null")
+    void hideByIds(@org.springframework.data.repository.query.Param("ids") java.util.Collection<java.util.UUID> ids,
+            @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
 }

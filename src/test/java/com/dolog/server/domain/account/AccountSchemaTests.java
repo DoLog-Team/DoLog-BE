@@ -29,6 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.transaction.TestTransaction;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -132,6 +133,10 @@ class AccountSchemaTests {
         assertFalse(profiles.existsById(profileA.getId()));
         assertTrue(artists.existsById(artistB.getId()));
         assertFalse(artworks.existsById(sole.getId()));
+        for (String table : java.util.List.of("artists", "artist_profiles", "artworks", "artwork_artist_maps", "bts")) {
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM " + table
+                    + " WHERE deleted_at IS NOT NULL AND (updated_at IS NULL OR updated_at <> deleted_at)", Integer.class));
+        }
         var kept = artworks.findById(shared.getId()).orElseThrow();
         assertEquals(java.util.List.of("B"), kept.getArtworkArtistMaps().stream()
                 .map(m -> m.getArtist().getNameKo()).toList());
@@ -149,24 +154,103 @@ class AccountSchemaTests {
             assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM artwork_artist_maps m JOIN artworks a ON a.id = m.artwork_id WHERE a.title IN ('shared', 'sole')", Integer.class));
             assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM bts_artwork_map m JOIN bts b ON b.id = m.bts_id WHERE b.title = 'B BTS'", Integer.class));
         }
-        retention.purgeExpired();
-        assertTrue(accounts.existsById(a.getId()));
-        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
-        // Simulate expiration; the same retained rows are now eligible for physical deletion.
-        var expired = java.time.LocalDateTime.now().minusMonths(3).minusDays(1);
-        for (String table : java.util.List.of("artists", "artist_profiles", "artworks", "artwork_artist_maps", "bts", "bts_artwork_map")) {
-            jdbc.update("UPDATE " + table + " SET deleted_at = ? WHERE deleted_at IS NOT NULL", expired);
+        entityManager.flush();
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        try {
+            retention.purgeExpired();
+            assertTrue(accounts.existsById(a.getId()));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
+            // Simulate expiration; the same retained rows are now eligible for physical deletion.
+            var expired = java.time.LocalDateTime.now().minusMonths(3).minusDays(1);
+            jdbc.update("UPDATE artists SET deleted_at = ? WHERE id = ?", expired, bytes(artistA.getId()));
+            jdbc.update("UPDATE artist_profiles SET deleted_at = ? WHERE id = ?", expired, bytes(profileA.getId()));
+            jdbc.update("UPDATE artworks SET deleted_at = ? WHERE id IN (?, ?) AND deleted_at IS NOT NULL",
+                    expired, bytes(shared.getId()), bytes(sole.getId()));
+            jdbc.update("UPDATE bts SET deleted_at = ? WHERE id IN (?, ?) AND deleted_at IS NOT NULL",
+                    expired, bytes(ownBts.getId()), bytes(otherBts.getId()));
+            jdbc.update("UPDATE accounts SET withdrawn_at = ? WHERE id = ?", expired, bytes(a.getId()));
+            retention.purgeExpired();
+            entityManager.clear();
+            assertFalse(accounts.existsById(a.getId()));
+            assertTrue(accounts.existsById(b.getId()));
+            assertEquals(!deleteRemainingContent, artworks.existsById(shared.getId()));
+            assertEquals(!deleteRemainingContent, btsRepository.existsById(otherBts.getId()));
+            assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'shared'", Integer.class));
+            assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM bts WHERE title = 'B BTS'", Integer.class));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
+        } finally {
+            // These fixtures were committed so the scheduler's independent transactions can see them.
+            for (String table : java.util.List.of("bts_artwork_map", "artwork_artist_maps", "artwork_imgs", "artwork_materials", "artwork_likes")) {
+                jdbc.update("DELETE FROM " + table + " WHERE artwork_id IN (?, ?)", bytes(shared.getId()), bytes(sole.getId()));
+            }
+            jdbc.update("DELETE FROM bts WHERE id IN (?, ?)", bytes(ownBts.getId()), bytes(otherBts.getId()));
+            jdbc.update("DELETE FROM artworks WHERE id IN (?, ?)", bytes(shared.getId()), bytes(sole.getId()));
+            jdbc.update("DELETE FROM artist_profiles WHERE id IN (?, ?)", bytes(profileA.getId()), bytes(profileB.getId()));
+            jdbc.update("DELETE FROM artists WHERE id IN (?, ?)", bytes(artistA.getId()), bytes(artistB.getId()));
+            jdbc.update("DELETE FROM refresh_token WHERE account_id IN (?, ?)", bytes(a.getId()), bytes(b.getId()));
+            jdbc.update("DELETE FROM refresh_token WHERE id = ?", adminSession.getId());
+            jdbc.update("DELETE FROM accounts WHERE id IN (?, ?)", bytes(a.getId()), bytes(b.getId()));
+            TestTransaction.start();
         }
-        jdbc.update("UPDATE accounts SET withdrawn_at = ? WHERE withdrawn_at IS NOT NULL", expired);
-        retention.purgeExpired();
-        entityManager.clear();
-        assertFalse(accounts.existsById(a.getId()));
-        assertTrue(accounts.existsById(b.getId()));
-        assertEquals(!deleteRemainingContent, artworks.existsById(shared.getId()));
-        assertEquals(!deleteRemainingContent, btsRepository.existsById(otherBts.getId()));
-        assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'shared'", Integer.class));
-        assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM bts WHERE title = 'B BTS'", Integer.class));
-        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
+    }
+
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    @DisplayName("DB 실패는 파일 대기 기록까지 롤백하고 S3 실패는 대기 기록을 남겨 재시도한다")
+    void retentionPersistsRetriesAndRollsBackFailedTargets() {
+        var sql = org.mockito.Mockito.spy(jdbc);
+        var files = org.mockito.Mockito.mock(com.dolog.server.global.util.FileService.class);
+        var job = new com.dolog.server.domain.account.service.WithdrawalRetentionJob(sql, files, transactionManager);
+        UUID failedId = UUID.randomUUID();
+        UUID retryId = UUID.randomUUID();
+        UUID referencedId = UUID.randomUUID();
+        UUID retainedId = UUID.randomUUID();
+        String failedUrl = "https://retention.test/" + failedId;
+        String retryUrl = "https://retention.test/" + retryId;
+        String sharedUrl = "https://retention.test/" + retainedId;
+        var exhibitionId = exhibitions.findByEntryCode("DEME2222").orElseThrow().getId();
+        var expired = java.time.LocalDateTime.now().minusMonths(3).minusDays(1);
+        try {
+            for (UUID id : java.util.List.of(failedId, retryId, referencedId, retainedId)) {
+                jdbc.update("INSERT INTO artworks (id, exhibition_id, main_img, deleted_at) VALUES (?, ?, ?, ?)",
+                        bytes(id), bytes(exhibitionId), id.equals(failedId) ? failedUrl : id.equals(retryId) ? retryUrl : sharedUrl,
+                        id.equals(retainedId) ? null : expired);
+            }
+            org.mockito.Mockito.doThrow(new DataIntegrityViolationException("simulated FK failure"))
+                    .when(sql).update(org.mockito.ArgumentMatchers.eq("DELETE FROM artworks WHERE id = ?"),
+                            org.mockito.AdditionalMatchers.aryEq(bytes(failedId)));
+            org.mockito.Mockito.doAnswer(invocation -> {
+                // The source row must already be committed as deleted when S3 is called.
+                assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE id = ?", Integer.class, bytes(retryId)));
+                throw new IllegalStateException("storage unavailable");
+            }).when(files).deleteOwnedFile(retryUrl);
+
+            job.purgeExpired();
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE id = ?", Integer.class, bytes(failedId)));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, failedUrl));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE id = ?", Integer.class, bytes(retryId)));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, retryUrl));
+            org.mockito.Mockito.verify(files, org.mockito.Mockito.never()).deleteOwnedFile(failedUrl);
+            org.mockito.Mockito.verify(files, org.mockito.Mockito.never()).deleteOwnedFile(sharedUrl);
+
+            org.mockito.Mockito.doNothing().when(files).deleteOwnedFile(retryUrl);
+            job.purgeExpired();
+            org.mockito.Mockito.verify(files, org.mockito.Mockito.times(2)).deleteOwnedFile(retryUrl);
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, retryUrl));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, sharedUrl));
+        } finally {
+            for (UUID id : java.util.List.of(failedId, retryId, referencedId, retainedId)) {
+                jdbc.update("DELETE FROM artworks WHERE id = ?", bytes(id));
+            }
+            jdbc.update("DELETE FROM file_deletion_tasks WHERE file_url IN (?, ?, ?)", failedUrl, retryUrl, sharedUrl);
+        }
+    }
+
+    private static byte[] bytes(UUID id) {
+        return java.nio.ByteBuffer.allocate(16).putLong(id.getMostSignificantBits()).putLong(id.getLeastSignificantBits()).array();
     }
 
     @Test

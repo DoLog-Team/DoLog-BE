@@ -74,7 +74,7 @@ public class FileService {
         }
     }
 
-    // Retention cleanup must propagate storage errors so the database deletion can be retried.
+    // Propagate storage errors so the durable file-deletion task remains available for retry.
     public void deleteOwnedFile(String fileUrl) {
         java.net.URI uri = java.net.URI.create(fileUrl);
         java.net.URI owned = java.net.URI.create(s3Client.utilities().getUrl(

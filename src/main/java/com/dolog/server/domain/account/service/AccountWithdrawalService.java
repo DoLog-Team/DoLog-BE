@@ -2,7 +2,17 @@ package com.dolog.server.domain.account.service;
 
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
+import com.dolog.server.domain.account.repository.RefreshTokenRepository;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.bts.repository.BtsArtworkMapRepository;
+import com.dolog.server.domain.bts.repository.BtsRepository;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
@@ -11,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -18,6 +30,15 @@ import java.util.UUID;
 public class AccountWithdrawalService {
     private final AccountRepository accounts;
     private final JdbcTemplate jdbc;
+
+    private final ArtistRepository artists;
+    private final ArtistProfileRepository profiles;
+    private final ArtworkRepository artworks;
+    private final ArtworkArtistMapRepository artworkMaps;
+    private final BtsRepository bts;
+    private final BtsArtworkMapRepository btsMaps;
+    private final RefreshTokenRepository tokens;
+    private final ExhibitionArtistMapRepository exhibitionMaps;
 
     @Transactional
     public void withdraw(UUID accountId) {
@@ -35,6 +56,7 @@ public class AccountWithdrawalService {
         for (byte[] artistId : artistIds) {
             var artworkIds = jdbc.queryForList("SELECT DISTINCT artwork_id FROM artwork_artist_maps "
                     + "WHERE artist_id = ? AND deleted_at IS NULL ORDER BY artwork_id", byte[].class, artistId);
+            List<UUID> deletedArtworkIds = new ArrayList<>();
             for (byte[] artworkId : artworkIds) {
                 jdbc.queryForList("SELECT id FROM artworks WHERE id = ? FOR UPDATE", artworkId);
                 // A locking read sees committed coauthor changes, even with MySQL REPEATABLE READ.
@@ -42,20 +64,29 @@ public class AccountWithdrawalService {
                         + "WHERE artwork_id = ? AND artist_id <> ? AND deleted_at IS NULL FOR UPDATE",
                         artworkId, artistId);
                 if (remaining.isEmpty()) {
-                    jdbc.update("UPDATE artworks SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL", now, artworkId);
-                    jdbc.update("UPDATE bts_artwork_map SET deleted_at = ? WHERE artwork_id = ? AND deleted_at IS NULL",
-                            now, artworkId);
+                    deletedArtworkIds.add(uuid(artworkId));
                 }
             }
-            jdbc.update("UPDATE artwork_artist_maps SET deleted_at = ? WHERE artist_id = ? AND deleted_at IS NULL", now, artistId);
-            jdbc.update("UPDATE bts b JOIN artist_profiles p ON p.id = b.artist_profile_id "
-                    + "SET b.deleted_at = ? WHERE p.artist_id = ? AND b.deleted_at IS NULL", now, artistId);
-            jdbc.update("UPDATE artist_profiles SET deleted_at = ? WHERE artist_id = ? AND deleted_at IS NULL", now, artistId);
-            jdbc.update("UPDATE artists SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL", now, artistId);
-            jdbc.update("UPDATE exhibition_artist_map SET status = 'WITHDRAWN' WHERE artist_id = ? "
-                    + "AND status IN ('PENDING', 'JOINED')", artistId);
+            if (!deletedArtworkIds.isEmpty()) {
+                artworks.hideByIds(deletedArtworkIds, now);
+                btsMaps.hideByArtworkIds(deletedArtworkIds, now);
+            }
+            UUID artistUuid = uuid(artistId);
+            artworkMaps.hideByArtistId(artistUuid, now);
+            bts.hideByArtistId(artistUuid, now);
+            profiles.hideByArtistId(artistUuid, now);
+            // State-policy unification is tracked separately from this retention change.
+            exhibitionMaps.updateStatusesForWithdrawal(artistUuid,
+                    List.of(ExhibitionArtistStatus.PENDING, ExhibitionArtistStatus.JOINED),
+                    ExhibitionArtistStatus.WITHDRAWN, now);
+            artists.hideById(artistUuid, now);
         }
-        jdbc.update("DELETE FROM refresh_token WHERE account_id = ?", id);
+        tokens.deleteAllByAccountId(accountId);
         account.withdraw(now);
+    }
+
+    private static UUID uuid(byte[] value) {
+        var buffer = ByteBuffer.wrap(value);
+        return new UUID(buffer.getLong(), buffer.getLong());
     }
 }
