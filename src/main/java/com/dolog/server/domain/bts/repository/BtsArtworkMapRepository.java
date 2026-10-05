@@ -5,4 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BtsArtworkMapRepository extends JpaRepository<BtsArtworkMap, Long> {
     // 필요 시 특정 BTS에 매핑된 작품들을 삭제하거나 조회하는 메서드 추가 가능
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("update BtsArtworkMap m set m.deletedAt = :at where m.artwork.id = :id and m.deletedAt is null")
+    void hideByArtworkId(@org.springframework.data.repository.query.Param("id") java.util.UUID id,
+                        @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("update BtsArtworkMap m set m.deletedAt = :at where m.bts.id = :id and m.deletedAt is null")
+    void hideByBtsId(@org.springframework.data.repository.query.Param("id") java.util.UUID id,
+                        @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
 }

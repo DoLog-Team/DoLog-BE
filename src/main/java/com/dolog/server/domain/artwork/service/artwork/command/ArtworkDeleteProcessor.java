@@ -16,6 +16,8 @@ import java.util.UUID;
 public class ArtworkDeleteProcessor {
 
     private final ArtworkRepository artworkRepository;
+    private final com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository artistMaps;
+    private final com.dolog.server.domain.bts.repository.BtsArtworkMapRepository btsMaps;
 
     public void delete(
             UUID artworkId
@@ -27,6 +29,9 @@ public class ArtworkDeleteProcessor {
                                 ArtworkErrorCode.ARTWORK_NOT_FOUND
                         ));
 
-        artworkRepository.delete(artwork);
+        var now = java.time.LocalDateTime.now();
+        artwork.markDeleted(now);
+        artistMaps.hideByArtworkId(artworkId, now);
+        btsMaps.hideByArtworkId(artworkId, now);
     }
 }

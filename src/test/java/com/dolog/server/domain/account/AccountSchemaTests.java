@@ -65,9 +65,22 @@ class AccountSchemaTests {
     @Autowired com.dolog.server.domain.bts.repository.BtsRepository btsRepository;
     @Autowired com.dolog.server.domain.account.service.WithdrawalRetentionJob retention;
 
+    @Autowired com.dolog.server.domain.artwork.service.artwork.command.ArtworkDeleteProcessor artworkDelete;
+    @Autowired com.dolog.server.domain.bts.service.BtsService btsService;
+
+    @Test
+    @DisplayName("탈퇴 후 남은 작가의 공동 작품과 BTS도 연결을 보관하며 삭제한다")
+    void deleteContentWithRetainedWithdrawalMappings() throws Exception {
+        verifyWithdrawalRetention(true);
+    }
+
     @Test
     @DisplayName("탈퇴는 공동 작품의 남은 작가만 노출하고 단독 작품·BTS를 3개월 보관한다")
     void withdrawalRetainsCoauthorAndPurgesExpiredContent() throws Exception {
+        verifyWithdrawalRetention(false);
+    }
+
+    private void verifyWithdrawalRetention(boolean deleteRemainingContent) throws Exception {
         var a = accounts.saveAndFlush(social("GOOGLE", "withdraw-a", "withdraw-a@test.com"));
         var b = accounts.saveAndFlush(social("GOOGLE", "withdraw-b", "withdraw-b@test.com"));
         var artistA = artists.saveAndFlush(com.dolog.server.domain.artist.entity.Artist.builder()
@@ -124,6 +137,18 @@ class AccountSchemaTests {
                 .map(m -> m.getArtist().getNameKo()).toList());
         assertFalse(btsRepository.existsById(ownBts.getId()));
         assertTrue(btsRepository.findById(otherBts.getId()).orElseThrow().getArtworkMaps().isEmpty());
+        if (deleteRemainingContent) {
+            artworkDelete.delete(shared.getId());
+            btsService.deleteBts(exhibition.getId(), otherBts.getId());
+            entityManager.flush();
+            entityManager.clear();
+            assertFalse(artworks.existsById(shared.getId()));
+            assertFalse(btsRepository.existsById(otherBts.getId()));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'shared'", Integer.class));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM bts WHERE title = 'B BTS'", Integer.class));
+            assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM artwork_artist_maps m JOIN artworks a ON a.id = m.artwork_id WHERE a.title IN ('shared', 'sole')", Integer.class));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM bts_artwork_map m JOIN bts b ON b.id = m.bts_id WHERE b.title = 'B BTS'", Integer.class));
+        }
         retention.purgeExpired();
         assertTrue(accounts.existsById(a.getId()));
         assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
@@ -137,8 +162,10 @@ class AccountSchemaTests {
         entityManager.clear();
         assertFalse(accounts.existsById(a.getId()));
         assertTrue(accounts.existsById(b.getId()));
-        assertTrue(artworks.existsById(shared.getId()));
-        assertTrue(btsRepository.existsById(otherBts.getId()));
+        assertEquals(!deleteRemainingContent, artworks.existsById(shared.getId()));
+        assertEquals(!deleteRemainingContent, btsRepository.existsById(otherBts.getId()));
+        assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'shared'", Integer.class));
+        assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM bts WHERE title = 'B BTS'", Integer.class));
         assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
     }
 

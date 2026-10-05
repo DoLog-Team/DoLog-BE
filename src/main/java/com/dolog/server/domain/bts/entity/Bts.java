@@ -63,4 +63,7 @@ public class Bts extends BaseEntity {
         if (mainImg != null) this.mainImg = mainImg;
         if (artistProfile != null) this.artistProfile = artistProfile;
     }
+    public void markDeleted(java.time.LocalDateTime at) {
+        if (deletedAt == null) deletedAt = at;
+    }
 }

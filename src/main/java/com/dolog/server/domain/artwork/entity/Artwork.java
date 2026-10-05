@@ -129,4 +129,7 @@ public class Artwork extends BaseEntity implements Orderable {
         this.exhibition = null;
         this.exhibitionZone = null;
     }
+    public void markDeleted(java.time.LocalDateTime at) {
+        if (deletedAt == null) deletedAt = at;
+    }
 }
