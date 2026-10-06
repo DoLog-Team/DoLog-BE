@@ -36,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -46,6 +47,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -323,6 +325,33 @@ class ArtistProfileControllerSecurityTest {
                 eq(accountId),
                 eq(snsId),
                 any(ArtistSnsUpdateRequest.class)
+        );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "ARTIST_ADMIN",
+            "EXHIBITION_ADMIN",
+            "DOLOG_ADMIN"
+    })
+    @DisplayName("작가·전시·두록 어드민은 SNS 삭제 API에 접근할 수 있다")
+    void supportedRolesCanDeleteSns(String role) throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID snsId = UUID.randomUUID();
+
+        mockMvc.perform(delete(
+                        "/api/artist-profiles/sns/{snsId}",
+                        snsId
+                )
+                        .contextPath("/api")
+                        .with(user(userDetails(accountId, role))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("SNS 삭제 성공"))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        verify(artistProfileService).deleteArtistSns(
+                accountId,
+                snsId
         );
     }
 

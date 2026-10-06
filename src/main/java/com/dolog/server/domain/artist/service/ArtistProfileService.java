@@ -9,13 +9,11 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailRespon
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
 public interface ArtistProfileService {
@@ -48,8 +46,7 @@ public interface ArtistProfileService {
             ArtistSnsRequest request
     );
 
-    List<ArtistSnsResponse> deleteArtistSns(UUID snsId)
-            throws IOException;
+    void deleteArtistSns(UUID accountId, UUID snsId);
 
     ArtistSnsListResponse getArtistSnsList(
             UUID accountId,

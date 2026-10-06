@@ -14,7 +14,6 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
@@ -29,7 +28,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -170,12 +168,16 @@ public class ArtistProfileController {
     // DELETE artist-profiles/sns/{snsId}
     @Operation(summary = "작가 SNS 삭제")
     @DeleteMapping("/sns/{snsId}")
-    public SuccessResponse<List<ArtistSnsResponse>> deleteArtistSns(@PathVariable UUID snsId)
-            throws IOException {
-        // 서비스에서 삭제 후 최신 목록을 받아옴
-        List<ArtistSnsResponse> response = artistProfileService.deleteArtistSns(snsId);
+    @PreAuthorize(
+            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+    )
+    public SuccessResponse<Void> deleteArtistSns(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID snsId
+    ) {
+        artistProfileService.deleteArtistSns(user.getId(), snsId);
 
-        return SuccessResponse.ok(response, "작가 SNS 삭제 성공");
+        return SuccessResponse.ok(null, "SNS 삭제 성공");
     }
 
     // SNS 목록 조회

@@ -388,21 +388,14 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // SNS 삭제
     @Transactional
     @Override
-    public List<ArtistSnsResponse> deleteArtistSns(UUID snsId) {
-        // 1. 삭제할 SNS 조회 (프로필 ID를 알아내기 위해 먼저 조회)
+    public void deleteArtistSns(UUID accountId, UUID snsId) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
         ArtistSns sns = artistSnsRepository.findById(snsId)
                 .orElseThrow(ArtistSnsNotFoundException::new);
 
-        UUID profileId = sns.getArtistProfile().getId();
-
-        // 2. 삭제 수행
+        requireCanUpdateProfile(actor, sns.getArtistProfile());
         artistSnsRepository.delete(sns);
-
-        // 3. 삭제 후 해당 프로필의 "남은 SNS 목록"을 다시 조회해서 반환
-        return artistSnsRepository.findByArtistProfileId(profileId)
-                .stream()
-                .map(ArtistSnsResponse::from)
-                .toList();
     }
 
     // SNS 목록 조회

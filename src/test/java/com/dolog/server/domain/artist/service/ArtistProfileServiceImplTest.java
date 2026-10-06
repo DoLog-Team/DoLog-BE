@@ -614,6 +614,64 @@ class ArtistProfileServiceImplTest {
         assertEquals("instagram", sns.getPlatformName());
     }
 
+    @Test
+    @DisplayName("작가 어드민은 자신의 SNS를 삭제할 수 있다")
+    void artistAdminDeletesOwnSns() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        service.deleteArtistSns(artistAccount.getId(), sns.getId());
+
+        verify(artistSnsRepository).delete(sns);
+        verify(artistSnsRepository, never())
+                .findByArtistProfileId(profile.getId());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 다른 작가의 SNS를 삭제할 수 없다")
+    void artistAdminCannotDeleteOtherArtistSns() {
+        Account actor = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.deleteArtistSns(
+                        actor.getId(),
+                        sns.getId()
+                )
+        );
+
+        verify(artistSnsRepository, never()).delete(any());
+    }
+
     private void prepareUpdate(
             Account actor,
             ArtistProfile profile
