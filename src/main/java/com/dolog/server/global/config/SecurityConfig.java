@@ -62,7 +62,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artist-profiles", "/artist-profiles/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/artists", "/artists/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/artists/*").permitAll()
                         // 비로그인 방문자 좋아요 (visitor_id 쿠키 기반)
                         .requestMatchers(HttpMethod.POST, "/artworks/*/likes", "/artist-profiles/*/likes").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/artworks/*/likes", "/artist-profiles/*/likes").permitAll()
