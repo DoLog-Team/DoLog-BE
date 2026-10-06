@@ -32,4 +32,10 @@ public interface ArtistRepository extends JpaRepository<Artist, UUID> {
             String accountEmail,
             Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update Artist e set e.deletedAt = :at, e.updatedAt = :at where e.id = :id and e.deletedAt is null")
+    void hideById(@org.springframework.data.repository.query.Param("id") java.util.UUID id,
+            @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
 }

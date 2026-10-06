@@ -9,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -46,6 +47,15 @@ public class Account extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "account_status")
     private AccountStatus accountStatus;
+
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
+
+    public void withdraw(LocalDateTime at) {
+        requireActive();
+        accountStatus = AccountStatus.WITHDRAWN;
+        withdrawnAt = at;
+    }
 
     public void requireActive() {
         if (accountStatus != AccountStatus.ACTIVE) {

@@ -5,13 +5,17 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistManageStatus;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistStatusUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import com.dolog.server.domain.artist.web.dto.request.ArtistJoinCodeValidateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
@@ -20,10 +24,10 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.dolog.server.domain.artist.web.dto.request.ArtistJoinRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.util.List;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -31,13 +35,14 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/exhibitions")
 @RequiredArgsConstructor
+@Validated
 public class ExhibitionArtistController {
     private final ExhibitionArtistService exhibitionArtistService;
 
     // 전시 참여 작가 목록 조회
     @Operation(summary = "전시 참여 작가 목록 조회")
     @GetMapping("/{exhibitionId}/artists")
-    public SuccessResponse<List<ExhibitionArtistListResponse>> getArtists(
+    public SuccessResponse<ExhibitionArtistListResponse> getArtists(
             @PathVariable UUID exhibitionId,
             @RequestParam(defaultValue = "NAME") String sort
     ) {
@@ -151,6 +156,38 @@ public class ExhibitionArtistController {
         return SuccessResponse.ok(
                 data,
                 "전시 참여 작가 상태 변경 성공"
+        );
+    }
+
+    @Operation(summary = "관리자용 전시 참여 작가 목록 조회")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
+    @GetMapping("/{exhibitionId}/artists/manage")
+    public SuccessResponse<ExhibitionArtistManageListResponse> getArtistsForManagement(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable UUID exhibitionId,
+            @RequestParam ExhibitionArtistManageStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0")
+            @Min(value = 0, message = "page는 0 이상이어야 합니다.")
+            int page,
+            @RequestParam(defaultValue = "10")
+            @Min(value = 1, message = "size는 1 이상이어야 합니다.")
+            @Max(value = 100, message = "size는 100 이하여야 합니다.")
+            int size
+    ) {
+        ExhibitionArtistManageListResponse response =
+                exhibitionArtistService.getArtistsForManagement(
+                        userDetails.getId(),
+                        exhibitionId,
+                        status.toExhibitionArtistStatus(),
+                        search,
+                        page,
+                        size
+                );
+
+        return SuccessResponse.ok(
+                response,
+                "전시 작가 관리 목록 조회 성공"
         );
     }
 }

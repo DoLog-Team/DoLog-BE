@@ -1,19 +1,28 @@
 package com.dolog.server.domain.artwork.repository;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
+
+    // 삭제될 zone에 속한 작품들의 zone을 해제한다 (작품은 유지)
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE Artwork a SET a.exhibitionZone = null WHERE a.exhibitionZone IN :zones")
+    void clearZone(@Param("zones") Collection<ExhibitionZone> zones);
 
     @EntityGraph(attributePaths = {"artworkArtistMaps", "artworkArtistMaps.artist"})
     @Query("SELECT DISTINCT aam.artwork FROM ArtworkArtistMap aam " +
@@ -76,14 +85,14 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     // 3. 동일 카테고리 내 작가 기준 조회
     // ==============================================================================
     @Query(value = "SELECT DISTINCT a.*, " +
-            "CASE WHEN am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.artwork_id = :artworkId) THEN 2 " +
+            "CASE WHEN am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) THEN 2 " +
             "     WHEN a.category = :category THEN 1 " +
             "     ELSE 0 END as score " +
             "FROM artworks a " +
-            "LEFT JOIN artwork_artist_maps am ON a.id = am.artwork_id " +
-            "WHERE a.exhibition_id = :exhibitionId " +
+            "LEFT JOIN artwork_artist_maps am ON a.id = am.artwork_id AND am.deleted_at IS NULL " +
+            "WHERE a.deleted_at IS NULL AND a.exhibition_id = :exhibitionId " +
             "AND a.id != :artworkId " +
-            "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.artwork_id = :artworkId) OR a.category = :category) " +
+            "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) OR a.category = :category) " +
             "ORDER BY score DESC, a.id DESC",
             nativeQuery = true)
     List<Artwork> findRelatedArtworks(
@@ -164,4 +173,11 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             UUID zoneId
     );
 
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update Artwork e set e.deletedAt = :at, e.updatedAt = :at where e.id in :ids and e.deletedAt is null")
+    void hideByIds(@org.springframework.data.repository.query.Param("ids") java.util.Collection<java.util.UUID> ids,
+            @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
+    List<Artwork> findByExhibitionIdAndStatus(UUID exhibitionId, ArtworkStatus status);
 }
