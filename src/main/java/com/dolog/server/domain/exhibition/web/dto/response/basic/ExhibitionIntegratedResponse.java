@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Getter
@@ -27,6 +28,9 @@ public class ExhibitionIntegratedResponse {
     private String dateInfo;
     private String description;
     private ExhibitionLocationResponse location;
+    private LocalTime openTime;
+    private LocalTime closeTime;
+    private String operationNotice;
 
     @JsonProperty("isPublic")
     private boolean isPublic;
@@ -45,6 +49,9 @@ public class ExhibitionIntegratedResponse {
                 .description(detail.getDescription())
                 .location(map != null ? ExhibitionLocationResponse.from(map) : null)
                 .isPublic(detail.getExhibition().isPublic())
+                .openTime(detail.getOpenTime())
+                .closeTime(detail.getCloseTime())
+                .operationNotice(detail.getOperationNotice())
                 .build();
     }
 }

@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 @Entity
@@ -66,6 +67,15 @@ public class ExhibitionDetail extends BaseEntity {
     @Column(length = 255)
     private String copyright;
 
+    @Column(name = "open_time")
+    private LocalTime openTime;
+
+    @Column(name = "close_time")
+    private LocalTime closeTime;
+
+    @Column(name = "operation_notice", length = 255)
+    private String operationNotice;
+
     @Column(name = "og_title", length = 255)
     private String ogTitle;
 
@@ -77,7 +87,8 @@ public class ExhibitionDetail extends BaseEntity {
     }
 
     public void updateBasicInfo(String title, String description, String exhibitionImg, LocalDate startDate, LocalDate endDate,
-                                String dateInfo, String email, String copyright, String logoImg) {
+                                String dateInfo, String email, String copyright, String logoImg,
+                                LocalTime openTime, LocalTime closeTime, String operationNotice) {
         if (title != null) this.title = title;
         if (description != null) this.description = description;
         if (exhibitionImg != null) this.exhibitionImg = exhibitionImg;
@@ -87,6 +98,9 @@ public class ExhibitionDetail extends BaseEntity {
         if (email != null) this.email = email;
         if (copyright != null) this.copyright = copyright;
         if (logoImg != null) this.logoImg = logoImg;
+        if (openTime != null) this.openTime = openTime;
+        if (closeTime != null) this.closeTime = closeTime;
+        if (operationNotice != null) this.operationNotice = operationNotice;
     }
 
     public void updateOgImage(String ogImage) {

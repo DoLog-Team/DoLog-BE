@@ -17,7 +17,11 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
-import com.dolog.server.domain.exhibition.web.dto.response.artist.*;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
@@ -151,7 +155,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
     // 전시 작가 제외 (참여 이력은 삭제하지 않고 REMOVED로 전환)
     @Override
-    public ExhibitionArtistRemoveResponse removeArtistFromExhibition(
+    public void removeArtistFromExhibition(
             UUID accountId,
             UUID exhibitionId,
             UUID artistId
@@ -172,18 +176,9 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_FOUND
                 ));
 
-        Artist artist = map.getArtist();
-
         requireStatusTransition(map, ExhibitionArtistStatus.REMOVED);
         map.updateStatus(ExhibitionArtistStatus.REMOVED);
         cancelArtworkSubmissions(exhibitionId, List.of(artistId));
-
-        return ExhibitionArtistRemoveResponse.of(
-                exhibition.getId(),
-                exhibition.getUnivName(),
-                artist.getId(),
-                artist.getNameKo()
-        );
     }
 
     @Override

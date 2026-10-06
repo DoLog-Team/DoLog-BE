@@ -106,7 +106,7 @@ class ExhibitionArtistServiceImplTest {
                 anyCollection()
         )).thenReturn(List.of());
 
-        var response = service.removeArtistFromExhibition(
+        service.removeArtistFromExhibition(
                 ownerId,
                 exhibition.getId(),
                 artist.getId()
@@ -115,8 +115,6 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
         assertNull(artwork.getExhibition());
         assertNull(artwork.getExhibitionZone());
-        assertEquals(artist.getId(), response.getArtistId());
-        assertEquals("제외 대상 님이 두록대학교에서 제외되었습니다.", response.getMessage());
         verify(exhibitionArtistMapRepository, never()).delete(any());
     }
 
@@ -453,6 +451,7 @@ class ExhibitionArtistServiceImplTest {
                 ExhibitionErrorCode.EXHIBITION_ARTIST_ALREADY_EXISTS,
                 exception.getErrorCode()
         );
+        assertEquals(409, exception.getErrorCode().getHttpStatus());
         verifyNoInteractions(artistProfileRepository);
     }
 

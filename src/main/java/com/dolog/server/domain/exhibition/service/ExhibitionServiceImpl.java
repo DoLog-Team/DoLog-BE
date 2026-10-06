@@ -155,6 +155,10 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
+        if (!exhibition.isPublic()) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_PUBLIC);
+        }
+
         ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
 
@@ -432,7 +436,19 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         ? request.getCopyright()
                         : exhibitionDetail.getCopyright(),
 
-                logoImgUrl
+                logoImgUrl,
+
+                request.getOpenTime() != null
+                        ? request.getOpenTime()
+                        : exhibitionDetail.getOpenTime(),
+
+                request.getCloseTime() != null
+                        ? request.getCloseTime()
+                        : exhibitionDetail.getCloseTime(),
+
+                request.getOperationNotice() != null
+                        ? request.getOperationNotice()
+                        : exhibitionDetail.getOperationNotice()
         );
 
         // ogImage 처리
