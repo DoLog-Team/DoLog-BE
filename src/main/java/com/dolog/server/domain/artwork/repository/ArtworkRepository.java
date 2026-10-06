@@ -2,19 +2,27 @@ package com.dolog.server.domain.artwork.repository;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
+
+    // 삭제될 zone에 속한 작품들의 zone을 해제한다 (작품은 유지)
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE Artwork a SET a.exhibitionZone = null WHERE a.exhibitionZone IN :zones")
+    void clearZone(@Param("zones") Collection<ExhibitionZone> zones);
 
     @EntityGraph(attributePaths = {"artworkArtistMaps", "artworkArtistMaps.artist"})
     @Query("SELECT DISTINCT aam.artwork FROM ArtworkArtistMap aam " +
