@@ -86,9 +86,9 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
                   AND (:status IS NULL OR m.status = :status)
                   AND (
                       :search IS NULL
-                      OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%'))
-                      OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%'))
-                      OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%'))
+                      OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                      OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                      OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
                   )
                 GROUP BY m.id, a.id, a.nameKo, acc.email, m.greeting, m.status, m.createdAt
                 ORDER BY m.createdAt DESC, m.id DESC
@@ -102,9 +102,9 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
                   AND (:status IS NULL OR m.status = :status)
                   AND (
                       :search IS NULL
-                      OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%'))
-                      OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%'))
-                      OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%'))
+                      OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                      OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                      OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
                   )
                 """
     )

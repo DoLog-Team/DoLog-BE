@@ -326,7 +326,9 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         requireCanManageArtists(actor, exhibition);
 
         String normalizedSearch =
-                search == null || search.isBlank() ? null : search.trim();
+                search == null || search.isBlank()
+                        ? null
+                        : escapeLikePattern(search.trim());
 
         Page<ExhibitionArtistManageItemResponse> result =
                 exhibitionArtistMapRepository.findArtistsForManagement(
@@ -341,6 +343,13 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                 Math.toIntExact(result.getTotalElements()),
                 result.getTotalPages()
         );
+    }
+
+    private String escapeLikePattern(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     private void requireStatusTransition(
