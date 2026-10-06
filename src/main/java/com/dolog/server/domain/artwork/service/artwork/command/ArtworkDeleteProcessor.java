@@ -5,6 +5,7 @@ import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.bts.repository.BtsArtworkMapRepository;
+import com.dolog.server.domain.like.repository.ArtworkLikeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class ArtworkDeleteProcessor {
     private final ArtworkRepository artworkRepository;
     private final ArtworkValidator artworkValidator;
     private final BtsArtworkMapRepository btsArtworkMapRepository;
+    private final ArtworkLikeRepository artworkLikeRepository;
 
     public void delete(
             UUID accountId,
@@ -28,8 +30,9 @@ public class ArtworkDeleteProcessor {
         Artist artist = artworkValidator.getLoginArtist(accountId);
         Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
 
-        // bts_artwork_map 은 작품 쪽 cascade 가 없어서 FK 위반이 나지 않게 먼저 지운다.
+        // bts_artwork_map, artwork_likes 는 작품 쪽 cascade 가 없어서 FK 위반이 나지 않게 먼저 지운다.
         btsArtworkMapRepository.deleteAllByArtworkId(artworkId);
+        artworkLikeRepository.deleteAllByArtworkId(artworkId);
         artworkRepository.delete(artwork);
     }
 }
