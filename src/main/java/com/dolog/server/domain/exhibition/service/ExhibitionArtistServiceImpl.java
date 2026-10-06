@@ -30,6 +30,7 @@ import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -115,6 +116,29 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         );
     }
 
+    // 권한 조회가 락보다 앞서므로 호출 트랜잭션은 READ_COMMITTED를 사용한다.
+    // 그래야 락 대기 후 후속 조회가 앞선 요청의 커밋 결과를 볼 수 있다.
+    private Exhibition findAuthorizedExhibitionForUpdate(
+            UUID accountId,
+            UUID exhibitionId
+    ) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
+
+        requireCanManageArtists(actor, exhibition);
+
+        // 권한을 확인한 요청만 같은 전시의 작가 변경 작업을 직렬화한다.
+        return exhibitionRepository.findByIdForUpdate(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
+    }
+
     // 전시 작가 리스트 조회
     @Override
     @Transactional(readOnly = true)
@@ -149,20 +173,13 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
     // 전시 작가 제외 (참여 이력은 삭제하지 않고 REMOVED로 전환)
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void removeArtistFromExhibition(
             UUID accountId,
             UUID exhibitionId,
             UUID artistId
     ) {
-        Account actor = accountRepository.findById(accountId)
-                .orElseThrow(JwtInvalidException::new);
-
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(
-                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
-                ));
-
-        requireCanManageArtists(actor, exhibition);
+        findAuthorizedExhibitionForUpdate(accountId, exhibitionId);
 
         ExhibitionArtistMap map = exhibitionArtistMapRepository
                 .findByExhibitionIdAndArtistId(exhibitionId, artistId)
@@ -232,20 +249,17 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
     }
 
     @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ExhibitionArtistStatusUpdateResponse updateArtistStatuses(
             UUID accountId,
             UUID exhibitionId,
             List<UUID> artistIds,
             ExhibitionArtistStatus targetStatus
     ) {
-        Account actor = accountRepository.findById(accountId)
-                .orElseThrow(JwtInvalidException::new);
-
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new ExhibitionException(
-                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
-                ));
-        requireCanManageArtists(actor, exhibition);
+        Exhibition exhibition = findAuthorizedExhibitionForUpdate(
+                accountId,
+                exhibitionId
+        );
 
         requireAllowedTargetStatus(targetStatus);
 

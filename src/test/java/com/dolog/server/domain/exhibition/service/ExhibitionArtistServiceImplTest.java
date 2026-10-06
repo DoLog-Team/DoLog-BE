@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -52,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -91,7 +93,7 @@ class ExhibitionArtistServiceImplTest {
     void softlyRemovesArtistAndCancelsArtworkSubmissions() {
         UUID ownerId = UUID.randomUUID();
         Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         Artist artist = artist("제외 대상", "removed-delete@test.com");
         ExhibitionArtistMap map = map(
                 exhibition,
@@ -121,6 +123,15 @@ class ExhibitionArtistServiceImplTest {
                 artist.getId()
         );
 
+        InOrder lockOrder = inOrder(
+                exhibitionRepository,
+                accountRepository
+        );
+        lockOrder.verify(accountRepository).findById(ownerId);
+        lockOrder.verify(exhibitionRepository).findById(exhibition.getId());
+        lockOrder.verify(exhibitionRepository)
+                .findByIdForUpdate(exhibition.getId());
+
         assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
         assertNull(artwork.getExhibition());
         assertNull(artwork.getExhibitionZone());
@@ -132,7 +143,7 @@ class ExhibitionArtistServiceImplTest {
     void skipsArtworkCancellationWhenNoSubmittedArtworkExists() {
         UUID ownerId = UUID.randomUUID();
         Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         Artist artist = artist("제외 대상", "no-artwork@test.com");
         ExhibitionArtistMap map = map(
                 exhibition,
@@ -169,7 +180,7 @@ class ExhibitionArtistServiceImplTest {
     void keepsJointArtworkWhenCoArtistRemainsJoined() {
         UUID ownerId = UUID.randomUUID();
         Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         Artist removedArtist = artist("제외 대상", "removed-joint@test.com");
         Artist joinedArtist = artist("참여 유지", "joined-joint@test.com");
         ExhibitionArtistMap removedMap = map(
@@ -209,7 +220,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("공동 작가가 모두 제외되면 공동 작품의 출품을 취소한다")
     void cancelsJointArtworkWhenAllCoArtistsAreRemoved() {
         UUID ownerId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist firstArtist = artist("제외 대상 A", "removed-a@test.com");
         Artist secondArtist = artist("제외 대상 B", "removed-b@test.com");
@@ -273,6 +284,8 @@ class ExhibitionArtistServiceImplTest {
                 )
         );
 
+        verify(exhibitionRepository, never())
+                .findByIdForUpdate(exhibition.getId());
         verifyNoInteractions(exhibitionArtistMapRepository);
         verifyNoInteractions(artworkRepository);
     }
@@ -492,7 +505,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("대기 중인 작가를 일괄 수락하고 없는 전시 프로필만 생성한다")
     void acceptsPendingArtistsAndCreatesOnlyMissingProfiles() {
         UUID ownerId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist firstArtist = artist("첫 번째", "first@test.com");
         Artist secondArtist = artist("두 번째", "second@test.com");
@@ -555,7 +568,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("일괄 요청 중 잘못된 상태 전이가 있으면 어떤 작가도 변경하지 않는다")
     void rejectsWholeRequestWhenAnyTransitionIsInvalid() {
         UUID ownerId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist pendingArtist = artist("대기", "pending@test.com");
         Artist joinedArtist = artist("참여", "joined@test.com");
@@ -600,7 +613,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("대기 중인 작가를 거절하면 프로필을 생성하지 않는다")
     void deniesPendingArtistWithoutCreatingProfile() {
         UUID ownerId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist artist = artist("거절 대상", "denied@test.com");
         ExhibitionArtistMap map = map(
@@ -633,7 +646,7 @@ class ExhibitionArtistServiceImplTest {
     void dologAdminCanUpdateArtistStatusesForAnyExhibition() {
         UUID ownerId = UUID.randomUUID();
         UUID dologAdminId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(dologAdminId, Role.DOLOG_ADMIN);
         Artist artist = artist("거절 대상", "dolog-status@test.com");
         ExhibitionArtistMap map = map(
@@ -665,7 +678,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("참여 중인 작가는 관리자에 의해 제외 상태로 변경될 수 있다")
     void removesJoinedArtist() {
         UUID ownerId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist artist = artist("제외 대상", "removed@test.com");
         ExhibitionArtistMap map = map(
@@ -697,6 +710,15 @@ class ExhibitionArtistServiceImplTest {
                 ExhibitionArtistStatus.REMOVED
         );
 
+        InOrder lockOrder = inOrder(
+                exhibitionRepository,
+                accountRepository
+        );
+        lockOrder.verify(accountRepository).findById(ownerId);
+        lockOrder.verify(exhibitionRepository).findById(exhibition.getId());
+        lockOrder.verify(exhibitionRepository)
+                .findByIdForUpdate(exhibition.getId());
+
         assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
         assertNull(artwork.getExhibition());
         assertNull(artwork.getExhibitionZone());
@@ -721,6 +743,8 @@ class ExhibitionArtistServiceImplTest {
                 )
         );
 
+        verify(exhibitionRepository, never())
+                .findByIdForUpdate(exhibition.getId());
         verifyNoInteractions(exhibitionArtistMapRepository);
         verifyNoInteractions(artistProfileRepository);
     }
@@ -729,7 +753,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("일괄 변경 API에서 PENDING과 WITHDRAWN은 목표 상태로 받을 수 없다")
     void rejectsUnsupportedTargetStatus() {
         UUID ownerId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
 
         for (ExhibitionArtistStatus targetStatus : List.of(
@@ -760,7 +784,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("요청한 작가 중 전시 참여 관계가 없는 작가가 있으면 전체 요청을 거절한다")
     void rejectsWholeRequestWhenAnyArtistMapIsMissing() {
         UUID ownerId = UUID.randomUUID();
-        Exhibition exhibition = exhibition(ownerId);
+        Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
         Artist existingArtist = artist("신청자", "applicant@test.com");
         ExhibitionArtistMap existingMap = map(
@@ -1195,19 +1219,35 @@ class ExhibitionArtistServiceImplTest {
         );
     }
 
-    private Exhibition exhibition(UUID ownerId) {
+    private Exhibition buildExhibition(UUID ownerId) {
         Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
 
-        Exhibition exhibition = Exhibition.builder()
+        return Exhibition.builder()
                 .id(UUID.randomUUID())
                 .account(owner)
                 .univName("두록대학교")
                 .deptName("시각디자인학과")
                 .slug("test-" + UUID.randomUUID())
                 .build();
+    }
+
+    private Exhibition exhibition(UUID ownerId) {
+        Exhibition exhibition = buildExhibition(ownerId);
 
         when(exhibitionRepository.findById(exhibition.getId()))
                 .thenReturn(Optional.of(exhibition));
+
+        return exhibition;
+    }
+
+    private Exhibition lockedExhibition(UUID ownerId) {
+        Exhibition exhibition = buildExhibition(ownerId);
+
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+
         return exhibition;
     }
 

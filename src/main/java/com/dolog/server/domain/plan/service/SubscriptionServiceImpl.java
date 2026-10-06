@@ -274,7 +274,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     // 전시 행에 쓰기 락을 걸어, 같은 전시의 해지 요청이 동시에 처리되지 않게 한다
     // 먼저 들어온 요청이 구독을 해지하면, 뒤의 요청은 해지된 구독을 보고 404를 받는다
     private Exhibition lockOwnedExhibitionOrThrow(UUID exhibitionId, UUID accountId) {
-        Exhibition exhibition = exhibitionRepository.findForCodeUpdate(exhibitionId)
+        Exhibition exhibition = exhibitionRepository.findByIdForUpdate(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
         if (!exhibition.getAccount().getId().equals(accountId)) {
