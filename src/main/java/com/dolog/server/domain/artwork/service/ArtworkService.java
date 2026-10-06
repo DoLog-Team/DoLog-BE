@@ -10,15 +10,23 @@ import java.util.UUID;
 public interface ArtworkService {
     Object getArtworks(Boolean main, String category, String search, String sort);
 
-    ArtworkCreateResponse createArtwork(ArtworkCreateRequest request);
+    ArtworkCreateResponse createArtwork(UUID accountId, ArtworkCreateRequest request);
 
     ArtworkDetailResponse getArtworkDetail(UUID exhibitionId,UUID artworkId);
 
     ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests);
 
-    ArtworkCreateResponse updateArtwork(UUID artworkId, ArtworkUpdateRequest request);
+    ArtworkCreateResponse updateArtwork(UUID accountId, UUID artworkId, ArtworkUpdateRequest request);
 
-    void deleteArtwork(UUID artworkId);
+    void deleteArtwork(UUID accountId, UUID artworkId);
+
+    ArtworkSubmitResponse submitArtwork(UUID accountId, UUID artworkId, ArtworkSubmitRequest request);
+
+    void cancelSubmission(UUID accountId, UUID artworkId);
+
+    ArtworkStatusResponse changeArtworkStatus(UUID accountId, UUID artworkId, ArtworkStatusUpdateRequest request);
+
+    ArtworkHiddenResponse changeArtworkHidden(UUID accountId, UUID artworkId, ArtworkHiddenUpdateRequest request);
 
     void reorderArtwork(UUID artworkId, Integer prev, Integer next);
     void moveArtworkZone(UUID artworkId, UUID zoneId, Integer prev, Integer next);

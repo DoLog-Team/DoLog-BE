@@ -21,6 +21,7 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     List<ExhibitionArtistMap> findByExhibitionId(UUID exhibitionId);
     Optional<ExhibitionArtistMap> findByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
     boolean existsByArtistId(UUID artistId);
+    long countByExhibitionIdAndStatus(UUID exhibitionId, ExhibitionArtistStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"artist", "artist.account"})

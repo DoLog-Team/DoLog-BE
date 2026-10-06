@@ -1,6 +1,6 @@
 package com.dolog.server.domain.artwork.service.artwork.command;
 
-import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
@@ -9,9 +9,9 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.service.artist.ArtworkArtistService;
 import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
 import com.dolog.server.domain.artwork.support.ArtworkOrderHandler;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.support.file.ArtworkFileHandler;
-import com.dolog.server.domain.artwork.support.file.ArtworkFileUrls;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
@@ -33,50 +33,56 @@ public class ArtworkUpdateProcessor {
     private final ArtworkArtistService artworkArtistService;
     private final ArtworkImageService artworkImageService;
     private final ArtworkOrderHandler artworkOrderHandler;
+    private final ArtworkFieldRequirement artworkFieldRequirement;
 
     public ArtworkCreateResponse update(
+            UUID accountId,
             UUID artworkId,
             ArtworkUpdateRequest request
     ) {
 
-        Artwork artwork = getArtwork(artworkId);
+        Artist artist = artworkValidator.getLoginArtist(accountId);
+        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
 
-        artworkOrderHandler.apply(
-                artwork,
-                request.getPrevOrder(),
-                request.getNextOrder(),
-                request.getZoneId()
-        );
-
-        ArtworkFileUrls files =
-                artworkFileHandler.updateArtworkFiles(
-                        artwork,
-                        request
-                );
-
-        String artistName =
-                updateArtistProfile(
-                        artwork,
-                        request
-                );
-
-        artwork.updateAllInfo(
-                request.getTitle(),
-                normalize(request.getDescription()),
+        artwork.updateText(
+                request.getTitle() != null ? request.getTitle().trim() : null,
                 request.getCategory(),
-                artwork.getExhibitionZone(),
-                request.getMaterial(),
-                request.getSize(),
-                files.mainImgUrl(),
-                files.locationMapUrl(),
+                normalize(request.getDescription()),
+                request.getShortIntro()
+        );
+        artwork.updateSize(request.getWidth(), request.getHeight(), request.getDepth());
+        artwork.updateProductionPeriod(
+                request.getProductionStartYear(),
+                request.getProductionStartMonth(),
+                request.getProductionStartDay(),
+                request.getProductionEndYear(),
+                request.getProductionEndMonth(),
+                request.getProductionEndDay()
+        );
+        artwork.updatePurchaseInfo(
                 request.getPurchaseUrl(),
+                request.getPurchaseChatUrl(),
+                request.getShowPurchaseButton(),
                 request.getYoutubeUrl()
         );
 
-        return ArtworkCreateResponse.of(
-                artwork,
-                artistName
+        if (request.getMaterials() != null) {
+            artwork.replaceMaterials(request.getMaterials());
+        }
+
+        if (request.getArtistRole() != null) {
+            artwork.getArtworkArtistMaps().stream()
+                    .filter(map -> map.getArtist().getId().equals(artist.getId()))
+                    .forEach(map -> map.updateRole(request.getArtistRole()));
+        }
+
+        artwork.updateMainImg(
+                artworkFileHandler.replaceMainImage(artwork.getMainImg(), request.getMainImageFile())
         );
+
+        artworkFieldRequirement.requireIfPublished(artwork);
+
+        return ArtworkCreateResponse.of(artwork, artist.getNameKo());
     }
 
     public ArtworkUpdateFullResponse updateFull(
@@ -141,40 +147,6 @@ public class ArtworkUpdateProcessor {
                                 ArtworkErrorCode.ARTWORK_NOT_FOUND
                         )
                 );
-    }
-
-    private String updateArtistProfile(
-            Artwork artwork,
-            ArtworkUpdateRequest request
-    ) {
-
-        if (request.getArtistProfileId() == null) {
-
-            return artwork.getArtworkArtistMaps()
-                    .stream()
-                    .findFirst()
-                    .map(map ->
-                            map.getArtistProfile() != null
-                                    ? map.getArtistProfile().getNameKo()
-                                    : map.getArtist().getNameKo()
-                    )
-                    .orElse("Unknown Artist");
-        }
-
-        ArtistProfile profile =
-                artworkValidator.validateArtistProfile(
-                        request.getArtistProfileId()
-                );
-
-        artwork.getArtworkArtistMaps()
-                .get(0)
-                .updateArtistProfile(
-                        profile.getArtist(),
-                        profile,
-                        request.getArtistRole()
-                );
-
-        return profile.getNameKo();
     }
 
     private String normalize(String description) {

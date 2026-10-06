@@ -140,7 +140,7 @@ class AccountSchemaTests {
         assertFalse(btsRepository.existsById(ownBts.getId()));
         assertTrue(btsRepository.findById(otherBts.getId()).orElseThrow().getArtworkMaps().isEmpty());
         if (deleteRemainingContent) {
-            artworkDelete.delete(shared.getId());
+            artworkDelete.delete(b.getId(), shared.getId());
             btsService.deleteBts(exhibition.getId(), otherBts.getId());
             entityManager.flush();
             entityManager.clear();
