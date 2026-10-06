@@ -60,4 +60,13 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             @Param("exhibitionId") UUID exhibitionId,
             @Param("artistIds") Collection<UUID> artistIds
     );
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @Query("update ExhibitionArtistMap m set m.status = :target, m.updatedAt = :at "
+            + "where m.artist.id = :artistId and m.status in :sources")
+    void updateStatusesForWithdrawal(@Param("artistId") UUID artistId,
+            @Param("sources") Collection<ExhibitionArtistStatus> sources,
+            @Param("target") ExhibitionArtistStatus target,
+            @Param("at") java.time.LocalDateTime at);
+
 }

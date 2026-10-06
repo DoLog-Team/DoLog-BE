@@ -10,4 +10,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     Optional<RefreshToken> findByToken(String token);
     Optional<RefreshToken> findByIdAndAccountId(Long id, UUID accountId);
     void deleteByIdAndAccountId(Long id, UUID accountId);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("delete from RefreshToken t where t.account.id = :id")
+    void deleteAllByAccountId(@org.springframework.data.repository.query.Param("id") UUID id);
+
 }
