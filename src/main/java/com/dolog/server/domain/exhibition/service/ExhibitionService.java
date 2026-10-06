@@ -41,4 +41,7 @@ public interface ExhibitionService {
     // 전시 게시 / 게시기간 연장
     ExhibitionPublishResponse publishExhibition(UUID exhibitionId, UUID accountId);
     ExhibitionPublishResponse extendExpiresAt(UUID exhibitionId, LocalDateTime expiresAt);
+
+    // 전시 어드민 홈
+    ExhibitionAdminHomeResponse getAdminHome(UUID exhibitionId, UUID accountId);
 }
