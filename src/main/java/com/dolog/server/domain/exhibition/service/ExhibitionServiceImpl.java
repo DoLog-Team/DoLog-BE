@@ -22,6 +22,9 @@ import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdate
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionMetaUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.domain.exhibition.web.dto.response.custom.ExhibitionCustomThemeResponse;
+import com.dolog.server.domain.plan.entity.Subscription;
+import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
+import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,6 +47,7 @@ import java.util.UUID;
 public class ExhibitionServiceImpl implements ExhibitionService {
 
     private final ExhibitionRepository exhibitionRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final ExhibitionMapRepository exhibitionMapRepository;
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
@@ -515,5 +519,35 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 exhibition.getArtistJoinCode(),
                 exhibition.getArtistJoinCodeExpiresAt()
         );
+    }
+
+    @Override
+    public ExhibitionPublishResponse publishExhibition(UUID exhibitionId, UUID accountId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+
+        // 활성 구독이 있으면 그 구독의 종료 시각을 전시 만료일로 사용한다 (없으면 만료 없음)
+        LocalDateTime expiresAt = subscriptionRepository
+                .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibitionId, List.of(SubscriptionStatus.ACTIVE))
+                .map(Subscription::getEndedAt)
+                .orElse(null);
+
+        exhibition.publish(expiresAt);
+
+        return ExhibitionPublishResponse.from(exhibition);
+    }
+
+    @Override
+    public ExhibitionPublishResponse extendExpiresAt(UUID exhibitionId, LocalDateTime expiresAt) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        exhibition.extendExpiresAt(expiresAt);
+
+        return ExhibitionPublishResponse.from(exhibition);
     }
 }
