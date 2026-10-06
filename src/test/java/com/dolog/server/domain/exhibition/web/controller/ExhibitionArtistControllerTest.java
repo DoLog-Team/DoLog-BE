@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.web.controller;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistManageStatus;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
@@ -114,7 +115,7 @@ class ExhibitionArtistControllerTest {
                 controller.getArtistsForManagement(
                         user,
                         exhibitionId,
-                        ExhibitionArtistStatus.PENDING,
+                        ExhibitionArtistManageStatus.PENDING,
                         "jw",
                         0,
                         10

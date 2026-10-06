@@ -1,11 +1,11 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
-import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistManageStatus;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistStatusUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
@@ -162,7 +162,7 @@ public class ExhibitionArtistController {
     public SuccessResponse<ExhibitionArtistManageListResponse> getArtistsForManagement(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable UUID exhibitionId,
-            @RequestParam ExhibitionArtistStatus status,
+            @RequestParam ExhibitionArtistManageStatus status,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -171,7 +171,7 @@ public class ExhibitionArtistController {
                 exhibitionArtistService.getArtistsForManagement(
                         userDetails.getId(),
                         exhibitionId,
-                        status,
+                        status.toExhibitionArtistStatus(),
                         search,
                         page,
                         size

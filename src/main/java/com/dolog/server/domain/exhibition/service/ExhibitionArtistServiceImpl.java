@@ -293,8 +293,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             int page,
             int size
     ) {
-        if (status == null
-                || (status != ExhibitionArtistStatus.PENDING
+        if ((status != ExhibitionArtistStatus.PENDING
                 && status != ExhibitionArtistStatus.JOINED)
                 || page < 0
                 || size < 1

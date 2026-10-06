@@ -195,6 +195,30 @@ class ExhibitionArtistControllerSecurityTest {
         verifyNoInteractions(exhibitionArtistService);
     }
 
+    @Test
+    @DisplayName("관리자용 목록에서 지원하지 않는 상태는 같은 400 오류를 반환한다")
+    void unsupportedManagementStatusesReturnSameBadRequest() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        for (String status : List.of("FOO", "DENIED")) {
+            mockMvc.perform(get(
+                            "/api/exhibitions/{exhibitionId}/artists/manage",
+                            exhibitionId
+                    )
+                            .contextPath("/api")
+                            .param("status", status)
+                            .with(user(userDetails(
+                                    accountId,
+                                    Role.EXHIBITION_ADMIN
+                            ))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("GLOBAL_400_2"));
+        }
+
+        verifyNoInteractions(exhibitionArtistService);
+    }
+
     private CustomUserDetails userDetails(UUID accountId, Role role) {
         return new CustomUserDetails(
                 accountId,
