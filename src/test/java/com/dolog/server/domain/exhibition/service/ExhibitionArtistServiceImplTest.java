@@ -11,6 +11,8 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.support.ArtworkSubmissionCanceller;
+import com.dolog.server.domain.artwork.support.file.ArtworkFileHandler;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
@@ -20,6 +22,7 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.global.util.FileService;
 import com.dolog.server.domain.exhibition.repository.projection.ArtistArtworkCountProjection;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
 import org.springframework.data.domain.PageImpl;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.PageRequest;
@@ -74,6 +78,10 @@ class ExhibitionArtistServiceImplTest {
 
     @Mock
     private ArtworkRepository artworkRepository;
+
+    @Spy
+    private ArtworkSubmissionCanceller artworkSubmissionCanceller =
+            new ArtworkSubmissionCanceller(new ArtworkFileHandler(mock(FileService.class)));
 
     @InjectMocks
     private ExhibitionArtistServiceImpl service;

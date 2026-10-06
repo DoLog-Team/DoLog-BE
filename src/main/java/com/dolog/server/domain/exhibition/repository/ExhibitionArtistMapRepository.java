@@ -24,6 +24,7 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     List<ExhibitionArtistMap> findByExhibitionId(UUID exhibitionId);
     Optional<ExhibitionArtistMap> findByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
     boolean existsByArtistId(UUID artistId);
+    long countByExhibitionIdAndStatus(UUID exhibitionId, ExhibitionArtistStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"artist", "artist.account"})
@@ -115,4 +116,13 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             @Param("exhibitionId") UUID exhibitionId,
             @Param("artistIds") Collection<UUID> artistIds
     );
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @Query("update ExhibitionArtistMap m set m.status = :target, m.updatedAt = :at "
+            + "where m.artist.id = :artistId and m.status in :sources")
+    void updateStatusesForWithdrawal(@Param("artistId") UUID artistId,
+            @Param("sources") Collection<ExhibitionArtistStatus> sources,
+            @Param("target") ExhibitionArtistStatus target,
+            @Param("at") java.time.LocalDateTime at);
+
 }

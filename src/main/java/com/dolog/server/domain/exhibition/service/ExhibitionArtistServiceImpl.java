@@ -10,6 +10,7 @@ import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.support.ArtworkSubmissionCanceller;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -48,6 +49,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
+    private final ArtworkSubmissionCanceller artworkSubmissionCanceller;
 
     // 전시 작가 추가
     @Override
@@ -427,7 +429,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         .noneMatch(map ->
                                 joinedArtistIds.contains(map.getArtist().getId())
                         ))
-                .forEach(Artwork::cancelExhibitionSubmission);
+                .forEach(artworkSubmissionCanceller::cancel);
     }
 
     private void requireAllowedTargetStatus(

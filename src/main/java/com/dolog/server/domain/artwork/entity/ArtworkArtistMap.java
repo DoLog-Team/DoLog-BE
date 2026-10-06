@@ -10,12 +10,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@org.hibernate.annotations.SQLRestriction("deleted_at IS NULL")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "artwork_artist_maps")
 public class ArtworkArtistMap extends BaseEntity {
+
+    @Column(name = "deleted_at")
+    private java.time.LocalDateTime deletedAt;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -42,6 +46,10 @@ public class ArtworkArtistMap extends BaseEntity {
         if (artistRole != null) {
             this.artistRole = artistRole;
         }
+    }
+
+    public void linkProfile(ArtistProfile profile) {
+        this.artistProfile = profile;
     }
 
     public void updateArtistProfile(Artist artist, ArtistProfile profile, String role) {
