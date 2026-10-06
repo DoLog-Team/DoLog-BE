@@ -20,6 +20,14 @@ public interface ArtworkService {
 
     void deleteArtwork(UUID accountId, UUID artworkId);
 
+    ArtworkSubmitResponse submitArtwork(UUID accountId, UUID artworkId, ArtworkSubmitRequest request);
+
+    void cancelSubmission(UUID accountId, UUID artworkId);
+
+    ArtworkStatusResponse changeArtworkStatus(UUID accountId, UUID artworkId, ArtworkStatusUpdateRequest request);
+
+    ArtworkHiddenResponse changeArtworkHidden(UUID accountId, UUID artworkId, ArtworkHiddenUpdateRequest request);
+
     void reorderArtwork(UUID artworkId, Integer prev, Integer next);
     void moveArtworkZone(UUID artworkId, UUID zoneId, Integer prev, Integer next);
 

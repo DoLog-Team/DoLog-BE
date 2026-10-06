@@ -41,13 +41,9 @@ public class ArtworkValidator {
             UUID exhibitionId
     ) {
 
-        if (zoneId == null) {
-            throw new RuntimeException("Zone은 필수입니다.");
-        }
-
         return exhibitionZoneRepository
                 .findByIdAndExhibitionId(zoneId, exhibitionId)
                 .orElseThrow(() ->
-                        new RuntimeException("해당 전시에 속한 Zone이 아닙니다."));
+                        new ArtworkException(ArtworkErrorCode.INVALID_EXHIBITION_ZONE));
     }
 }

@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.web.controller;
 
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.service.order.ArtworkOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -76,6 +77,52 @@ public class ArtworkController {
             @PathVariable UUID artworkId) {
         artworkService.deleteArtwork(user.getId(), artworkId);
         return SuccessResponse.ok(null, "작품이 성공적으로 삭제되었습니다.");
+    }
+
+    /* ---------------- [ 출품 / 공개 상태 API ] ---------------- */
+
+    @Operation(summary = "작품 전시회에 출품하기", description = "참여 중(JOINED)인 전시의 구역에 출품합니다. 순서는 구역 마지막으로 정해집니다.")
+    @PutMapping(value = "/artworks/{artworkId}/exhibition", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtworkSubmitResponse> submitArtwork(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId,
+            @Valid @ModelAttribute ArtworkSubmitRequest request) {
+        ArtworkSubmitResponse data = artworkService.submitArtwork(user.getId(), artworkId, request);
+        return SuccessResponse.ok(data, "작품이 전시에 출품되었습니다.");
+    }
+
+    @Operation(summary = "작품 출품 취소", description = "전시 연결을 해제하고 전시 미소속 상태로 되돌립니다.")
+    @DeleteMapping("/artworks/{artworkId}/exhibition")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<Void> cancelSubmission(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId) {
+        artworkService.cancelSubmission(user.getId(), artworkId);
+        return SuccessResponse.ok(null, "작품 출품이 취소되었습니다.");
+    }
+
+    @Operation(summary = "작품 공개/비공개 처리 (작가 어드민)", description = "DRAFT/PUBLISHED 전환. 출품된 작품은 전시의 필수 항목을 채워야 공개할 수 있습니다.")
+    @PatchMapping("/artworks/{artworkId}/exhibition")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtworkStatusResponse> changeArtworkStatus(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId,
+            @Valid @RequestBody ArtworkStatusUpdateRequest request) {
+        ArtworkStatusResponse data = artworkService.changeArtworkStatus(user.getId(), artworkId, request);
+        return SuccessResponse.ok(data, request.status() == ArtworkStatus.PUBLISHED
+                ? "작품이 공개 처리되었습니다." : "작품이 비공개 처리되었습니다.");
+    }
+
+    @Operation(summary = "작품 숨김/재공개 처리 (전시 어드민)", description = "전시 URL 에서만 숨깁니다. 두록 URL 노출과 공개 상태는 그대로입니다.")
+    @PatchMapping("/artworks/{artworkId}/hidden")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    public SuccessResponse<ArtworkHiddenResponse> changeArtworkHidden(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId,
+            @Valid @RequestBody ArtworkHiddenUpdateRequest request) {
+        ArtworkHiddenResponse data = artworkService.changeArtworkHidden(user.getId(), artworkId, request);
+        return SuccessResponse.ok(data, request.hidden() ? "작품이 숨김 처리되었습니다." : "작품이 재공개되었습니다.");
     }
 
     /* ---------------- [ 상세 이미지 관련 API ] ---------------- */

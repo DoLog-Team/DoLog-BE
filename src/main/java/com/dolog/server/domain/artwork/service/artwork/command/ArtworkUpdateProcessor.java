@@ -9,6 +9,7 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.service.artist.ArtworkArtistService;
 import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
 import com.dolog.server.domain.artwork.support.ArtworkOrderHandler;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.support.file.ArtworkFileHandler;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
@@ -32,6 +33,7 @@ public class ArtworkUpdateProcessor {
     private final ArtworkArtistService artworkArtistService;
     private final ArtworkImageService artworkImageService;
     private final ArtworkOrderHandler artworkOrderHandler;
+    private final ArtworkFieldRequirement artworkFieldRequirement;
 
     public ArtworkCreateResponse update(
             UUID accountId,
@@ -77,6 +79,8 @@ public class ArtworkUpdateProcessor {
         artwork.updateMainImg(
                 artworkFileHandler.replaceMainImage(artwork.getMainImg(), request.getMainImageFile())
         );
+
+        artworkFieldRequirement.requireIfPublished(artwork);
 
         return ArtworkCreateResponse.of(artwork, artist.getNameKo());
     }
