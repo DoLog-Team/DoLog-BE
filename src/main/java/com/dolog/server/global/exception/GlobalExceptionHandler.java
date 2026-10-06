@@ -6,6 +6,7 @@ import com.dolog.server.global.exception.jwt.JwtMalformedException;
 import com.dolog.server.global.exception.jwt.JwtUnsupportedException;
 import com.dolog.server.global.response.ErrorResponse;
 import com.dolog.server.global.response.code.GlobalErrorCode;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -67,7 +68,31 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     private ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(
             MissingServletRequestParameterException e) {
-        ErrorResponse error = ErrorResponse.of(GlobalErrorCode.BAD_REQUEST_ERROR);
+        String message = String.format(
+                "필수 요청 파라미터 '%s'가 누락되었습니다.",
+                e.getParameterName()
+        );
+        ErrorResponse error = ErrorResponse.of(
+                GlobalErrorCode.BAD_REQUEST_ERROR,
+                message
+        );
+        return ResponseEntity.status(error.getHttpStatus()).body(error);
+    }
+
+    /* Controller method parameter의 @Min, @Max 등 제약 조건을 위반한 경우 */
+    @ExceptionHandler(ConstraintViolationException.class)
+    private ResponseEntity<ErrorResponse> handleConstraintViolationException(
+            ConstraintViolationException e
+    ) {
+        String message = e.getConstraintViolations().stream()
+                .map(violation -> violation.getMessage())
+                .findFirst()
+                .orElse(GlobalErrorCode.BAD_REQUEST_ERROR.getMessage());
+
+        ErrorResponse error = ErrorResponse.of(
+                GlobalErrorCode.BAD_REQUEST_ERROR,
+                message
+        );
         return ResponseEntity.status(error.getHttpStatus()).body(error);
     }
 

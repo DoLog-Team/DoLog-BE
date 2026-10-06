@@ -190,7 +190,80 @@ class ExhibitionArtistControllerSecurityTest {
                 )
                         .contextPath("/api")
                         .with(user(userDetails(accountId, Role.EXHIBITION_ADMIN))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"))
+                .andExpect(jsonPath("$.message").value(
+                        "필수 요청 파라미터 'status'가 누락되었습니다."
+                ));
+
+        verifyNoInteractions(exhibitionArtistService);
+    }
+
+    @Test
+    @DisplayName("관리자용 목록의 page는 0 이상이어야 한다")
+    void pageMustNotBeNegative() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        mockMvc.perform(get(
+                        "/api/exhibitions/{exhibitionId}/artists/manage",
+                        exhibitionId
+                )
+                        .contextPath("/api")
+                        .param("status", "PENDING")
+                        .param("page", "-1")
+                        .with(user(userDetails(
+                                accountId,
+                                Role.EXHIBITION_ADMIN
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"))
+                .andExpect(jsonPath("$.message").value(
+                        "page는 0 이상이어야 합니다."
+                ));
+
+        verifyNoInteractions(exhibitionArtistService);
+    }
+
+    @Test
+    @DisplayName("관리자용 목록의 size는 1 이상 100 이하여야 한다")
+    void sizeMustBeWithinAllowedRange() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        mockMvc.perform(get(
+                        "/api/exhibitions/{exhibitionId}/artists/manage",
+                        exhibitionId
+                )
+                        .contextPath("/api")
+                        .param("status", "PENDING")
+                        .param("size", "0")
+                        .with(user(userDetails(
+                                accountId,
+                                Role.EXHIBITION_ADMIN
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"))
+                .andExpect(jsonPath("$.message").value(
+                        "size는 1 이상이어야 합니다."
+                ));
+
+        mockMvc.perform(get(
+                        "/api/exhibitions/{exhibitionId}/artists/manage",
+                        exhibitionId
+                )
+                        .contextPath("/api")
+                        .param("status", "PENDING")
+                        .param("size", "101")
+                        .with(user(userDetails(
+                                accountId,
+                                Role.EXHIBITION_ADMIN
+                        ))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"))
+                .andExpect(jsonPath("$.message").value(
+                        "size는 100 이하여야 합니다."
+                ));
 
         verifyNoInteractions(exhibitionArtistService);
     }

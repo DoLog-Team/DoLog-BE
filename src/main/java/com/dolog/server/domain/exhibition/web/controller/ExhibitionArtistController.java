@@ -11,8 +11,11 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import com.dolog.server.domain.artist.web.dto.request.ArtistJoinCodeValidateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
@@ -33,6 +36,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/exhibitions")
 @RequiredArgsConstructor
+@Validated
 public class ExhibitionArtistController {
     private final ExhibitionArtistService exhibitionArtistService;
 
@@ -164,8 +168,13 @@ public class ExhibitionArtistController {
             @PathVariable UUID exhibitionId,
             @RequestParam ExhibitionArtistManageStatus status,
             @RequestParam(required = false) String search,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "0")
+            @Min(value = 0, message = "page는 0 이상이어야 합니다.")
+            int page,
+            @RequestParam(defaultValue = "10")
+            @Min(value = 1, message = "size는 1 이상이어야 합니다.")
+            @Max(value = 100, message = "size는 100 이하여야 합니다.")
+            int size
     ) {
         ExhibitionArtistManageListResponse response =
                 exhibitionArtistService.getArtistsForManagement(
