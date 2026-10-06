@@ -42,11 +42,8 @@ public class ExhibitionCustomSplashServiceImpl implements ExhibitionCustomSplash
     }
 
     private void checkPlanSupport(Exhibition exhibition) {
-        if (exhibition.getAccount() == null) {
-            return;
-        }
         boolean hasActivePlan = subscriptionRepository
-                .existsByAccountIdAndStatus(exhibition.getAccount().getId(), SubscriptionStatus.ACTIVE);
+                .existsByExhibitionIdAndStatus(exhibition.getId(), SubscriptionStatus.ACTIVE);
         if (!hasActivePlan) {
             throw new ExhibitionException(ExhibitionErrorCode.SPLASH_PLAN_NOT_SUPPORTED);
         }

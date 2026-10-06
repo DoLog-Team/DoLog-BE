@@ -33,4 +33,10 @@ public interface BtsRepository extends JpaRepository<Bts, UUID> {
 
     @Query("SELECT b FROM Bts b JOIN b.artworkMaps m WHERE m.artwork.id = :artworkId")
     List<Bts> findAllByArtworkId(@Param("artworkId") UUID artworkId);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update Bts e set e.deletedAt = :at, e.updatedAt = :at where e.artistProfile.id in (select p.id from ArtistProfile p where p.artist.id = :id) and e.deletedAt is null")
+    void hideByArtistId(@org.springframework.data.repository.query.Param("id") java.util.UUID id,
+            @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
 }

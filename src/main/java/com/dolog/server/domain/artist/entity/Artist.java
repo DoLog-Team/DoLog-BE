@@ -10,12 +10,16 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
+@org.hibernate.annotations.SQLRestriction("deleted_at IS NULL")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "artists")
 public class Artist extends BaseEntity {
+
+    @Column(name = "deleted_at")
+    private java.time.LocalDateTime deletedAt;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

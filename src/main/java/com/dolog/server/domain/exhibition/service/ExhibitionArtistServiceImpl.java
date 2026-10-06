@@ -10,6 +10,7 @@ import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.support.ArtworkSubmissionCanceller;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -19,6 +20,8 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapReposito
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
@@ -29,16 +32,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.Locale;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -53,6 +50,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
+    private final ArtworkSubmissionCanceller artworkSubmissionCanceller;
 
     // 전시 작가 추가
     @Override
@@ -300,6 +298,109 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         return new ExhibitionArtistStatusUpdateResponse(maps.size());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    // 관리자용 작가 목록을 조회하기 전에 요청값과 권한을 검사하고, 검색 조건을 정리한 뒤 페이지 단위로 조회
+    public ExhibitionArtistManageListResponse getArtistsForManagement(
+            UUID accountId,
+            UUID exhibitionId,
+            ExhibitionArtistStatus status,
+            String search,
+            int page,
+            int size
+    ) {
+        if ((status != ExhibitionArtistStatus.PENDING
+                && status != ExhibitionArtistStatus.JOINED)
+                || page < 0
+                || size < 1
+                || size > 100) {
+            throw new ExhibitionException(
+                    ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID
+            );
+        }
+
+        // 요청을 보낸 사용자 정보 조회
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+
+        // 관리 대상 전시가 실제로 존재하는지 확인
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
+
+        // DOLOG_ADMIN이거나 해당 전시 ADMIN인지 확인
+        requireCanManageArtists(actor, exhibition);
+
+        String normalizedSearch =
+                search == null || search.isBlank()
+                        ? null
+                        : escapeLikePattern(search.trim());
+
+        Page<ExhibitionArtistMap> result =
+                exhibitionArtistMapRepository.findArtistsForManagement(
+                        exhibitionId,
+                        status,
+                        normalizedSearch,
+                        PageRequest.of(page, size)
+                );
+
+        Map<UUID, Integer> artworkCountByArtistId = new HashMap<>();
+
+        if (status == ExhibitionArtistStatus.JOINED
+                && !result.getContent().isEmpty()) {
+
+            List<UUID> artistIds = result.getContent().stream()
+                    .map(map -> map.getArtist().getId())
+                    .toList();
+
+            exhibitionArtistMapRepository
+                    .countArtworksByArtistIds(exhibitionId, artistIds)
+                    .forEach(count -> artworkCountByArtistId.put(
+                            count.getArtistId(),
+                            Math.toIntExact(count.getArtworkCount())
+                    ));
+        }
+
+        List<ExhibitionArtistManageItemResponse> artists =
+                result.getContent().stream()
+                        .map(map -> {
+                            Artist artist = map.getArtist();
+
+                            Integer artworkCount =
+                                    status == ExhibitionArtistStatus.JOINED
+                                            ? artworkCountByArtistId.getOrDefault(
+                                                    artist.getId(),
+                                                    0
+                                            )
+                                            : null;
+
+                            return new ExhibitionArtistManageItemResponse(
+                                    artist.getId(),
+                                    artist.getNameKo(),
+                                    artist.getAccount() == null
+                                            ? null
+                                            : artist.getAccount().getEmail(),
+                                    map.getGreeting(),
+                                    artworkCount
+                            );
+                        })
+                        .toList();
+
+        return new ExhibitionArtistManageListResponse(
+                artists,
+                Math.toIntExact(result.getTotalElements()),
+                result.getTotalPages()
+        );
+    }
+
+    private String escapeLikePattern(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+    }
+
     private void requireStatusTransition(
             ExhibitionArtistMap map,
             ExhibitionArtistStatus targetStatus
@@ -342,7 +443,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         .noneMatch(map ->
                                 joinedArtistIds.contains(map.getArtist().getId())
                         ))
-                .forEach(Artwork::cancelExhibitionSubmission);
+                .forEach(artworkSubmissionCanceller::cancel);
     }
 
     private void requireAllowedTargetStatus(

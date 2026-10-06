@@ -9,6 +9,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -95,5 +96,11 @@ public class Plan extends BaseEntity {
                                         .build()
                         )
                 );
+    }
+
+    public Optional<PlanPrice> findPriceByCycle(BillingCycle billingCycle) {
+        return this.prices.stream()
+                .filter(planPrice -> planPrice.getBillingCycle() == billingCycle)
+                .findFirst();
     }
 }

@@ -6,12 +6,16 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
+@org.hibernate.annotations.SQLRestriction("deleted_at IS NULL")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "bts_artwork_map")
 public class BtsArtworkMap extends BaseEntity {
+
+    @Column(name = "deleted_at")
+    private java.time.LocalDateTime deletedAt;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

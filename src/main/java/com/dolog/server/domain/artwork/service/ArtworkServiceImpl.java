@@ -4,6 +4,8 @@ import com.dolog.server.domain.artwork.service.artist.ArtworkArtistService;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkCreateProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkDeleteProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkOrderProcessor;
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkSubmissionProcessor;
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkVisibilityProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkUpdateProcessor;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkQueryService;
@@ -15,12 +17,18 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkSubmitRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkStatusUpdateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkHiddenUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkSubmitResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,6 +49,8 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ArtworkUpdateProcessor artworkUpdateProcessor;
     private final ArtworkDeleteProcessor artworkDeleteProcessor;
     private final ArtworkOrderProcessor artworkOrderProcessor;
+    private final ArtworkSubmissionProcessor artworkSubmissionProcessor;
+    private final ArtworkVisibilityProcessor artworkVisibilityProcessor;
 
     private final ArtworkArtistService artworkArtistService;
     private final ArtworkImageService artworkImageService;
@@ -85,19 +95,22 @@ public class ArtworkServiceImpl implements ArtworkService {
     //============================================================
     @Override
     public ArtworkCreateResponse createArtwork(
+            UUID accountId,
             ArtworkCreateRequest request
     ) {
 
-        return artworkCreateProcessor.execute(request);
+        return artworkCreateProcessor.execute(accountId, request);
     }
 
     @Override
     public ArtworkCreateResponse updateArtwork(
+            UUID accountId,
             UUID artworkId,
             ArtworkUpdateRequest request
     ) {
 
         return artworkUpdateProcessor.update(
+                accountId,
                 artworkId,
                 request
         );
@@ -117,9 +130,45 @@ public class ArtworkServiceImpl implements ArtworkService {
     }
 
     @Override
-    public void deleteArtwork(UUID artworkId) {
+    public void deleteArtwork(UUID accountId, UUID artworkId) {
 
-        artworkDeleteProcessor.delete(artworkId);
+        artworkDeleteProcessor.delete(accountId, artworkId);
+    }
+
+    @Override
+    public ArtworkSubmitResponse submitArtwork(
+            UUID accountId,
+            UUID artworkId,
+            ArtworkSubmitRequest request
+    ) {
+
+        return artworkSubmissionProcessor.submit(accountId, artworkId, request);
+    }
+
+    @Override
+    public void cancelSubmission(UUID accountId, UUID artworkId) {
+
+        artworkSubmissionProcessor.cancel(accountId, artworkId);
+    }
+
+    @Override
+    public ArtworkStatusResponse changeArtworkStatus(
+            UUID accountId,
+            UUID artworkId,
+            ArtworkStatusUpdateRequest request
+    ) {
+
+        return artworkVisibilityProcessor.changeStatus(accountId, artworkId, request.status());
+    }
+
+    @Override
+    public ArtworkHiddenResponse changeArtworkHidden(
+            UUID accountId,
+            UUID artworkId,
+            ArtworkHiddenUpdateRequest request
+    ) {
+
+        return artworkVisibilityProcessor.changeHidden(accountId, artworkId, request.hidden());
     }
 
     @Override
