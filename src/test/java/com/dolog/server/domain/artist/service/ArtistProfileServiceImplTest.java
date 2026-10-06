@@ -468,6 +468,85 @@ class ArtistProfileServiceImplTest {
         verify(artistSnsRepository, never()).save(any());
     }
 
+    @Test
+    @DisplayName("공개 프로필의 SNS 목록은 비로그인 사용자도 조회할 수 있다")
+    void anonymousGetsPublicProfileSnsList() {
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        UUID snsId = UUID.randomUUID();
+        ArtistSns sns = ArtistSns.builder()
+                .id(snsId)
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(artistSnsRepository.findByArtistProfileId(profile.getId()))
+                .thenReturn(List.of(sns));
+
+        var response = service.getArtistSnsList(
+                null,
+                profile.getId()
+        );
+
+        assertEquals(1, response.snsList().size());
+        assertEquals(snsId, response.snsList().get(0).getSnsId());
+        assertEquals(
+                "instagram",
+                response.snsList().get(0).getPlatformName()
+        );
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자는 비공개 프로필의 SNS 목록을 조회할 수 없다")
+    void anonymousCannotGetPrivateProfileSnsList() {
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        profile.togglePublicStatus(false);
+
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.getArtistSnsList(null, profile.getId())
+        );
+
+        verify(artistSnsRepository, never())
+                .findByArtistProfileId(profile.getId());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 자신의 비공개 프로필 SNS 목록을 조회할 수 있다")
+    void artistAdminGetsOwnPrivateProfileSnsList() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        profile.togglePublicStatus(false);
+
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(artistSnsRepository.findByArtistProfileId(profile.getId()))
+                .thenReturn(List.of());
+
+        var response = service.getArtistSnsList(
+                artistAccount.getId(),
+                profile.getId()
+        );
+
+        assertTrue(response.snsList().isEmpty());
+    }
+
     private void prepareUpdate(
             Account actor,
             ArtistProfile profile

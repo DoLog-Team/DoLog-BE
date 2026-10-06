@@ -11,6 +11,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateRespon
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
@@ -179,11 +180,18 @@ public class ArtistProfileController {
     // GET artist-profiles/{profileId}/sns
     @Operation(summary = "작가 SNS 목록 조회")
     @GetMapping("/{profileId}/sns")
-    public SuccessResponse<List<ArtistSnsResponse>> getArtistSnsList(
-            @PathVariable UUID profileId) {
+    public SuccessResponse<ArtistSnsListResponse> getArtistSnsList(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID profileId
+    ) {
 
-        List<ArtistSnsResponse> response = artistProfileService.getArtistSnsList(profileId);
+        UUID accountId = user == null ? null : user.getId();
+        ArtistSnsListResponse response =
+                artistProfileService.getArtistSnsList(
+                        accountId,
+                        profileId
+                );
 
-        return SuccessResponse.ok(response, "작가 SNS 목록 조회 성공");
+        return SuccessResponse.ok(response, "SNS 목록 조회 성공");
     }
 }

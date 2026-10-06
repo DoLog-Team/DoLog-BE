@@ -17,6 +17,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailRespon
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -205,6 +206,23 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         throw new ArtistProfileAccessDeniedException();
     }
 
+    private void requireCanViewProfile(
+            UUID accountId,
+            ArtistProfile profile
+    ) {
+        if (profile.isPublic()) {
+            return;
+        }
+
+        if (accountId == null) {
+            throw new ArtistProfileAccessDeniedException();
+        }
+
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        requireCanUpdateProfile(actor, profile);
+    }
+
     // 관리자용 프로필 목록 조회
     @Override
     @Transactional(readOnly = true)
@@ -388,12 +406,20 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // SNS 목록 조회
     @Transactional(readOnly = true)
     @Override
-    public List<ArtistSnsResponse> getArtistSnsList(UUID profileId) {
+    public ArtistSnsListResponse getArtistSnsList(
+            UUID accountId,
+            UUID profileId
+    ) {
+        ArtistProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(ArtistProfileNotFoundException::new);
+        requireCanViewProfile(accountId, profile);
 
-        // DB에서 해당 프로필 ID를 외래키로 가진 SNS들을 다 긁어옵니다.
-        return artistSnsRepository.findByArtistProfileId(profileId)
+        List<ArtistSnsResponse> snsList =
+                artistSnsRepository.findByArtistProfileId(profileId)
                 .stream()
                 .map(ArtistSnsResponse::from)
                 .toList();
+
+        return new ArtistSnsListResponse(snsList);
     }
 }

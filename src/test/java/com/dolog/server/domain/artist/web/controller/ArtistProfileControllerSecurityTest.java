@@ -9,6 +9,8 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResp
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
 import com.dolog.server.global.jwt.JwtTokenProvider;
@@ -246,6 +248,38 @@ class ArtistProfileControllerSecurityTest {
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(artistProfileService);
+    }
+
+    @Test
+    @DisplayName("공개 프로필의 SNS 목록은 명세의 snsList 구조로 반환한다")
+    void anonymousGetsSnsListResponse() throws Exception {
+        UUID profileId = UUID.randomUUID();
+        UUID snsId = UUID.randomUUID();
+        ArtistSnsResponse item = ArtistSnsResponse.builder()
+                .snsId(snsId)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(artistProfileService.getArtistSnsList(null, profileId))
+                .thenReturn(new ArtistSnsListResponse(List.of(item)));
+
+        mockMvc.perform(get(
+                        "/api/artist-profiles/{profileId}/sns",
+                        profileId
+                ).contextPath("/api"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("SNS 목록 조회 성공"))
+                .andExpect(jsonPath("$.data.snsList").isArray())
+                .andExpect(jsonPath("$.data.snsList[0].snsId")
+                        .value(snsId.toString()))
+                .andExpect(jsonPath("$.data.snsList[0].platformName")
+                        .value("instagram"))
+                .andExpect(jsonPath("$.data.snsList[0].url")
+                        .value("https://instagram.com/dolog"));
+
+        verify(artistProfileService).getArtistSnsList(null, profileId);
     }
 
     @Test
