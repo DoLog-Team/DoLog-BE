@@ -15,6 +15,7 @@ import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -545,6 +546,72 @@ class ArtistProfileServiceImplTest {
         );
 
         assertTrue(response.snsList().isEmpty());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 자신의 SNS URL만 수정할 수 있다")
+    void artistAdminUpdatesOwnSnsPartially() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/old")
+                .build();
+
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        var response = service.updateArtistSns(
+                artistAccount.getId(),
+                sns.getId(),
+                new ArtistSnsUpdateRequest(
+                        null,
+                        " https://instagram.com/new "
+                )
+        );
+
+        assertEquals(sns.getId(), response.snsId());
+        assertEquals("instagram", sns.getPlatformName());
+        assertEquals("https://instagram.com/new", sns.getUrl());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 다른 작가의 SNS를 수정할 수 없다")
+    void artistAdminCannotUpdateOtherArtistSns() {
+        Account actor = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.updateArtistSns(
+                        actor.getId(),
+                        sns.getId(),
+                        new ArtistSnsUpdateRequest("behance", null)
+                )
+        );
+
+        assertEquals("instagram", sns.getPlatformName());
     }
 
     private void prepareUpdate(

@@ -12,12 +12,14 @@ import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -421,5 +423,24 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .toList();
 
         return new ArtistSnsListResponse(snsList);
+    }
+
+    // SNS 수정
+    @Transactional
+    @Override
+    public ArtistSnsUpdateResponse updateArtistSns(
+            UUID accountId,
+            UUID snsId,
+            ArtistSnsUpdateRequest request
+    ) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        ArtistSns sns = artistSnsRepository.findById(snsId)
+                .orElseThrow(ArtistSnsNotFoundException::new);
+
+        requireCanUpdateProfile(actor, sns.getArtistProfile());
+        sns.update(request.getPlatformName(), request.getUrl());
+
+        return new ArtistSnsUpdateResponse(sns.getId());
     }
 }

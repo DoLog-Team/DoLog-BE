@@ -4,6 +4,7 @@ import com.dolog.server.domain.artist.service.ArtistProfileService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
@@ -11,6 +12,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateRespon
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
 import com.dolog.server.global.jwt.JwtTokenProvider;
@@ -43,6 +45,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -280,6 +283,47 @@ class ArtistProfileControllerSecurityTest {
                         .value("https://instagram.com/dolog"));
 
         verify(artistProfileService).getArtistSnsList(null, profileId);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "ARTIST_ADMIN",
+            "EXHIBITION_ADMIN",
+            "DOLOG_ADMIN"
+    })
+    @DisplayName("작가·전시·두록 어드민은 SNS 수정 API에 접근할 수 있다")
+    void supportedRolesCanUpdateSns(String role) throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID snsId = UUID.randomUUID();
+        ArtistSnsUpdateRequest request = new ArtistSnsUpdateRequest(
+                null,
+                "https://behance.net/dolog"
+        );
+
+        when(artistProfileService.updateArtistSns(
+                eq(accountId),
+                eq(snsId),
+                any(ArtistSnsUpdateRequest.class)
+        )).thenReturn(new ArtistSnsUpdateResponse(snsId));
+
+        mockMvc.perform(patch(
+                        "/api/artist-profiles/sns/{snsId}",
+                        snsId
+                )
+                        .contextPath("/api")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsBytes(request))
+                        .with(user(userDetails(accountId, role))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("SNS 수정 성공"))
+                .andExpect(jsonPath("$.data.snsId")
+                        .value(snsId.toString()));
+
+        verify(artistProfileService).updateArtistSns(
+                eq(accountId),
+                eq(snsId),
+                any(ArtistSnsUpdateRequest.class)
+        );
     }
 
     @Test

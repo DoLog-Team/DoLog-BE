@@ -7,6 +7,7 @@ import com.dolog.server.domain.artist.service.ArtistProfileService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
@@ -14,6 +15,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -193,5 +195,27 @@ public class ArtistProfileController {
                 );
 
         return SuccessResponse.ok(response, "SNS 목록 조회 성공");
+    }
+
+    // SNS 수정
+    // PATCH artist-profiles/sns/{snsId}
+    @Operation(summary = "작가 SNS 수정")
+    @PatchMapping("/sns/{snsId}")
+    @PreAuthorize(
+            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+    )
+    public SuccessResponse<ArtistSnsUpdateResponse> updateArtistSns(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID snsId,
+            @Valid @RequestBody ArtistSnsUpdateRequest request
+    ) {
+        ArtistSnsUpdateResponse response =
+                artistProfileService.updateArtistSns(
+                        user.getId(),
+                        snsId,
+                        request
+                );
+
+        return SuccessResponse.ok(response, "SNS 수정 성공");
     }
 }
