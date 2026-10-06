@@ -33,15 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.Locale;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -330,7 +322,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         ? null
                         : escapeLikePattern(search.trim());
 
-        Page<ExhibitionArtistManageItemResponse> result =
+        Page<ExhibitionArtistMap> result =
                 exhibitionArtistMapRepository.findArtistsForManagement(
                         exhibitionId,
                         status,
@@ -338,8 +330,50 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         PageRequest.of(page, size)
                 );
 
+        Map<UUID, Integer> artworkCountByArtistId = new HashMap<>();
+
+        if (status == ExhibitionArtistStatus.JOINED
+                && !result.getContent().isEmpty()) {
+
+            List<UUID> artistIds = result.getContent().stream()
+                    .map(map -> map.getArtist().getId())
+                    .toList();
+
+            exhibitionArtistMapRepository
+                    .countArtworksByArtistIds(exhibitionId, artistIds)
+                    .forEach(count -> artworkCountByArtistId.put(
+                            count.getArtistId(),
+                            Math.toIntExact(count.getArtworkCount())
+                    ));
+        }
+
+        List<ExhibitionArtistManageItemResponse> artists =
+                result.getContent().stream()
+                        .map(map -> {
+                            Artist artist = map.getArtist();
+
+                            Integer artworkCount =
+                                    status == ExhibitionArtistStatus.JOINED
+                                            ? artworkCountByArtistId.getOrDefault(
+                                                    artist.getId(),
+                                                    0
+                                            )
+                                            : null;
+
+                            return new ExhibitionArtistManageItemResponse(
+                                    artist.getId(),
+                                    artist.getNameKo(),
+                                    artist.getAccount() == null
+                                            ? null
+                                            : artist.getAccount().getEmail(),
+                                    map.getGreeting(),
+                                    artworkCount
+                            );
+                        })
+                        .toList();
+
         return new ExhibitionArtistManageListResponse(
-                result.getContent(),
+                artists,
                 Math.toIntExact(result.getTotalElements()),
                 result.getTotalPages()
         );

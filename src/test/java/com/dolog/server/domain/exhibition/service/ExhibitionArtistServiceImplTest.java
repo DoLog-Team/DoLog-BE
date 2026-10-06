@@ -20,6 +20,7 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.repository.projection.ArtistArtworkCountProjection;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
 import org.springframework.data.domain.PageImpl;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -925,14 +927,14 @@ class ExhibitionArtistServiceImplTest {
         Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
         Exhibition exhibition = exhibition(ownerId);
 
-        ExhibitionArtistManageItemResponse item =
-                new ExhibitionArtistManageItemResponse(
-                        UUID.randomUUID(),
-                        "김지우",
-                        "jiwoo@test.com",
-                        "전시에 참여하고 싶습니다.",
-                        (Integer) null
-                );
+        Artist pendingArtist = artist("김지우", "jiwoo@test.com");
+        ExhibitionArtistMap pendingMap = ExhibitionArtistMap.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .artist(pendingArtist)
+                .status(ExhibitionArtistStatus.PENDING)
+                .greeting("전시에 참여하고 싶습니다.")
+                .build();
 
         PageRequest pageable = PageRequest.of(0, 10);
 
@@ -944,7 +946,7 @@ class ExhibitionArtistServiceImplTest {
                 "지우",
                 pageable
         )).thenReturn(new PageImpl<>(
-                List.of(item),
+                List.of(pendingMap),
                 pageable,
                 1
         ));
@@ -959,7 +961,16 @@ class ExhibitionArtistServiceImplTest {
         );
 
         assertEquals(1, response.artists().size());
-        assertEquals(item, response.artists().get(0));
+        ExhibitionArtistManageItemResponse responseItem =
+                response.artists().get(0);
+        assertEquals(pendingArtist.getId(), responseItem.artistId());
+        assertEquals("김지우", responseItem.nameKo());
+        assertEquals("jiwoo@test.com", responseItem.email());
+        assertEquals(
+                "전시에 참여하고 싶습니다.",
+                responseItem.greeting()
+        );
+        assertNull(responseItem.artworkCount());
         assertEquals(1, response.totalCount());
         assertEquals(1, response.totalPages());
 
@@ -969,6 +980,106 @@ class ExhibitionArtistServiceImplTest {
                 "지우",
                 pageable
         );
+        verify(
+                exhibitionArtistMapRepository,
+                never()
+        ).countArtworksByArtistIds(any(), anyCollection());
+    }
+
+    @Test
+    @DisplayName("JOINED 작가 목록은 현재 페이지 작가들의 작품 수를 한 번에 조회한다")
+    void getsArtworkCountsForJoinedArtists() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist joinedArtist = artist("김지우", "jiwoo@test.com");
+        ExhibitionArtistMap joinedMap = map(
+                exhibition,
+                joinedArtist,
+                ExhibitionArtistStatus.JOINED
+        );
+        PageRequest pageable = PageRequest.of(0, 10);
+
+        ArtistArtworkCountProjection count =
+                mock(ArtistArtworkCountProjection.class);
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(exhibitionArtistMapRepository.findArtistsForManagement(
+                exhibition.getId(),
+                ExhibitionArtistStatus.JOINED,
+                null,
+                pageable
+        )).thenReturn(new PageImpl<>(
+                List.of(joinedMap),
+                pageable,
+                1
+        ));
+        when(exhibitionArtistMapRepository.countArtworksByArtistIds(
+                exhibition.getId(),
+                List.of(joinedArtist.getId())
+        )).thenReturn(List.of(count));
+        when(count.getArtistId()).thenReturn(joinedArtist.getId());
+        when(count.getArtworkCount()).thenReturn(2L);
+
+        var response = service.getArtistsForManagement(
+                ownerId,
+                exhibition.getId(),
+                ExhibitionArtistStatus.JOINED,
+                null,
+                0,
+                10
+        );
+
+        assertEquals(1, response.artists().size());
+        assertEquals(2, response.artists().get(0).artworkCount());
+        verify(exhibitionArtistMapRepository).countArtworksByArtistIds(
+                exhibition.getId(),
+                List.of(joinedArtist.getId())
+        );
+    }
+
+    @Test
+    @DisplayName("JOINED 작가에게 출품 작품이 없으면 작품 수를 0으로 반환한다")
+    void returnsZeroWhenJoinedArtistHasNoArtwork() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist joinedArtist = artist("작품 없는 작가", "empty@test.com");
+        ExhibitionArtistMap joinedMap = map(
+                exhibition,
+                joinedArtist,
+                ExhibitionArtistStatus.JOINED
+        );
+        PageRequest pageable = PageRequest.of(0, 10);
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(exhibitionArtistMapRepository.findArtistsForManagement(
+                exhibition.getId(),
+                ExhibitionArtistStatus.JOINED,
+                null,
+                pageable
+        )).thenReturn(new PageImpl<>(
+                List.of(joinedMap),
+                pageable,
+                1
+        ));
+        when(exhibitionArtistMapRepository.countArtworksByArtistIds(
+                exhibition.getId(),
+                List.of(joinedArtist.getId())
+        )).thenReturn(List.of());
+
+        var response = service.getArtistsForManagement(
+                ownerId,
+                exhibition.getId(),
+                ExhibitionArtistStatus.JOINED,
+                null,
+                0,
+                10
+        );
+
+        assertEquals(0, response.artists().get(0).artworkCount());
     }
 
     @Test
