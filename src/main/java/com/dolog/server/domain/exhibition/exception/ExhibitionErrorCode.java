@@ -28,6 +28,7 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     EXHIBITION_ARTIST_ALREADY_EXISTS("EXHIBITION_ARTIST_409", CONFLICT, "이미 전시에 추가된 작가입니다."),
     EXHIBITION_ARTIST_NOT_FOUND("EXHIBITION_ARTIST_404", NOT_FOUND, "해당 전시에 등록된 작가가 아닙니다."),
+    EXHIBITION_ARTIST_QUERY_INVALID("EXHIBITION_ARTIST_QUERY_400", BAD_REQUEST, "잘못된 전시 작가 조회 조건입니다."),
 
     HOST_NOT_FOUND("EXHIBITION_HOST_404", NOT_FOUND, "등록된 호스트 정보가 없습니다."),
 
@@ -49,7 +50,11 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     EXHIBITION_SLUG_NOT_FOUND("EXHIBITION_SLUG_404", NOT_FOUND, "해당 slug의 전시회를 찾을 수 없습니다."),
     EXHIBITION_SLUG_DUPLICATE("EXHIBITION_SLUG_409", CONFLICT, "이미 사용 중인 slug입니다."),
-    EXHIBITION_SLUG_INVALID("EXHIBITION_SLUG_400", BAD_REQUEST, "slug는 공백일 수 없습니다.");
+    EXHIBITION_SLUG_INVALID("EXHIBITION_SLUG_400", BAD_REQUEST, "slug는 공백일 수 없습니다."),
+
+    EXHIBITION_ALREADY_PUBLISHED("EXHIBITION_409_1", CONFLICT, "이미 게시된 전시입니다."),
+    EXHIBITION_NOT_PUBLISHED("EXHIBITION_409_2", CONFLICT, "게시되지 않은 전시입니다."),
+    EXHIBITION_EXPIRES_AT_INVALID("EXHIBITION_400_2", BAD_REQUEST, "게시 종료 시각은 현재보다 이후여야 합니다.");
 
     private final String code;
     private final int httpStatus;

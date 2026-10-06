@@ -29,6 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.test.context.transaction.TestTransaction;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -55,6 +56,202 @@ class AccountSchemaTests {
     @Value("${jwt.secret}") String signingKey;
     @Value("${admin.email}") String adminEmail;
     @Value("${admin.password}") String adminPassword;
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired jakarta.persistence.EntityManager entityManager;
+    @Autowired com.dolog.server.domain.artist.repository.ArtistRepository artists;
+    @Autowired com.dolog.server.domain.artist.repository.ArtistProfileRepository profiles;
+    @Autowired com.dolog.server.domain.artwork.repository.ArtworkRepository artworks;
+    @Autowired com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository artworkMappings;
+    @Autowired com.dolog.server.domain.bts.repository.BtsRepository btsRepository;
+    @Autowired com.dolog.server.domain.account.service.WithdrawalRetentionJob retention;
+
+    @Autowired com.dolog.server.domain.artwork.service.artwork.command.ArtworkDeleteProcessor artworkDelete;
+    @Autowired com.dolog.server.domain.bts.service.BtsService btsService;
+
+    @Test
+    @DisplayName("탈퇴 후 남은 작가의 공동 작품과 BTS도 연결을 보관하며 삭제한다")
+    void deleteContentWithRetainedWithdrawalMappings() throws Exception {
+        verifyWithdrawalRetention(true);
+    }
+
+    @Test
+    @DisplayName("탈퇴는 공동 작품의 남은 작가만 노출하고 단독 작품·BTS를 3개월 보관한다")
+    void withdrawalRetainsCoauthorAndPurgesExpiredContent() throws Exception {
+        verifyWithdrawalRetention(false);
+    }
+
+    private void verifyWithdrawalRetention(boolean deleteRemainingContent) throws Exception {
+        var a = accounts.saveAndFlush(social("GOOGLE", "withdraw-a", "withdraw-a@test.com"));
+        var b = accounts.saveAndFlush(social("GOOGLE", "withdraw-b", "withdraw-b@test.com"));
+        var artistA = artists.saveAndFlush(com.dolog.server.domain.artist.entity.Artist.builder()
+                .account(a).nameKo("A").build());
+        var artistB = artists.saveAndFlush(com.dolog.server.domain.artist.entity.Artist.builder()
+                .account(b).nameKo("B").build());
+        var exhibition = exhibitions.findByEntryCode("DEME2222").orElseThrow();
+        var profileA = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
+                .artist(artistA).exhibition(exhibition).nameKo("A").isPublic(true).build());
+        var profileB = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
+                .artist(artistB).exhibition(exhibition).nameKo("B").isPublic(true).build());
+        var shared = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()
+                .exhibition(exhibition).title("shared").build());
+        var sole = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()
+                .exhibition(exhibition).title("sole").build());
+        for (var artwork : java.util.List.of(shared, sole)) {
+            artworkMappings.saveAndFlush(com.dolog.server.domain.artwork.entity.ArtworkArtistMap.builder()
+                    .artwork(artwork).artist(artistA).artistProfile(profileA).artistRole("AUTHOR").build());
+        }
+        artworkMappings.saveAndFlush(com.dolog.server.domain.artwork.entity.ArtworkArtistMap.builder()
+                .artwork(shared).artist(artistB).artistProfile(profileB).artistRole("AUTHOR").build());
+        var ownBts = btsRepository.saveAndFlush(com.dolog.server.domain.bts.entity.Bts.builder()
+                .exhibition(exhibition).artistProfile(profileA).title("A BTS").build());
+        var otherBts = com.dolog.server.domain.bts.entity.Bts.builder()
+                .exhibition(exhibition).artistProfile(profileB).title("B BTS").build();
+        otherBts.getArtworkMaps().add(com.dolog.server.domain.bts.entity.BtsArtworkMap.builder()
+                .bts(otherBts).artwork(sole).build());
+        btsRepository.saveAndFlush(otherBts);
+        var first = session(a);
+        var second = session(a);
+        String access = jwt.createAccessToken(a.getId(), first.getId());
+        mvc.perform(delete("/api/accounts/me").contextPath("/api")).andExpect(status().isUnauthorized());
+        var admin = accounts.findByEmail(adminEmail).orElseThrow();
+        var adminSession = session(admin);
+        mvc.perform(delete("/api/accounts/me").contextPath("/api")
+                .header("Authorization", "Bearer " + jwt.createAccessToken(admin.getId(), adminSession.getId())))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/accounts/me").contextPath("/api")
+                .header("Authorization", "Bearer " + access)).andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+        assertEquals(AccountStatus.WITHDRAWN, accounts.findById(a.getId()).orElseThrow().getAccountStatus());
+        assertFalse(tokens.existsById(first.getId()));
+        assertFalse(tokens.existsById(second.getId()));
+        assertFalse(artists.existsById(artistA.getId()));
+        assertFalse(profiles.existsById(profileA.getId()));
+        assertTrue(artists.existsById(artistB.getId()));
+        assertFalse(artworks.existsById(sole.getId()));
+        for (String table : java.util.List.of("artists", "artist_profiles", "artworks", "artwork_artist_maps", "bts")) {
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM " + table
+                    + " WHERE deleted_at IS NOT NULL AND (updated_at IS NULL OR updated_at <> deleted_at)", Integer.class));
+        }
+        var kept = artworks.findById(shared.getId()).orElseThrow();
+        assertEquals(java.util.List.of("B"), kept.getArtworkArtistMaps().stream()
+                .map(m -> m.getArtist().getNameKo()).toList());
+        assertFalse(btsRepository.existsById(ownBts.getId()));
+        assertTrue(btsRepository.findById(otherBts.getId()).orElseThrow().getArtworkMaps().isEmpty());
+        if (deleteRemainingContent) {
+            artworkDelete.delete(b.getId(), shared.getId());
+            btsService.deleteBts(exhibition.getId(), otherBts.getId());
+            entityManager.flush();
+            entityManager.clear();
+            assertFalse(artworks.existsById(shared.getId()));
+            assertFalse(btsRepository.existsById(otherBts.getId()));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'shared'", Integer.class));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM bts WHERE title = 'B BTS'", Integer.class));
+            assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM artwork_artist_maps m JOIN artworks a ON a.id = m.artwork_id WHERE a.title IN ('shared', 'sole')", Integer.class));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM bts_artwork_map m JOIN bts b ON b.id = m.bts_id WHERE b.title = 'B BTS'", Integer.class));
+        }
+        entityManager.flush();
+        TestTransaction.flagForCommit();
+        TestTransaction.end();
+        try {
+            assertThrows(JwtInvalidException.class, () -> auth.refresh(first.getToken()));
+            mvc.perform(get("/api/accounts/me").contextPath("/api")
+                    .header("Authorization", "Bearer " + access)).andExpect(status().isUnauthorized());
+            retention.purgeExpired();
+            assertTrue(accounts.existsById(a.getId()));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
+            // Simulate expiration; the same retained rows are now eligible for physical deletion.
+            var expired = java.time.LocalDateTime.now().minusMonths(3).minusDays(1);
+            jdbc.update("UPDATE artists SET deleted_at = ? WHERE id = ?", expired, bytes(artistA.getId()));
+            jdbc.update("UPDATE artist_profiles SET deleted_at = ? WHERE id = ?", expired, bytes(profileA.getId()));
+            jdbc.update("UPDATE artworks SET deleted_at = ? WHERE id IN (?, ?) AND deleted_at IS NOT NULL",
+                    expired, bytes(shared.getId()), bytes(sole.getId()));
+            jdbc.update("UPDATE bts SET deleted_at = ? WHERE id IN (?, ?) AND deleted_at IS NOT NULL",
+                    expired, bytes(ownBts.getId()), bytes(otherBts.getId()));
+            jdbc.update("UPDATE accounts SET withdrawn_at = ? WHERE id = ?", expired, bytes(a.getId()));
+            retention.purgeExpired();
+            entityManager.clear();
+            assertFalse(accounts.existsById(a.getId()));
+            assertTrue(accounts.existsById(b.getId()));
+            assertEquals(!deleteRemainingContent, artworks.existsById(shared.getId()));
+            assertEquals(!deleteRemainingContent, btsRepository.existsById(otherBts.getId()));
+            assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'shared'", Integer.class));
+            assertEquals(deleteRemainingContent ? 0 : 1, jdbc.queryForObject("SELECT COUNT(*) FROM bts WHERE title = 'B BTS'", Integer.class));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE title = 'sole'", Integer.class));
+        } finally {
+            // These fixtures were committed so the scheduler's independent transactions can see them.
+            for (String table : java.util.List.of("bts_artwork_map", "artwork_artist_maps", "artwork_imgs", "artwork_materials", "artwork_likes")) {
+                jdbc.update("DELETE FROM " + table + " WHERE artwork_id IN (?, ?)", bytes(shared.getId()), bytes(sole.getId()));
+            }
+            jdbc.update("DELETE FROM bts WHERE id IN (?, ?)", bytes(ownBts.getId()), bytes(otherBts.getId()));
+            jdbc.update("DELETE FROM artworks WHERE id IN (?, ?)", bytes(shared.getId()), bytes(sole.getId()));
+            jdbc.update("DELETE FROM artist_profiles WHERE id IN (?, ?)", bytes(profileA.getId()), bytes(profileB.getId()));
+            jdbc.update("DELETE FROM artists WHERE id IN (?, ?)", bytes(artistA.getId()), bytes(artistB.getId()));
+            jdbc.update("DELETE FROM refresh_token WHERE account_id IN (?, ?)", bytes(a.getId()), bytes(b.getId()));
+            jdbc.update("DELETE FROM refresh_token WHERE id = ?", adminSession.getId());
+            jdbc.update("DELETE FROM accounts WHERE id IN (?, ?)", bytes(a.getId()), bytes(b.getId()));
+            TestTransaction.start();
+        }
+    }
+
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @Test
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    @DisplayName("DB 실패는 파일 대기 기록까지 롤백하고 S3 실패는 대기 기록을 남겨 재시도한다")
+    void retentionPersistsRetriesAndRollsBackFailedTargets() {
+        var sql = org.mockito.Mockito.spy(jdbc);
+        var files = org.mockito.Mockito.mock(com.dolog.server.global.util.FileService.class);
+        var job = new com.dolog.server.domain.account.service.WithdrawalRetentionJob(sql, files, transactionManager);
+        UUID failedId = UUID.randomUUID();
+        UUID retryId = UUID.randomUUID();
+        UUID referencedId = UUID.randomUUID();
+        UUID retainedId = UUID.randomUUID();
+        String failedUrl = "https://retention.test/" + failedId;
+        String retryUrl = "https://retention.test/" + retryId;
+        String sharedUrl = "https://retention.test/" + retainedId;
+        var exhibitionId = exhibitions.findByEntryCode("DEME2222").orElseThrow().getId();
+        var expired = java.time.LocalDateTime.now().minusMonths(3).minusDays(1);
+        try {
+            for (UUID id : java.util.List.of(failedId, retryId, referencedId, retainedId)) {
+                jdbc.update("INSERT INTO artworks (id, exhibition_id, main_img, deleted_at) VALUES (?, ?, ?, ?)",
+                        bytes(id), bytes(exhibitionId), id.equals(failedId) ? failedUrl : id.equals(retryId) ? retryUrl : sharedUrl,
+                        id.equals(retainedId) ? null : expired);
+            }
+            org.mockito.Mockito.doThrow(new DataIntegrityViolationException("simulated FK failure"))
+                    .when(sql).update(org.mockito.ArgumentMatchers.eq("DELETE FROM artworks WHERE id = ?"),
+                            org.mockito.AdditionalMatchers.aryEq(bytes(failedId)));
+            org.mockito.Mockito.doAnswer(invocation -> {
+                // The source row must already be committed as deleted when S3 is called.
+                assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE id = ?", Integer.class, bytes(retryId)));
+                throw new IllegalStateException("storage unavailable");
+            }).when(files).deleteOwnedFile(retryUrl);
+
+            job.purgeExpired();
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE id = ?", Integer.class, bytes(failedId)));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, failedUrl));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM artworks WHERE id = ?", Integer.class, bytes(retryId)));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, retryUrl));
+            org.mockito.Mockito.verify(files, org.mockito.Mockito.never()).deleteOwnedFile(failedUrl);
+            org.mockito.Mockito.verify(files, org.mockito.Mockito.never()).deleteOwnedFile(sharedUrl);
+
+            org.mockito.Mockito.doNothing().when(files).deleteOwnedFile(retryUrl);
+            job.purgeExpired();
+            org.mockito.Mockito.verify(files, org.mockito.Mockito.times(2)).deleteOwnedFile(retryUrl);
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, retryUrl));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM file_deletion_tasks WHERE file_url = ?", Integer.class, sharedUrl));
+        } finally {
+            for (UUID id : java.util.List.of(failedId, retryId, referencedId, retainedId)) {
+                jdbc.update("DELETE FROM artworks WHERE id = ?", bytes(id));
+            }
+            jdbc.update("DELETE FROM file_deletion_tasks WHERE file_url IN (?, ?, ?)", failedUrl, retryUrl, sharedUrl);
+        }
+    }
+
+    private static byte[] bytes(UUID id) {
+        return java.nio.ByteBuffer.allocate(16).putLong(id.getMostSignificantBits()).putLong(id.getLeastSignificantBits()).array();
+    }
 
     @Test
     @DisplayName("소셜 사용자 ID는 제공자별로 대소문자를 구분하고 중복을 허용하지 않음.")

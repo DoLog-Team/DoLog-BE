@@ -14,5 +14,7 @@ public interface TermsAgreementRepository extends JpaRepository<TermsAgreement, 
             + "and t.serviceTermsAgreed = true and t.privacyAgreed = true")
     boolean hasRequiredAgreement(@Param("accountId") UUID accountId, @Param("termsVersion") String termsVersion);
 
+    Optional<TermsAgreement> findFirstByAccountIdOrderByAgreedAtDescIdDesc(UUID accountId);
+
     Optional<TermsAgreement> findByAccountIdAndTermsVersion(UUID accountId, String termsVersion);
 }

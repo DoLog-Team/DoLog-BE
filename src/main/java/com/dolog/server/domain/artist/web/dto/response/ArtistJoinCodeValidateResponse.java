@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record ArtistJoinCodeValidateResponse(
         UUID exhibitionId,
-        String exhibitionTitle
+        String exhibitionTitle,
+        String greetingFormat
 ) {
 }

@@ -1,11 +1,19 @@
 package com.dolog.server.domain.exhibition.web.controller;
 
+import com.dolog.server.domain.artist.web.dto.request.ArtistJoinCodeValidateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistManageStatus;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,8 +28,10 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +43,49 @@ class ExhibitionArtistControllerTest {
 
     @InjectMocks
     private ExhibitionArtistController controller;
+
+    @Test
+    @DisplayName("전시 참여 작가 목록은 artists와 totalCount 구조로 반환한다")
+    void returnsArtistsWithTotalCount() {
+        UUID exhibitionId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        ExhibitionArtistItemResponse artist =
+                new ExhibitionArtistItemResponse(
+                        profileId,
+                        artistId,
+                        "김두록",
+                        "Dolog Kim",
+                        "https://cdn.test/profile.webp"
+                );
+        ExhibitionArtistListResponse serviceResponse =
+                ExhibitionArtistListResponse.from(List.of(artist));
+
+        when(exhibitionArtistService.getArtistsByExhibition(
+                exhibitionId,
+                "NAME"
+        )).thenReturn(serviceResponse);
+
+        SuccessResponse<ExhibitionArtistListResponse> response =
+                controller.getArtists(exhibitionId, "NAME");
+
+        assertEquals(200, response.getHttpStatus());
+        assertEquals("SUCCESS_200", response.getCode());
+        assertEquals("전시 작가 목록 조회 성공", response.getMessage());
+        assertEquals(1, response.getData().getTotalCount());
+
+        JsonNode data = new ObjectMapper().valueToTree(response.getData());
+        assertTrue(data.has("artists"));
+        assertTrue(data.has("totalCount"));
+        assertEquals(profileId.toString(), data.at("/artists/0/profileId").asText());
+        assertEquals(artistId.toString(), data.at("/artists/0/artistId").asText());
+        assertFalse(data.at("/artists/0").has("isPublic"));
+
+        verify(exhibitionArtistService).getArtistsByExhibition(
+                exhibitionId,
+                "NAME"
+        );
+    }
 
     @Test
     @DisplayName("전시 작가 직접 추가는 201과 축소된 응답을 반환한다")
@@ -81,6 +134,62 @@ class ExhibitionArtistControllerTest {
     }
 
     @Test
+    @DisplayName("관리자용 전시 작가 목록 조회 결과를 200 응답으로 반환한다")
+    void getsArtistsForManagement() {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        CustomUserDetails user = new CustomUserDetails(
+                accountId,
+                1L,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_EXHIBITION_ADMIN"))
+        );
+
+        ExhibitionArtistManageListResponse serviceResponse =
+                new ExhibitionArtistManageListResponse(
+                        List.of(),
+                        0,
+                        0
+                );
+
+        when(exhibitionArtistService.getArtistsForManagement(
+                accountId,
+                exhibitionId,
+                ExhibitionArtistStatus.PENDING,
+                "jw",
+                0,
+                10
+        )).thenReturn(serviceResponse);
+
+        SuccessResponse<ExhibitionArtistManageListResponse> response =
+                controller.getArtistsForManagement(
+                        user,
+                        exhibitionId,
+                        ExhibitionArtistManageStatus.PENDING,
+                        "jw",
+                        0,
+                        10
+                );
+
+        assertEquals(200, response.getHttpStatus());
+        assertEquals(
+                "전시 작가 관리 목록 조회 성공",
+                response.getMessage()
+        );
+        assertEquals(serviceResponse, response.getData());
+
+        verify(exhibitionArtistService).getArtistsForManagement(
+                accountId,
+                exhibitionId,
+                ExhibitionArtistStatus.PENDING,
+                "jw",
+                0,
+                10
+        );
+    }
+
+    @Test
     @DisplayName("전시 작가 제외는 path의 artistId를 사용하고 data 없이 200을 반환한다")
     void removesArtistAndReturnsEmptyResponse() {
         UUID accountId = UUID.randomUUID();
@@ -107,6 +216,49 @@ class ExhibitionArtistControllerTest {
                 accountId,
                 exhibitionId,
                 artistId
+        );
+    }
+
+    @Test
+    @DisplayName("참여 코드 검증 응답은 greetingFormat을 null로 포함한다")
+    void validatesJoinCodeWithNullGreetingFormat() {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+        CustomUserDetails user = new CustomUserDetails(
+                accountId,
+                1L,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_ARTIST_ADMIN"))
+        );
+        ArtistJoinCodeValidateResponse serviceResponse =
+                new ArtistJoinCodeValidateResponse(
+                        exhibitionId,
+                        "2026년 두록 졸업 전시회",
+                        null
+                );
+
+        when(exhibitionArtistService.validateJoinCode(
+                accountId,
+                "2345ABCD"
+        )).thenReturn(serviceResponse);
+
+        SuccessResponse<ArtistJoinCodeValidateResponse> response =
+                controller.validateJoinCode(
+                        user,
+                        new ArtistJoinCodeValidateRequest("2345ABCD")
+                );
+
+        assertEquals(200, response.getHttpStatus());
+        assertEquals("SUCCESS_200", response.getCode());
+        assertNull(response.getData().greetingFormat());
+
+        JsonNode data = new ObjectMapper().valueToTree(response.getData());
+        assertTrue(data.has("greetingFormat"));
+        assertTrue(data.get("greetingFormat").isNull());
+
+        verify(exhibitionArtistService).validateJoinCode(
+                accountId,
+                "2345ABCD"
         );
     }
 }

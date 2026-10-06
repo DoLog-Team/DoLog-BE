@@ -43,6 +43,9 @@ public class Exhibition extends BaseEntity {
     @Column(name = "artist_join_code_expires_at")
     private LocalDateTime artistJoinCodeExpiresAt;
 
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
     public void reissueEntryCode(String code, LocalDateTime codeExpiresAt) {
         this.entryCode = code;
         this.entryCodeExpiresAt = codeExpiresAt;
@@ -79,6 +82,26 @@ public class Exhibition extends BaseEntity {
                     ExhibitionErrorCode.ARTIST_JOIN_CODE_EXPIRED
             );
         }
+    }
+
+    // expiresAt은 활성 구독의 종료 시각이며, 활성 구독이 없으면 null(만료 없음)로 게시한다
+    public void publish(LocalDateTime expiresAt) {
+        if (this.isPublic) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_ALREADY_PUBLISHED);
+        }
+        this.isPublic = true;
+        this.publishedAt = LocalDateTime.now();
+        this.expiresAt = expiresAt;
+    }
+
+    public void extendExpiresAt(LocalDateTime newExpiresAt) {
+        if (this.publishedAt == null) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_PUBLISHED);
+        }
+        if (!newExpiresAt.isAfter(LocalDateTime.now())) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_EXPIRES_AT_INVALID);
+        }
+        this.expiresAt = newExpiresAt;
     }
 
     @Column(name = "univ_name", length = 100, nullable = false)

@@ -22,7 +22,7 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from Exhibition e where e.id = :id")
-    Optional<Exhibition> findForCodeUpdate(@Param("id") UUID id);
+    Optional<Exhibition> findByIdForUpdate(@Param("id") UUID id);
 
     @Query("SELECT e FROM Exhibition e LEFT JOIN FETCH e.exhibitionDetail d " +
             "WHERE (:isPublic IS NULL OR e.isPublic = :isPublic) " +

@@ -59,11 +59,16 @@ public class SecurityConfig {
                         .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
                         // HealthEndpoint 매처는 GET만 매칭 → HEAD(무료 모니터 기본 메서드) 별도 허용
                         .requestMatchers(HttpMethod.HEAD, "/actuator/health").permitAll()
+                        // 작품 항목 설정은 전시 어드민 전용이라 아래 GET /exhibitions/** 공개보다 먼저 막는다 (미로그인 401)
+                        .requestMatchers(HttpMethod.GET, "/exhibitions/*/field-settings").authenticated()
                         .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artist-profiles").authenticated()
                         .requestMatchers(HttpMethod.GET, "/artist-profiles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artists/*").permitAll()
+                        // 비로그인 방문자 좋아요 (visitor_id 쿠키 기반)
+                        .requestMatchers(HttpMethod.POST, "/artworks/*/likes", "/artist-profiles/*/likes").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/artworks/*/likes", "/artist-profiles/*/likes").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh",
                                 "/auth/social/login", "/auth/exhibition/login").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

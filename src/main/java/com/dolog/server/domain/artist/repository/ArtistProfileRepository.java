@@ -105,4 +105,10 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
             @Param("nameKo") String nameKo,
             Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update ArtistProfile e set e.deletedAt = :at, e.updatedAt = :at where e.artist.id = :id and e.deletedAt is null")
+    void hideByArtistId(@org.springframework.data.repository.query.Param("id") java.util.UUID id,
+            @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
+
 }
