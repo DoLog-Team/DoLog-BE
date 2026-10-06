@@ -15,8 +15,10 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
+import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,6 +40,7 @@ import java.util.UUID;
 public class ArtistProfileController {
 
     private final ArtistProfileService artistProfileService;
+    private final VisitorIdResolver visitorIdResolver;
 
     @Operation(summary = "관리자용 전시 작가 프로필 목록 조회")
     @GetMapping
@@ -61,10 +64,20 @@ public class ArtistProfileController {
     @Operation(summary = "전시 작가 프로필 상세 조회")
     @GetMapping("/{profileId}")
     public SuccessResponse<ArtistProfileDetailResponse> getArtistProfileDetail(
+            @AuthenticationPrincipal CustomUserDetails user,
+            HttpServletRequest request,
             @PathVariable UUID profileId
     ) {
-        ArtistProfileDetailResponse response = artistProfileService.getArtistProfileDetail(profileId);
-        return SuccessResponse.ok(response, "작가 프로필 상세 조회 성공");
+        UUID accountId = user == null ? null : user.getId();
+        String visitorId = visitorIdResolver.resolve(request, null)
+                .orElse(null);
+        ArtistProfileDetailResponse response =
+                artistProfileService.getArtistProfileDetail(
+                        accountId,
+                        profileId,
+                        visitorId
+                );
+        return SuccessResponse.ok(response, "프로필 상세 조회 성공");
     }
 
 

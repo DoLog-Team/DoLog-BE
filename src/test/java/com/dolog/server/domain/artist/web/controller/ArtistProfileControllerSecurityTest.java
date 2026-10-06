@@ -6,6 +6,7 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
@@ -13,6 +14,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
+import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
 import com.dolog.server.global.jwt.JwtTokenProvider;
@@ -34,6 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.nullValue;
@@ -72,6 +75,9 @@ class ArtistProfileControllerSecurityTest {
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMappingContext;
+
+    @MockitoBean
+    private VisitorIdResolver visitorIdResolver;
 
     @Test
     @DisplayName("비로그인 사용자의 관리자용 프로필 목록 조회는 401을 반환한다")
@@ -176,17 +182,100 @@ class ArtistProfileControllerSecurityTest {
     }
 
     @Test
-    @DisplayName("프로필 상세 조회는 기존처럼 비로그인 사용자에게 열려 있다")
-    void detailRemainsPublic() throws Exception {
+    @DisplayName("비로그인 프로필 상세 조회는 v2 명세 JSON을 반환한다")
+    void detailRemainsPublicAndReturnsV2Response() throws Exception {
         UUID profileId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+        UUID snsId = UUID.randomUUID();
+        UUID artworkId = UUID.randomUUID();
+        ArtistProfileDetailResponse response =
+                ArtistProfileDetailResponse.builder()
+                        .profileId(profileId)
+                        .artistId(artistId)
+                        .exhibitionId(exhibitionId)
+                        .nameKo("김두록")
+                        .nameEn(null)
+                        .bio(null)
+                        .profileImg(null)
+                        .email(null)
+                        .snsList(List.of(
+                                ArtistProfileDetailResponse.SnsInfo.builder()
+                                        .snsId(snsId)
+                                        .platformName("instagram")
+                                        .url("https://instagram.com/dolog")
+                                        .build()
+                        ))
+                        .purchaseContactUrl(null)
+                        .artworks(List.of(
+                                ArtistProfileDetailResponse.ArtworkSummary.builder()
+                                        .artworkId(artworkId)
+                                        .title("숨")
+                                        .mainImg("https://cdn.test/artwork.webp")
+                                        .build()
+                        ))
+                        .prevArtist(null)
+                        .nextArtist(null)
+                        .likeCount(8)
+                        .liked(true)
+                        .viewCount(120L)
+                        .build();
+
+        when(visitorIdResolver.resolve(any(), eq(null)))
+                .thenReturn(Optional.of("vis_test"));
+        when(artistProfileService.getArtistProfileDetail(
+                null,
+                profileId,
+                "vis_test"
+        )).thenReturn(response);
 
         mockMvc.perform(get(
                         "/api/artist-profiles/{profileId}",
                         profileId
                 ).contextPath("/api"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("프로필 상세 조회 성공"))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()))
+                .andExpect(jsonPath("$.data.artistId")
+                        .value(artistId.toString()))
+                .andExpect(jsonPath("$.data.exhibitionId")
+                        .value(exhibitionId.toString()))
+                .andExpect(jsonPath("$.data.nameKo").value("김두록"))
+                .andExpect(jsonPath("$.data.nameEn")
+                        .value(nullValue()))
+                .andExpect(jsonPath("$.data.bio").value(nullValue()))
+                .andExpect(jsonPath("$.data.profileImg")
+                        .value(nullValue()))
+                .andExpect(jsonPath("$.data.email").value(nullValue()))
+                .andExpect(jsonPath("$.data.snsList[0].snsId")
+                        .value(snsId.toString()))
+                .andExpect(jsonPath("$.data.purchaseContactUrl")
+                        .value(nullValue()))
+                .andExpect(jsonPath("$.data.artworks[0].artworkId")
+                        .value(artworkId.toString()))
+                .andExpect(jsonPath("$.data.artworks[0].mainImg")
+                        .value("https://cdn.test/artwork.webp"))
+                .andExpect(jsonPath("$.data.prevArtist")
+                        .value(nullValue()))
+                .andExpect(jsonPath("$.data.nextArtist")
+                        .value(nullValue()))
+                .andExpect(jsonPath("$.data.likeCount").value(8))
+                .andExpect(jsonPath("$.data.liked").value(true))
+                .andExpect(jsonPath("$.data.viewCount").value(120))
+                .andExpect(jsonPath("$.data.profileImage")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.data.isPublic").doesNotExist())
+                .andExpect(jsonPath("$.data.contact").doesNotExist())
+                .andExpect(jsonPath("$.data.behindTheScenes")
+                        .doesNotExist());
 
-        verify(artistProfileService).getArtistProfileDetail(profileId);
+        verify(artistProfileService).getArtistProfileDetail(
+                null,
+                profileId,
+                "vis_test"
+        );
     }
 
     @ParameterizedTest

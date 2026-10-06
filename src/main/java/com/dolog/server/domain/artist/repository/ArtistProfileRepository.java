@@ -4,8 +4,8 @@ import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.projection.ArtistProfileListItemProjection;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -70,41 +70,20 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
             @Param("artistIds") Collection<UUID> artistIds
     );
 
+    @Modifying(flushAutomatically = true)
     @Query("""
-        SELECT p
-        FROM ArtistProfile p
-        JOIN ExhibitionArtistMap m
-          ON m.artist = p.artist
-         AND m.exhibition = p.exhibition
-        WHERE p.exhibition.id = :exhibitionId
-          AND m.status =
-              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
-          AND p.nameKo < :nameKo
-        ORDER BY p.nameKo DESC
-        """)
-    List<ArtistProfile> findPrevProfile(
-            @Param("exhibitionId") UUID exhibitionId,
-            @Param("nameKo") String nameKo,
-            Pageable pageable
-    );
+            UPDATE ArtistProfile p
+            SET p.viewCount = p.viewCount + 1
+            WHERE p.id = :profileId
+            """)
+    int incrementViewCount(@Param("profileId") UUID profileId);
 
     @Query("""
-        SELECT p
-        FROM ArtistProfile p
-        JOIN ExhibitionArtistMap m
-          ON m.artist = p.artist
-         AND m.exhibition = p.exhibition
-        WHERE p.exhibition.id = :exhibitionId
-          AND m.status =
-              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
-          AND p.nameKo > :nameKo
-        ORDER BY p.nameKo ASC
-        """)
-    List<ArtistProfile> findNextProfile(
-            @Param("exhibitionId") UUID exhibitionId,
-            @Param("nameKo") String nameKo,
-            Pageable pageable
-    );
+            SELECT p.viewCount
+            FROM ArtistProfile p
+            WHERE p.id = :profileId
+            """)
+    long findViewCountById(@Param("profileId") UUID profileId);
 
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
     @org.springframework.data.jpa.repository.Query("update ArtistProfile e set e.deletedAt = :at, e.updatedAt = :at where e.artist.id = :id and e.deletedAt is null")

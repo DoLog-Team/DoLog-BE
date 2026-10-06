@@ -7,6 +7,7 @@ import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.entity.ArtistSns;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAccessDeniedException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
@@ -16,11 +17,17 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
-import com.dolog.server.domain.bts.repository.BtsRepository;
+import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.entity.enums.SortType;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
+import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.util.FileService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -67,13 +74,16 @@ class ArtistProfileServiceImplTest {
     private ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
     @Mock
+    private ArtworkRepository artworkRepository;
+
+    @Mock
+    private ArtistProfileLikeRepository artistProfileLikeRepository;
+
+    @Mock
     private FileService fileService;
 
     @Mock
     private ArtistSnsRepository artistSnsRepository;
-
-    @Mock
-    private BtsRepository btsRepository;
 
     @Mock
     private ArtistProfileImageValidator profileImageValidator;
@@ -395,6 +405,307 @@ class ArtistProfileServiceImplTest {
     }
 
     @Test
+    @DisplayName("공개 프로필 상세 조회는 v2 명세 응답을 반환하고 조회수를 증가시킨다")
+    void anonymousGetsPublicProfileDetail() {
+        Exhibition exhibition = exhibition(
+                account(Role.EXHIBITION_ADMIN)
+        );
+        Artist artist = artist(account(Role.ARTIST_ADMIN));
+        ArtistProfile profile = profile(artist, exhibition);
+        UUID previousProfileId = UUID.randomUUID();
+        UUID nextProfileId = UUID.randomUUID();
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+        Artwork artwork = Artwork.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .title("숨")
+                .mainImg("https://cdn.test/artwork.webp")
+                .status(ArtworkStatus.PUBLISHED)
+                .build();
+
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        mockJoined(profile);
+        when(profileRepository.incrementViewCount(profile.getId()))
+                .thenReturn(1);
+        when(profileRepository.findViewCountById(profile.getId()))
+                .thenReturn(121L);
+        when(artistSnsRepository.findByArtistProfileId(profile.getId()))
+                .thenReturn(List.of(sns));
+        when(artworkRepository.findVisibleInExhibitionByArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(List.of(artwork));
+        when(exhibitionArtistMapRepository.findArtists(exhibition.getId()))
+                .thenReturn(List.of(
+                        new ExhibitionArtistItemResponse(
+                                nextProfileId,
+                                UUID.randomUUID(),
+                                "하작가",
+                                null,
+                                "https://cdn.test/next.webp"
+                        ),
+                        new ExhibitionArtistItemResponse(
+                                profile.getId(),
+                                artist.getId(),
+                                profile.getNameKo(),
+                                profile.getNameEn(),
+                                profile.getProfileImg()
+                        ),
+                        new ExhibitionArtistItemResponse(
+                                previousProfileId,
+                                UUID.randomUUID(),
+                                "가작가",
+                                null,
+                                "https://cdn.test/previous.webp"
+                        )
+                ));
+        when(artistProfileLikeRepository.countByArtistProfileId(
+                profile.getId()
+        )).thenReturn(8L);
+        when(artistProfileLikeRepository
+                .existsByArtistProfileIdAndVisitorId(
+                        profile.getId(),
+                        "vis_test"
+                )).thenReturn(true);
+
+        var response = service.getArtistProfileDetail(
+                null,
+                profile.getId(),
+                "vis_test"
+        );
+
+        assertEquals(profile.getId(), response.getProfileId());
+        assertEquals(artist.getId(), response.getArtistId());
+        assertEquals(exhibition.getId(), response.getExhibitionId());
+        assertEquals("기존 이름", response.getNameKo());
+        assertEquals("Existing Name", response.getNameEn());
+        assertEquals("작가 소개", response.getBio());
+        assertEquals("https://cdn.test/original.webp",
+                response.getProfileImg());
+        assertEquals("artist@test.com", response.getEmail());
+        assertEquals("https://open.kakao.com/o/profile",
+                response.getPurchaseContactUrl());
+        assertEquals(1, response.getSnsList().size());
+        assertEquals(sns.getId(), response.getSnsList().get(0).getSnsId());
+        assertEquals(1, response.getArtworks().size());
+        assertEquals(artwork.getId(),
+                response.getArtworks().get(0).getArtworkId());
+        assertEquals("https://cdn.test/artwork.webp",
+                response.getArtworks().get(0).getMainImg());
+        assertEquals(previousProfileId,
+                response.getPrevArtist().getProfileId());
+        assertEquals(nextProfileId,
+                response.getNextArtist().getProfileId());
+        assertEquals(8, response.getLikeCount());
+        assertTrue(response.isLiked());
+        assertEquals(121L, response.getViewCount());
+        verify(profileRepository).incrementViewCount(profile.getId());
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자는 비공개 프로필 상세를 조회할 수 없다")
+    void anonymousCannotGetPrivateProfileDetail() {
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        profile.togglePublicStatus(false);
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        mockJoined(profile);
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.getArtistProfileDetail(
+                        null,
+                        profile.getId(),
+                        null
+                )
+        );
+
+        verify(profileRepository, never())
+                .incrementViewCount(profile.getId());
+    }
+
+    @Test
+    @DisplayName("관리 범위 밖의 어드민은 비공개 프로필 상세를 조회할 수 없다")
+    void unrelatedAdminCannotGetPrivateProfileDetail() {
+        Account actor = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        profile.togglePublicStatus(false);
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        mockJoined(profile);
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.getArtistProfileDetail(
+                        actor.getId(),
+                        profile.getId(),
+                        null
+                )
+        );
+
+        verify(profileRepository, never())
+                .incrementViewCount(profile.getId());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = Role.class,
+            names = {"ARTIST_ADMIN", "EXHIBITION_ADMIN", "DOLOG_ADMIN"}
+    )
+    @DisplayName("작가 본인·해당 전시·두록 어드민은 비공개 프로필 상세를 조회할 수 있다")
+    void authorizedAdminGetsPrivateProfileDetail(Role role) {
+        Account actor = account(role);
+        Account artistAccount = role == Role.ARTIST_ADMIN
+                ? actor
+                : account(Role.ARTIST_ADMIN);
+        Account exhibitionAccount = role == Role.EXHIBITION_ADMIN
+                ? actor
+                : account(Role.EXHIBITION_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(exhibitionAccount)
+        );
+        profile.togglePublicStatus(false);
+        prepareDetail(profile, 1L);
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+
+        var response = service.getArtistProfileDetail(
+                actor.getId(),
+                profile.getId(),
+                null
+        );
+
+        assertEquals(profile.getId(), response.getProfileId());
+        assertEquals(1L, response.getViewCount());
+    }
+
+    @Test
+    @DisplayName("참여 상태가 아닌 프로필은 일반 요청에 존재하지 않는 것으로 응답한다")
+    void anonymousGetsNotFoundForNonJoinedProfile() {
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        profile.getExhibition().getId(),
+                        profile.getArtist().getId(),
+                        ExhibitionArtistStatus.JOINED
+                )).thenReturn(false);
+
+        assertThrows(
+                ArtistProfileNotFoundException.class,
+                () -> service.getArtistProfileDetail(
+                        null,
+                        profile.getId(),
+                        null
+                )
+        );
+
+        verify(profileRepository, never())
+                .incrementViewCount(profile.getId());
+    }
+
+    @Test
+    @DisplayName("관리 범위 밖의 로그인 요청에도 비참여 프로필은 404로 숨긴다")
+    void unrelatedAdminGetsNotFoundForNonJoinedProfile() {
+        Account actor = account(Role.EXHIBITION_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        profile.getExhibition().getId(),
+                        profile.getArtist().getId(),
+                        ExhibitionArtistStatus.JOINED
+                )).thenReturn(false);
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+
+        assertThrows(
+                ArtistProfileNotFoundException.class,
+                () -> service.getArtistProfileDetail(
+                        actor.getId(),
+                        profile.getId(),
+                        null
+                )
+        );
+
+        verify(profileRepository, never())
+                .incrementViewCount(profile.getId());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 프로필 상세 조회는 404를 반환한다")
+    void missingProfileDetailReturnsNotFound() {
+        UUID profileId = UUID.randomUUID();
+        when(profileRepository.findById(profileId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ArtistProfileNotFoundException.class,
+                () -> service.getArtistProfileDetail(
+                        null,
+                        profileId,
+                        null
+                )
+        );
+
+        verify(profileRepository, never()).incrementViewCount(profileId);
+    }
+
+    @Test
+    @DisplayName("관리 범위의 어드민은 참여 상태가 아닌 기존 프로필을 조회할 수 있다")
+    void ownerAdminGetsNonJoinedProfileDetail() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        profile.getExhibition().getId(),
+                        profile.getArtist().getId(),
+                        ExhibitionArtistStatus.JOINED
+                )).thenReturn(false);
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        prepareDetailResponseData(profile, 1L);
+
+        var response = service.getArtistProfileDetail(
+                artistAccount.getId(),
+                profile.getId(),
+                null
+        );
+
+        assertEquals(profile.getId(), response.getProfileId());
+        assertNull(response.getPrevArtist());
+        assertNull(response.getNextArtist());
+    }
+
+    @Test
     @DisplayName("작가 어드민은 자신의 프로필에 SNS를 추가하고 snsId를 받는다")
     void artistAdminAddsSnsToOwnProfile() {
         Account artistAccount = account(Role.ARTIST_ADMIN);
@@ -486,6 +797,7 @@ class ArtistProfileServiceImplTest {
 
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
+        mockJoined(profile);
         when(artistSnsRepository.findByArtistProfileId(profile.getId()))
                 .thenReturn(List.of(sns));
 
@@ -513,6 +825,7 @@ class ArtistProfileServiceImplTest {
 
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
+        mockJoined(profile);
 
         assertThrows(
                 ArtistProfileAccessDeniedException.class,
@@ -535,6 +848,7 @@ class ArtistProfileServiceImplTest {
 
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
+        mockJoined(profile);
         when(accountRepository.findById(artistAccount.getId()))
                 .thenReturn(Optional.of(artistAccount));
         when(artistSnsRepository.findByArtistProfileId(profile.getId()))
@@ -682,6 +996,47 @@ class ArtistProfileServiceImplTest {
                 .thenReturn(Optional.of(profile));
     }
 
+    private void prepareDetail(
+            ArtistProfile profile,
+            long viewCount
+    ) {
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        mockJoined(profile);
+        prepareDetailResponseData(profile, viewCount);
+    }
+
+    private void prepareDetailResponseData(
+            ArtistProfile profile,
+            long viewCount
+    ) {
+        when(profileRepository.incrementViewCount(profile.getId()))
+                .thenReturn(1);
+        when(profileRepository.findViewCountById(profile.getId()))
+                .thenReturn(viewCount);
+        when(artistSnsRepository.findByArtistProfileId(profile.getId()))
+                .thenReturn(List.of());
+        when(artworkRepository.findVisibleInExhibitionByArtistId(
+                profile.getExhibition().getId(),
+                profile.getArtist().getId()
+        )).thenReturn(List.of());
+        when(exhibitionArtistMapRepository.findArtists(
+                profile.getExhibition().getId()
+        )).thenReturn(List.of());
+        when(artistProfileLikeRepository.countByArtistProfileId(
+                profile.getId()
+        )).thenReturn(0L);
+    }
+
+    private void mockJoined(ArtistProfile profile) {
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        profile.getExhibition().getId(),
+                        profile.getArtist().getId(),
+                        ExhibitionArtistStatus.JOINED
+                )).thenReturn(true);
+    }
+
     private ArtistProfileCreateRequest createRequest(
             UUID artistId,
             UUID exhibitionId
@@ -727,6 +1082,9 @@ class ArtistProfileServiceImplTest {
                 .slug("test-" + UUID.randomUUID())
                 .univName("두록대학교")
                 .deptName("시각디자인학과")
+                .exhibitionDetail(ExhibitionDetail.builder()
+                        .sortType(SortType.ABC)
+                        .build())
                 .build();
     }
 
@@ -747,6 +1105,12 @@ class ArtistProfileServiceImplTest {
                 .artist(artist)
                 .exhibition(exhibition)
                 .nameKo("기존 이름")
+                .nameEn("Existing Name")
+                .bio("작가 소개")
+                .email("artist@test.com")
+                .purchaseContactUrl(
+                        "https://open.kakao.com/o/profile"
+                )
                 .profileImg("https://cdn.test/original.webp")
                 .isPublic(true)
                 .build();
