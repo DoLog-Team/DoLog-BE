@@ -3,9 +3,11 @@ package com.dolog.server.domain.exhibition.web.controller;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.service.ExhibitionArtistService;
 import com.dolog.server.domain.exhibition.web.dto.request.artist.AddArtistRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.artist.ExhibitionArtistManageStatus;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistAddResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,6 +79,62 @@ class ExhibitionArtistControllerTest {
                 accountId,
                 exhibitionId,
                 artistId
+        );
+    }
+
+    @Test
+    @DisplayName("관리자용 전시 작가 목록 조회 결과를 200 응답으로 반환한다")
+    void getsArtistsForManagement() {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        CustomUserDetails user = new CustomUserDetails(
+                accountId,
+                1L,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_EXHIBITION_ADMIN"))
+        );
+
+        ExhibitionArtistManageListResponse serviceResponse =
+                new ExhibitionArtistManageListResponse(
+                        List.of(),
+                        0,
+                        0
+                );
+
+        when(exhibitionArtistService.getArtistsForManagement(
+                accountId,
+                exhibitionId,
+                ExhibitionArtistStatus.PENDING,
+                "jw",
+                0,
+                10
+        )).thenReturn(serviceResponse);
+
+        SuccessResponse<ExhibitionArtistManageListResponse> response =
+                controller.getArtistsForManagement(
+                        user,
+                        exhibitionId,
+                        ExhibitionArtistManageStatus.PENDING,
+                        "jw",
+                        0,
+                        10
+                );
+
+        assertEquals(200, response.getHttpStatus());
+        assertEquals(
+                "전시 작가 관리 목록 조회 성공",
+                response.getMessage()
+        );
+        assertEquals(serviceResponse, response.getData());
+
+        verify(exhibitionArtistService).getArtistsForManagement(
+                accountId,
+                exhibitionId,
+                ExhibitionArtistStatus.PENDING,
+                "jw",
+                0,
+                10
         );
     }
 

@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.repository;
 
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.repository.projection.ArtistArtworkCountProjection;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -9,6 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Collection;
 import java.util.List;
@@ -57,6 +60,59 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
               com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
         """)
     List<UUID> findJoinedArtistIds(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("artistIds") Collection<UUID> artistIds
+    );
+
+    @EntityGraph(attributePaths = {"artist", "artist.account"})
+    @Query(
+            value = """
+            SELECT m
+            FROM ExhibitionArtistMap m
+            JOIN m.artist a
+            LEFT JOIN a.account acc
+            WHERE m.exhibition.id = :exhibitionId
+              AND m.status = :status
+              AND (
+                  :search IS NULL
+                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+              )
+            ORDER BY m.createdAt DESC, m.id DESC
+            """,
+            countQuery = """
+            SELECT COUNT(m)
+            FROM ExhibitionArtistMap m
+            JOIN m.artist a
+            LEFT JOIN a.account acc
+            WHERE m.exhibition.id = :exhibitionId
+              AND m.status = :status
+              AND (
+                  :search IS NULL
+                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+              )
+            """
+    )
+    Page<ExhibitionArtistMap> findArtistsForManagement(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("status") ExhibitionArtistStatus status,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    @Query("""
+    SELECT
+        aam.artist.id AS artistId,
+        COUNT(DISTINCT aam.artwork.id) AS artworkCount
+    FROM ArtworkArtistMap aam
+    WHERE aam.artwork.exhibition.id = :exhibitionId
+      AND aam.artist.id IN :artistIds
+    GROUP BY aam.artist.id
+    """)
+    List<ArtistArtworkCountProjection> countArtworksByArtistIds(
             @Param("exhibitionId") UUID exhibitionId,
             @Param("artistIds") Collection<UUID> artistIds
     );
