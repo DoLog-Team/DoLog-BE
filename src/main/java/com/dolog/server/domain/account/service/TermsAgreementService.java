@@ -4,6 +4,7 @@ import com.dolog.server.domain.account.entity.TermsAgreement;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.TermsAgreementRepository;
 import com.dolog.server.domain.account.web.dto.request.TermsAgreementRequest;
+import com.dolog.server.domain.account.web.dto.response.TermsAgreementDetailResponse;
 import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import com.dolog.server.domain.account.exception.AccountErrorCode;
@@ -31,6 +32,13 @@ public class TermsAgreementService {
     @Transactional(readOnly = true)
     public boolean needsAgreement(UUID accountId) {
         return !agreements.hasRequiredAgreement(accountId, requiredVersion());
+    }
+
+    @Transactional(readOnly = true)
+    public TermsAgreementDetailResponse getLatestAgreement(UUID accountId) {
+        var agreement = agreements.findFirstByAccountIdOrderByAgreedAtDescIdDesc(accountId)
+                .orElseThrow(() -> new BaseException(AccountErrorCode.TERMS_NOT_FOUND));
+        return TermsAgreementDetailResponse.from(agreement);
     }
 
     @Transactional

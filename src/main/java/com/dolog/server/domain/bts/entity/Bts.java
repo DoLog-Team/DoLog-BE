@@ -12,12 +12,16 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
+@org.hibernate.annotations.SQLRestriction("deleted_at IS NULL")
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "bts")
 public class Bts extends BaseEntity {
+
+    @Column(name = "deleted_at")
+    private java.time.LocalDateTime deletedAt;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -58,5 +62,8 @@ public class Bts extends BaseEntity {
         if (content != null) this.content = content;
         if (mainImg != null) this.mainImg = mainImg;
         if (artistProfile != null) this.artistProfile = artistProfile;
+    }
+    public void markDeleted(java.time.LocalDateTime at) {
+        if (deletedAt == null) deletedAt = at;
     }
 }

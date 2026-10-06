@@ -365,7 +365,7 @@ class ArtworkCommandApiTests {
     // ---------------- 삭제 ----------------
 
     @Test
-    @DisplayName("본인 작품을 삭제하면 재료, 작가 연결, BTS 연결까지 함께 지워진다")
+    @DisplayName("본인 작품을 삭제하면 숨겨지고, 재료는 보관 기간 동안 남으며 BTS 연결은 조회되지 않는다")
     void deletesOwnArtworkWithRelations() throws Exception {
         Artwork artwork = artworkOf(me, "작품");
         artwork.replaceMaterials(List.of("백자토"));
@@ -381,7 +381,8 @@ class ArtworkCommandApiTests {
         em.flush();
         em.clear();
         assertTrue(artworks.findById(id).isEmpty());
-        assertEquals(0L, materialCount(id));
+        // 소프트 삭제라 재료는 WithdrawalRetentionJob 이 보관 기간 후 정리한다.
+        assertEquals(1L, materialCount(id));
         assertEquals(0L, em.createQuery("SELECT COUNT(m) FROM BtsArtworkMap m WHERE m.artwork.id = :id", Long.class)
                 .setParameter("id", id).getSingleResult());
         assertTrue(btsRepository.findById(bts.getId()).isPresent());
