@@ -45,4 +45,11 @@ public class ExhibitionZone extends BaseEntity {
     public void changeHidden(boolean hidden) {
         this.hidden = hidden;
     }
+
+    // 일괄 저장용: null 값도 그대로 반영한다 (설명을 비우면 null로 저장)
+    public void replace(String name, String description, Integer orderId) {
+        this.name = name;
+        this.description = description;
+        this.orderId = orderId;
+    }
 }

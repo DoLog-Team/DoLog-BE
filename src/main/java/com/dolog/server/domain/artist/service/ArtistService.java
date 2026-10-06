@@ -2,6 +2,7 @@ package com.dolog.server.domain.artist.service;
 
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistPublicResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
@@ -18,5 +19,5 @@ public interface ArtistService {
 
     ArtistListResponse getArtists(String search, int page, int size);
 
-    ArtistResponse getArtist(UUID artistId);
+    ArtistPublicResponse getArtist(UUID artistId);
 }
