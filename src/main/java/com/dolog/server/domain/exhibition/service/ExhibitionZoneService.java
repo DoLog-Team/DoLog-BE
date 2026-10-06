@@ -1,5 +1,6 @@
 package com.dolog.server.domain.exhibition.service;
 
+import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneBulkSaveRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.zone.ExhibitionZoneCreateResponse;
@@ -12,9 +13,11 @@ public interface ExhibitionZoneService {
 
     ExhibitionZoneListResponse getZones(UUID exhibitionId);
 
-    ExhibitionZoneCreateResponse createZone(UUID exhibitionId, ExhibitionZoneCreateRequest request);
+    ExhibitionZoneListResponse saveZones(UUID exhibitionId, UUID accountId, ExhibitionZoneBulkSaveRequest request);
 
-    ExhibitionZoneUpdateResponse updateZone(UUID zoneId, ExhibitionZoneUpdateRequest request);
+    ExhibitionZoneCreateResponse createZone(UUID exhibitionId, UUID accountId, boolean isDologAdmin, ExhibitionZoneCreateRequest request);
 
-    void deleteZone(UUID zoneId);
+    ExhibitionZoneUpdateResponse updateZone(UUID zoneId, UUID accountId, boolean isDologAdmin, ExhibitionZoneUpdateRequest request);
+
+    void deleteZone(UUID zoneId, UUID accountId, boolean isDologAdmin);
 }
