@@ -114,9 +114,10 @@ class ExhibitionArtistServiceImplTest {
                 exhibitionRepository,
                 accountRepository
         );
+        lockOrder.verify(accountRepository).findById(ownerId);
+        lockOrder.verify(exhibitionRepository).findById(exhibition.getId());
         lockOrder.verify(exhibitionRepository)
                 .findByIdForUpdate(exhibition.getId());
-        lockOrder.verify(accountRepository).findById(ownerId);
 
         assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
         assertNull(artwork.getExhibition());
@@ -256,7 +257,7 @@ class ExhibitionArtistServiceImplTest {
     void exhibitionAdminCannotRemoveArtistFromAnotherExhibition() {
         UUID actorId = UUID.randomUUID();
         Account actor = account(actorId, Role.EXHIBITION_ADMIN);
-        Exhibition exhibition = lockedExhibition(UUID.randomUUID());
+        Exhibition exhibition = exhibition(UUID.randomUUID());
 
         when(accountRepository.findById(actorId))
                 .thenReturn(Optional.of(actor));
@@ -270,6 +271,8 @@ class ExhibitionArtistServiceImplTest {
                 )
         );
 
+        verify(exhibitionRepository, never())
+                .findByIdForUpdate(exhibition.getId());
         verifyNoInteractions(exhibitionArtistMapRepository);
         verifyNoInteractions(artworkRepository);
     }
@@ -698,9 +701,10 @@ class ExhibitionArtistServiceImplTest {
                 exhibitionRepository,
                 accountRepository
         );
+        lockOrder.verify(accountRepository).findById(ownerId);
+        lockOrder.verify(exhibitionRepository).findById(exhibition.getId());
         lockOrder.verify(exhibitionRepository)
                 .findByIdForUpdate(exhibition.getId());
-        lockOrder.verify(accountRepository).findById(ownerId);
 
         assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
         assertNull(artwork.getExhibition());
@@ -713,7 +717,7 @@ class ExhibitionArtistServiceImplTest {
     void rejectsDifferentExhibitionOwner() {
         UUID ownerId = UUID.randomUUID();
         UUID actorId = UUID.randomUUID();
-        Exhibition exhibition = lockedExhibition(ownerId);
+        Exhibition exhibition = exhibition(ownerId);
         mockAccount(actorId, Role.EXHIBITION_ADMIN);
 
         assertThrows(
@@ -726,6 +730,8 @@ class ExhibitionArtistServiceImplTest {
                 )
         );
 
+        verify(exhibitionRepository, never())
+                .findByIdForUpdate(exhibition.getId());
         verifyNoInteractions(exhibitionArtistMapRepository);
         verifyNoInteractions(artistProfileRepository);
     }
@@ -957,6 +963,8 @@ class ExhibitionArtistServiceImplTest {
     private Exhibition lockedExhibition(UUID ownerId) {
         Exhibition exhibition = buildExhibition(ownerId);
 
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
         when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
                 .thenReturn(Optional.of(exhibition));
 
