@@ -1,20 +1,23 @@
 package com.dolog.server.domain.exhibition.web.dto.response.artist;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 
-import java.util.UUID;
+import java.util.List;
 
 @Getter
-@Builder
 @AllArgsConstructor
 public class ExhibitionArtistListResponse {
 
-    private UUID artistId;
-    private UUID profileId;
-    private String nameKo;
-    private String nameEn;
-    private String profileImg;
-    private Boolean isPublic;
+    private List<ExhibitionArtistItemResponse> artists;
+    private int totalCount;
+
+    public static ExhibitionArtistListResponse from(
+            List<ExhibitionArtistItemResponse> artists
+    ) {
+        return new ExhibitionArtistListResponse(
+                List.copyOf(artists),
+                artists.size()
+        );
+    }
 }
