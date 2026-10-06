@@ -10,9 +10,13 @@ import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import com.dolog.server.global.response.SuccessResponse;
+import com.dolog.server.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -41,33 +45,36 @@ public class ArtworkController {
     }
 
     // 2. 작품 기본 정보 등록
-    @Operation(summary = "작품 등록")
-    @PostMapping(value = "/exhibitions/artworks", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
-    public SuccessResponse<ArtworkCreateResponse> createArtwork(
+    @Operation(summary = "작품 등록", description = "로그인한 작가 본인의 작품을 전시 미소속(DRAFT) 상태로 등록합니다.")
+    @PostMapping(value = "/artworks", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public ResponseEntity<SuccessResponse<ArtworkCreateResponse>> createArtwork(
+            @AuthenticationPrincipal CustomUserDetails user,
             @Valid @ModelAttribute ArtworkCreateRequest request) {
-        ArtworkCreateResponse data = artworkService.createArtwork(request);
-        return SuccessResponse.created(data);
+        ArtworkCreateResponse data = artworkService.createArtwork(user.getId(), request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data));
     }
 
     // 3. 작품 기본 정보 수정 (PATCH)
-    @Operation(summary = "작품 기본 정보 수정")
-    @PatchMapping(value = "/exhibitions/artworks/{artworkId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @Operation(summary = "작품 기본 정보 수정", description = "본인 작품만 수정할 수 있으며 보낸 필드만 반영합니다.")
+    @PatchMapping(value = "/artworks/{artworkId}", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtworkCreateResponse> updateArtwork(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
             @Valid @ModelAttribute ArtworkUpdateRequest request) {
-        ArtworkCreateResponse data = artworkService.updateArtwork(artworkId, request);
+        ArtworkCreateResponse data = artworkService.updateArtwork(user.getId(), artworkId, request);
         return SuccessResponse.ok(data, "정보가 성공적으로 수정되었습니다.");
     }
 
     // 4. 작품 삭제 (DELETE)
-    @Operation(summary = "작품 기본 정보 삭제")
-    @DeleteMapping("/exhibitions/artworks/{artworkId}")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @Operation(summary = "작품 기본 정보 삭제", description = "본인 작품만 삭제할 수 있습니다.")
+    @DeleteMapping("/artworks/{artworkId}")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<Void> deleteArtwork(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId) {
-        artworkService.deleteArtwork(artworkId);
+        artworkService.deleteArtwork(user.getId(), artworkId);
         return SuccessResponse.ok(null, "작품이 성공적으로 삭제되었습니다.");
     }
 

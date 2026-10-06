@@ -8,4 +8,9 @@ public class TextUtils {
         if (text == null) return null;
         return text.replace("\\n", "\n");
     }
+
+    public static String blankToNull(String text) {
+        if (text == null || text.isBlank()) return null;
+        return text.trim();
+    }
 }

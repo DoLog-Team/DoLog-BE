@@ -85,19 +85,22 @@ public class ArtworkServiceImpl implements ArtworkService {
     //============================================================
     @Override
     public ArtworkCreateResponse createArtwork(
+            UUID accountId,
             ArtworkCreateRequest request
     ) {
 
-        return artworkCreateProcessor.execute(request);
+        return artworkCreateProcessor.execute(accountId, request);
     }
 
     @Override
     public ArtworkCreateResponse updateArtwork(
+            UUID accountId,
             UUID artworkId,
             ArtworkUpdateRequest request
     ) {
 
         return artworkUpdateProcessor.update(
+                accountId,
                 artworkId,
                 request
         );
@@ -117,9 +120,9 @@ public class ArtworkServiceImpl implements ArtworkService {
     }
 
     @Override
-    public void deleteArtwork(UUID artworkId) {
+    public void deleteArtwork(UUID accountId, UUID artworkId) {
 
-        artworkDeleteProcessor.delete(artworkId);
+        artworkDeleteProcessor.delete(accountId, artworkId);
     }
 
     @Override
