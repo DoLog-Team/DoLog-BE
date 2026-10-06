@@ -198,6 +198,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         return new ArtistJoinCodeValidateResponse(
                 exhibition.getId(),
                 exhibition.getExhibitionDetail().getTitle(),
+                // TODO: 자기소개 양식 정책 확정 후 고정 문구 또는 전시별 설정값으로 교체
                 null
         );
     }
