@@ -16,6 +16,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateRespon
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -336,23 +337,31 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // SNS 추가
     @Transactional
     @Override
-    public ArtistSnsResponse addArtistSns(UUID profileId, ArtistSnsRequest request) {
+    public ArtistSnsCreateResponse addArtistSns(
+            UUID accountId,
+            UUID profileId,
+            ArtistSnsRequest request
+    ) {
+
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
 
         // 1. 프로필 존재 확인
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
+        requireCanUpdateProfile(actor, profile);
 
         // 2. SNS 엔티티 생성 및 저장
         ArtistSns sns = ArtistSns.builder()
                 .artistProfile(profile)
-                .platformName(request.getPlatformName())
-                .url(request.getUrl())
+                .platformName(request.getPlatformName().trim())
+                .url(request.getUrl().trim())
                 .build();
 
         ArtistSns savedSns = artistSnsRepository.save(sns);
 
         // 3. 응답 반환
-        return ArtistSnsResponse.from(savedSns);
+        return new ArtistSnsCreateResponse(savedSns.getId());
     }
 
 

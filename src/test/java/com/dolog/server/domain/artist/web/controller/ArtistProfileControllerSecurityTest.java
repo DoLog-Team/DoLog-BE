@@ -3,10 +3,12 @@ package com.dolog.server.domain.artist.web.controller;
 import com.dolog.server.domain.artist.service.ArtistProfileService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
 import com.dolog.server.global.jwt.JwtTokenProvider;
@@ -38,6 +40,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -177,6 +180,72 @@ class ArtistProfileControllerSecurityTest {
                 .andExpect(status().isOk());
 
         verify(artistProfileService).getArtistProfileDetail(profileId);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "ARTIST_ADMIN",
+            "EXHIBITION_ADMIN",
+            "DOLOG_ADMIN"
+    })
+    @DisplayName("작가·전시·두록 어드민은 SNS 추가 API에 접근할 수 있다")
+    void supportedRolesCanAddSns(String role) throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID snsId = UUID.randomUUID();
+        ArtistSnsRequest request = new ArtistSnsRequest(
+                "instagram",
+                "https://instagram.com/dolog"
+        );
+
+        when(artistProfileService.addArtistSns(
+                eq(accountId),
+                eq(profileId),
+                any(ArtistSnsRequest.class)
+        )).thenReturn(new ArtistSnsCreateResponse(snsId));
+
+        mockMvc.perform(post(
+                        "/api/artist-profiles/{profileId}/sns",
+                        profileId
+                )
+                        .contextPath("/api")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsBytes(request))
+                        .with(user(userDetails(accountId, role))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.code").value("CREATED_201"))
+                .andExpect(jsonPath("$.message").value("SNS 추가 성공"))
+                .andExpect(jsonPath("$.data.snsId")
+                        .value(snsId.toString()))
+                .andExpect(jsonPath("$.data.platformName")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.data.url").doesNotExist());
+
+        verify(artistProfileService).addArtistSns(
+                eq(accountId),
+                eq(profileId),
+                any(ArtistSnsRequest.class)
+        );
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자의 SNS 추가는 401을 반환한다")
+    void unauthenticatedSnsCreateReturnsUnauthorized() throws Exception {
+        ArtistSnsRequest request = new ArtistSnsRequest(
+                "instagram",
+                "https://instagram.com/dolog"
+        );
+
+        mockMvc.perform(post(
+                        "/api/artist-profiles/{profileId}/sns",
+                        UUID.randomUUID()
+                )
+                        .contextPath("/api")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(artistProfileService);
     }
 
     @Test

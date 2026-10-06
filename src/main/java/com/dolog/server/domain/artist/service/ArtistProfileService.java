@@ -6,6 +6,7 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,8 +39,11 @@ public interface ArtistProfileService {
     ArtistProfileDetailResponse getArtistProfileDetail(UUID profileId);
 
 //    SNS
-    ArtistSnsResponse addArtistSns(UUID profileId, ArtistSnsRequest request)
-            throws IOException;
+    ArtistSnsCreateResponse addArtistSns(
+            UUID accountId,
+            UUID profileId,
+            ArtistSnsRequest request
+    );
 
     List<ArtistSnsResponse> deleteArtistSns(UUID snsId)
             throws IOException;

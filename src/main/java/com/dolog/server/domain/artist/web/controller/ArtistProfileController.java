@@ -10,6 +10,7 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
@@ -139,12 +140,27 @@ public class ArtistProfileController {
     // POST artist-profiles/{profileId}/sns
     @Operation(summary = "작가 SNS 추가")
     @PostMapping("/{profileId}/sns")
-    public SuccessResponse<ArtistSnsResponse> addArtistSns(
+    @PreAuthorize(
+            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+    )
+    public ResponseEntity<SuccessResponse<ArtistSnsCreateResponse>> addArtistSns(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID profileId,
-            @RequestBody ArtistSnsRequest request) throws IOException {
+            @Valid @RequestBody ArtistSnsRequest request
+    ) {
 
-        ArtistSnsResponse response = artistProfileService.addArtistSns(profileId, request);
-        return SuccessResponse.ok(response, "작가 SNS 등록 성공");
+        ArtistSnsCreateResponse response =
+                artistProfileService.addArtistSns(
+                        user.getId(),
+                        profileId,
+                        request
+                );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(
+                        response,
+                        "SNS 추가 성공"
+                ));
     }
 
     // SNS 삭제

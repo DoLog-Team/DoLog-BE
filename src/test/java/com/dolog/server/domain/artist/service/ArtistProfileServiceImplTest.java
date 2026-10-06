@@ -5,6 +5,7 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.entity.ArtistSns;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAccessDeniedException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
@@ -13,6 +14,7 @@ import com.dolog.server.domain.artist.repository.projection.ArtistProfileListIte
 import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -389,6 +391,81 @@ class ArtistProfileServiceImplTest {
 
         verify(profileRepository, never())
                 .findListItemsByExhibitionId(exhibition.getId());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 자신의 프로필에 SNS를 추가하고 snsId를 받는다")
+    void artistAdminAddsSnsToOwnProfile() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        UUID snsId = UUID.randomUUID();
+        ArtistSnsRequest request = new ArtistSnsRequest(
+                " instagram ",
+                " https://instagram.com/dolog "
+        );
+
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(artistSnsRepository.save(any(ArtistSns.class)))
+                .thenAnswer(invocation -> {
+                    ArtistSns sns = invocation.getArgument(0);
+                    return ArtistSns.builder()
+                            .id(snsId)
+                            .artistProfile(sns.getArtistProfile())
+                            .platformName(sns.getPlatformName())
+                            .url(sns.getUrl())
+                            .build();
+                });
+
+        var response = service.addArtistSns(
+                artistAccount.getId(),
+                profile.getId(),
+                request
+        );
+
+        ArgumentCaptor<ArtistSns> snsCaptor =
+                ArgumentCaptor.forClass(ArtistSns.class);
+        verify(artistSnsRepository).save(snsCaptor.capture());
+        assertEquals(snsId, response.snsId());
+        assertEquals("instagram", snsCaptor.getValue().getPlatformName());
+        assertEquals(
+                "https://instagram.com/dolog",
+                snsCaptor.getValue().getUrl()
+        );
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 다른 작가 프로필에 SNS를 추가할 수 없다")
+    void artistAdminCannotAddSnsToOtherProfile() {
+        Account actor = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.addArtistSns(
+                        actor.getId(),
+                        profile.getId(),
+                        new ArtistSnsRequest(
+                                "instagram",
+                                "https://instagram.com/dolog"
+                        )
+                )
+        );
+
+        verify(artistSnsRepository, never()).save(any());
     }
 
     private void prepareUpdate(

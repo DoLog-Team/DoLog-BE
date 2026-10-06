@@ -66,6 +66,24 @@ class ArtistProfileRequestValidationTest {
         assertTrue(validator.validate(request).isEmpty());
     }
 
+    @Test
+    @DisplayName("SNS 추가 요청은 플랫폼 이름과 HTTP(S) URL이 필수다")
+    void validatesArtistSnsCreateRequest() {
+        ArtistSnsRequest request = new ArtistSnsRequest(
+                "",
+                "instagram.com/dolog"
+        );
+
+        assertFalse(validator.validate(request).isEmpty());
+
+        request = new ArtistSnsRequest(
+                "instagram",
+                "https://instagram.com/dolog"
+        );
+
+        assertTrue(validator.validate(request).isEmpty());
+    }
+
     private ArtistProfileCreateRequest validCreateRequest() {
         ArtistProfileCreateRequest request =
                 new ArtistProfileCreateRequest();
