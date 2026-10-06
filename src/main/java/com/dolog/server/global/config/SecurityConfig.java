@@ -59,6 +59,8 @@ public class SecurityConfig {
                         .requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
                         // HealthEndpoint 매처는 GET만 매칭 → HEAD(무료 모니터 기본 메서드) 별도 허용
                         .requestMatchers(HttpMethod.HEAD, "/actuator/health").permitAll()
+                        // 작품 항목 설정은 전시 어드민 전용이라 아래 GET /exhibitions/** 공개보다 먼저 막는다 (미로그인 401)
+                        .requestMatchers(HttpMethod.GET, "/exhibitions/*/field-settings").authenticated()
                         .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artist-profiles", "/artist-profiles/**").permitAll()
