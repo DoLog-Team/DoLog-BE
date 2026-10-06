@@ -25,11 +25,14 @@ public class ArtworkOrderAdapter {
      * 생성 시
      */
     public void assign(Artwork artwork) {
+        // 조회 시 자동 flush 로 순서가 아직 없는 자기 자신이 섞여 들어오므로 빼고 계산한다.
         List<Artwork> artworks =
                 artworkRepository.findByExhibitionIdAndExhibitionZoneIdOrderByOrderIndexAsc(
                         artwork.getExhibition().getId(),
                         artwork.getExhibitionZone().getId()
-                );
+                ).stream()
+                        .filter(other -> other != artwork && other.getOrderIndex() != null)
+                        .toList();
 
         artwork.updateOrder(orderProcessor.assignNext(artworks));
     }

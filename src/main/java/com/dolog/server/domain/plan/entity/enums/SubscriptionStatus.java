@@ -1,5 +1,5 @@
 package com.dolog.server.domain.plan.entity.enums;
 
 public enum SubscriptionStatus {
-    ACTIVE, EXPIRED, CANCELED
+    ACTIVE, EXPIRED, CANCELED, PENDING_PAYMENT
 }

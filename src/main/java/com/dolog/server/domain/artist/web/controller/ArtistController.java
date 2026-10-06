@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artist.web.controller;
 
 import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistPublicResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistService;
@@ -39,7 +40,7 @@ public class ArtistController {
     // 작가 상세 조회
     @Operation(summary = "작가 단일 조회")
     @GetMapping("/{artistId}")
-    public SuccessResponse<ArtistResponse> getArtist(
+    public SuccessResponse<ArtistPublicResponse> getArtist(
             @PathVariable UUID artistId
     ) {
         return SuccessResponse.ok(

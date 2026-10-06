@@ -8,11 +8,13 @@ import com.dolog.server.domain.exhibition.entity.enums.ExhibitionType;
 import com.dolog.server.domain.exhibition.service.ExhibitionService;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.*;
 import com.dolog.server.global.response.SuccessResponse;
+import com.dolog.server.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -182,5 +184,41 @@ public class ExhibitionController {
                         response,
                         "작가 참여 코드 재발급 성공"
                 ));
+    }
+
+    // 전시 게시하기
+    @Operation(summary = "전시 게시하기")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @PostMapping("/{exhibitionId}/publish")
+    public SuccessResponse<ExhibitionPublishResponse> publishExhibition(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId
+    ) {
+        ExhibitionPublishResponse data = exhibitionService.publishExhibition(exhibitionId, user.getId());
+        return SuccessResponse.ok(data, "전시 게시 성공");
+    }
+
+    // 게시 기간 연장
+    @Operation(summary = "게시 기간 연장")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PatchMapping("/{exhibitionId}/expires-at")
+    public SuccessResponse<ExhibitionPublishResponse> extendExpiresAt(
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ExpiresAtUpdateRequest request
+    ) {
+        ExhibitionPublishResponse data = exhibitionService.extendExpiresAt(exhibitionId, request.getExpiresAt());
+        return SuccessResponse.ok(data, "게시 기간 연장 성공");
+    }
+
+    // 전시 어드민 홈 통합 조회 (전시 정보 보기 화면 최초 호출용)
+    @Operation(summary = "전시 어드민 홈 통합 조회")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @GetMapping("/{exhibitionId}/admin-home")
+    public SuccessResponse<ExhibitionAdminHomeResponse> getAdminHome(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId
+    ) {
+        ExhibitionAdminHomeResponse data = exhibitionService.getAdminHome(exhibitionId, user.getId());
+        return SuccessResponse.ok(data, "전시 어드민 홈 조회 성공");
     }
 }

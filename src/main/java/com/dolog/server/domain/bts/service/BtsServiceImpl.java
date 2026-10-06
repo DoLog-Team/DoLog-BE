@@ -53,6 +53,7 @@ import java.util.LinkedHashSet;
 public class BtsServiceImpl implements BtsService {
 
     private final BtsRepository btsRepository;
+    private final com.dolog.server.domain.bts.repository.BtsArtworkMapRepository btsMaps;
     private final ExhibitionRepository exhibitionRepository;
     private final ArtistRepository artistRepository;
     private final ArtistProfileRepository artistProfileRepository;
@@ -172,8 +173,9 @@ public class BtsServiceImpl implements BtsService {
             throw new BtsException(BtsErrorCode.BTS_EXHIBITION_MISMATCH);
         }
 
-        // cascade = ALL 설정에 의해 bts_artwork_map도 같이 삭제됨
-        btsRepository.delete(bts);
+        var now = java.time.LocalDateTime.now();
+        bts.markDeleted(now);
+        btsMaps.hideByBtsId(btsId, now);
     }
 
     @Override
