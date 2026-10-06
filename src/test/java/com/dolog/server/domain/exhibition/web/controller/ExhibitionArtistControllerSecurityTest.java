@@ -27,9 +27,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.nullValue;
 
 @WebMvcTest(ExhibitionArtistController.class)
 @Import({SecurityConfig.class, JwtAuthenticationEntryPoint.class})
@@ -50,6 +52,65 @@ class ExhibitionArtistControllerSecurityTest {
     // @WebMvcTest에는 JPA 엔티티가 없으므로 애플리케이션의 JPA Auditing 의존성만 대체한다.
     @MockitoBean
     private JpaMetamodelMappingContext jpaMetamodelMappingContext;
+
+    @Test
+    @DisplayName("비로그인 사용자는 전시 나가기 요청 시 401을 받는다")
+    void anonymousCannotLeaveExhibition() throws Exception {
+        UUID exhibitionId = UUID.randomUUID();
+
+        mockMvc.perform(delete(
+                        "/api/exhibitions/{exhibitionId}/artists/me",
+                        exhibitionId
+                ).contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(exhibitionArtistService);
+    }
+
+    @Test
+    @DisplayName("작가 관리자는 본인 계정으로 전시를 나갈 수 있다")
+    void artistAdminCanLeaveExhibition() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        mockMvc.perform(delete(
+                        "/api/exhibitions/{exhibitionId}/artists/me",
+                        exhibitionId
+                )
+                        .contextPath("/api")
+                        .with(user(userDetails(accountId, Role.ARTIST_ADMIN))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isSuccess").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS_200"))
+                .andExpect(jsonPath("$.httpStatus").value(200))
+                .andExpect(jsonPath("$.message").value("전시 나가기 성공"))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        verify(exhibitionArtistService).leaveExhibition(
+                accountId,
+                exhibitionId
+        );
+    }
+
+    @Test
+    @DisplayName("전시 관리자는 작가 본인용 전시 나가기 API를 호출할 수 없다")
+    void exhibitionAdminCannotLeaveExhibitionAsArtist() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+
+        mockMvc.perform(delete(
+                        "/api/exhibitions/{exhibitionId}/artists/me",
+                        exhibitionId
+                )
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                accountId,
+                                Role.EXHIBITION_ADMIN
+                        ))))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(exhibitionArtistService);
+    }
 
     @Test
     @DisplayName("비로그인 사용자는 관리자용 전시 작가 목록 조회 시 403을 받는다")

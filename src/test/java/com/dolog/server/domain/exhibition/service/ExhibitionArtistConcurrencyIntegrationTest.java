@@ -164,6 +164,25 @@ class ExhibitionArtistConcurrencyIntegrationTest {
         assertAllArtistsRemovedAndArtworkCancelled(scenario);
     }
 
+    @RepeatedTest(10)
+    @DisplayName("공동 작가가 동시에 전시를 나가면 마지막 작가 처리 후 출품이 취소된다")
+    void concurrentArtistWithdrawalsCancelJointArtwork() throws Exception {
+        Scenario scenario = createScenario();
+
+        runConcurrently(
+                () -> exhibitionArtistService.leaveExhibition(
+                        scenario.firstArtistAccountId(),
+                        scenario.exhibitionId()
+                ),
+                () -> exhibitionArtistService.leaveExhibition(
+                        scenario.secondArtistAccountId(),
+                        scenario.exhibitionId()
+                )
+        );
+
+        assertAllArtistsWithdrawnAndArtworkCancelled(scenario);
+    }
+
     private Scenario createScenario() {
         return Objects.requireNonNull(transactionTemplate.execute(status -> {
             String suffix = UUID.randomUUID().toString();
@@ -228,6 +247,8 @@ class ExhibitionArtistConcurrencyIntegrationTest {
 
             return new Scenario(
                     owner.getId(),
+                    firstArtistAccount.getId(),
+                    secondArtistAccount.getId(),
                     exhibition.getId(),
                     firstArtist.getId(),
                     secondArtist.getId(),
@@ -323,6 +344,25 @@ class ExhibitionArtistConcurrencyIntegrationTest {
     private void assertAllArtistsRemovedAndArtworkCancelled(
             Scenario scenario
     ) {
+        assertAllArtistsStatusAndArtworkCancelled(
+                scenario,
+                ExhibitionArtistStatus.REMOVED
+        );
+    }
+
+    private void assertAllArtistsWithdrawnAndArtworkCancelled(
+            Scenario scenario
+    ) {
+        assertAllArtistsStatusAndArtworkCancelled(
+                scenario,
+                ExhibitionArtistStatus.WITHDRAWN
+        );
+    }
+
+    private void assertAllArtistsStatusAndArtworkCancelled(
+            Scenario scenario,
+            ExhibitionArtistStatus expectedStatus
+    ) {
         transactionTemplate.executeWithoutResult(status -> {
             entityManager.clear();
 
@@ -342,8 +382,8 @@ class ExhibitionArtistConcurrencyIntegrationTest {
                     .findById(scenario.artworkId())
                     .orElseThrow();
 
-            assertEquals(ExhibitionArtistStatus.REMOVED, firstMap.getStatus());
-            assertEquals(ExhibitionArtistStatus.REMOVED, secondMap.getStatus());
+            assertEquals(expectedStatus, firstMap.getStatus());
+            assertEquals(expectedStatus, secondMap.getStatus());
             assertNull(artwork.getExhibition());
             assertNull(artwork.getExhibitionZone());
         });
@@ -356,6 +396,8 @@ class ExhibitionArtistConcurrencyIntegrationTest {
 
     private record Scenario(
             UUID ownerId,
+            UUID firstArtistAccountId,
+            UUID secondArtistAccountId,
             UUID exhibitionId,
             UUID firstArtistId,
             UUID secondArtistId,
