@@ -3,12 +3,14 @@ package com.dolog.server.domain.artwork.service.artwork.command;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.service.artist.ArtworkArtistService;
 import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
 import com.dolog.server.domain.artwork.service.order.ArtworkOrderAdapter;
+import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
@@ -18,11 +20,14 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullResponse;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -37,6 +42,7 @@ public class ArtworkUpdateProcessor {
     private final ArtworkImageService artworkImageService;
     private final ArtworkOrderAdapter artworkOrderAdapter;
     private final ArtworkFieldRequirement artworkFieldRequirement;
+    private final NotificationService notificationService;
 
     public ArtworkCreateResponse update(
             UUID accountId,
@@ -118,6 +124,7 @@ public class ArtworkUpdateProcessor {
 
         if (zoneChanged) {
             artwork.updateZone(zone);
+            notifyArtists(artwork, NotificationType.ARTWORK_GROUP_ASSIGNED, zone.getName());
         }
 
         if (prev != null) {
@@ -125,6 +132,31 @@ public class ArtworkUpdateProcessor {
         } else if (zoneChanged) {
             artworkOrderAdapter.assign(artwork);
         }
+    }
+
+    // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀)
+    private void notifyArtists(Artwork artwork, NotificationType type, String zoneName) {
+        Exhibition exhibition = artwork.getExhibition();
+        Map<String, String> payload = Map.of(
+                "exhibitionName", resolveExhibitionName(exhibition),
+                "artworkTitle", artwork.getTitle(),
+                "zoneName", zoneName
+        );
+
+        for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+            Artist artist = map.getArtist();
+            if (artist.getAccount() == null) {
+                continue;
+            }
+            notificationService.send(artist.getAccount(), type, payload, exhibition.getId());
+        }
+    }
+
+    // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibition.getExhibitionDetail() != null
+                ? exhibition.getExhibitionDetail().getTitle()
+                : exhibition.getSlug();
     }
 
     // 안 보낸 값(null)은 기존 값을 유지한다.

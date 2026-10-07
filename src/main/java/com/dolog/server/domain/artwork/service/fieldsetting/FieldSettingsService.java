@@ -1,6 +1,8 @@
 package com.dolog.server.domain.artwork.service.fieldsetting;
 
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ExhibitionFieldSettings;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
@@ -14,11 +16,14 @@ import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,6 +35,7 @@ public class FieldSettingsService {
     private final ExhibitionFieldSettingsRepository fieldSettingsRepository;
     private final ArtworkRepository artworkRepository;
     private final ArtworkFieldRequirement artworkFieldRequirement;
+    private final NotificationService notificationService;
 
     // 설정 행이 없는 전시는 모든 항목이 선택/노출인 기본값으로 응답한다 (행은 만들지 않음).
     @Transactional(readOnly = true)
@@ -64,7 +70,32 @@ public class FieldSettingsService {
         );
 
         List<Artwork> published = artworkRepository.findByExhibitionIdAndStatus(exhibitionId, ArtworkStatus.PUBLISHED);
-        artworkFieldRequirement.draftUnsatisfied(settings, published);
+        List<Artwork> drafted = artworkFieldRequirement.draftUnsatisfied(settings, published);
+        drafted.forEach(artwork -> notifyArtists(artwork, NotificationType.ARTWORK_UNPUBLISHED));
+    }
+
+    // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀)
+    private void notifyArtists(Artwork artwork, NotificationType type) {
+        Exhibition exhibition = artwork.getExhibition();
+        Map<String, String> payload = Map.of(
+                "exhibitionName", resolveExhibitionName(exhibition),
+                "artworkTitle", artwork.getTitle()
+        );
+
+        for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+            Artist artist = map.getArtist();
+            if (artist.getAccount() == null) {
+                continue;
+            }
+            notificationService.send(artist.getAccount(), type, payload, exhibition.getId());
+        }
+    }
+
+    // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibition.getExhibitionDetail() != null
+                ? exhibition.getExhibitionDetail().getTitle()
+                : exhibition.getSlug();
     }
 
     private Exhibition getOwnedExhibition(UUID accountId, UUID exhibitionId) {

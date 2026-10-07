@@ -1,5 +1,8 @@
 package com.dolog.server.domain.exhibition.service;
 
+import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
@@ -91,6 +94,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .filter(zone -> !requestedIds.contains(zone.getId()))
                 .toList();
         if (!removedZones.isEmpty()) {
+            notifyZoneRemoved(exhibition, removedZones);
             artworkRepository.clearZone(removedZones);
             exhibitionZoneRepository.deleteAll(removedZones);
         }
@@ -183,5 +187,32 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         return exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
                 .map(ExhibitionDetail::getTitle)
                 .orElse(exhibition.getSlug());
+    }
+
+    // 삭제될 그룹에 속해 있던 작품들의 작가 전원에게, zone이 실제로 비워지기 전에 알린다
+    private void notifyZoneRemoved(Exhibition exhibition, List<ExhibitionZone> removedZones) {
+        String exhibitionName = resolveExhibitionName(exhibition);
+
+        for (ExhibitionZone zone : removedZones) {
+            List<Artwork> artworks = artworkRepository
+                    .findByExhibitionIdAndExhibitionZoneIdOrderByOrderIndexAsc(exhibition.getId(), zone.getId());
+
+            for (Artwork artwork : artworks) {
+                Map<String, String> payload = Map.of(
+                        "exhibitionName", exhibitionName,
+                        "artworkTitle", artwork.getTitle(),
+                        "zoneName", zone.getName()
+                );
+
+                for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+                    Artist artist = map.getArtist();
+                    if (artist.getAccount() == null) {
+                        continue;
+                    }
+                    notificationService.send(
+                            artist.getAccount(), NotificationType.ARTWORK_GROUP_REMOVED, payload, exhibition.getId());
+                }
+            }
+        }
     }
 }
