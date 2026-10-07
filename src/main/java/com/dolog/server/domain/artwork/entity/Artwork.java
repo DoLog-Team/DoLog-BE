@@ -224,13 +224,16 @@ public class Artwork extends BaseEntity implements Orderable {
         return hiddenAt != null;
     }
 
-    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 숨김이면 비노출
+    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 작품이나 구역이 숨김이면 비노출.
+    // 출품된 작품은 전시가 게시된 뒤에만 보인다 (출품 안 한 개인 작품은 공개면 노출).
     public boolean isVisibleOnDolog() {
-        return status == ArtworkStatus.PUBLISHED;
+        return status == ArtworkStatus.PUBLISHED
+                && (exhibition == null || exhibition.isPublic());
     }
 
     public boolean isVisibleOnExhibition() {
-        return isVisibleOnDolog() && !isHidden();
+        return isVisibleOnDolog() && !isHidden()
+                && (exhibitionZone == null || !exhibitionZone.isHidden());
     }
 
     // 공백 이름은 버린다. multipart 에서 빈 값 하나만 보내면 재료 전체 삭제가 된다.

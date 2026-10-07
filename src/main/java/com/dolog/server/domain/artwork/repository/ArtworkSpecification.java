@@ -2,6 +2,7 @@ package com.dolog.server.domain.artwork.repository;
 
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -44,6 +45,18 @@ public class ArtworkSpecification {
             }
             return cb.conjunction();
         };
+    }
+
+    // 두록 URL 노출 조건 (작품 숨김, 구역 숨김은 전시 URL 에서만 본다)
+    public static Specification<Artwork> isPublished() {
+        return (root, query, cb) ->
+                cb.equal(root.get("status"), ArtworkStatus.PUBLISHED);
+    }
+
+    // 게시 전 전시의 작품은 이용자에게 보이지 않는다
+    public static Specification<Artwork> inPublishedExhibition() {
+        return (root, query, cb) ->
+                cb.isTrue(root.get("exhibition").get("isPublic"));
     }
 
     public static Specification<Artwork> hasExhibition() {

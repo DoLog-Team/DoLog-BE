@@ -16,13 +16,10 @@ public interface ArtworkArtistMapRepository extends JpaRepository<ArtworkArtistM
             "WHERE aam.artwork.id IN :artworkIds")
     List<ArtworkArtistMap> findByArtworkIdIn(@Param("artworkIds") List<UUID> artworkIds);
 
-    // 작품 ID와 아티스트 프로필 ID 조합으로 찾기
-    Optional<ArtworkArtistMap> findByArtworkIdAndArtistProfileId(UUID artworkId, UUID artistProfileId);
-
-    // 중복 등록 확인
-    boolean existsByArtworkIdAndArtistProfileId(UUID artworkId, UUID artistProfileId);
-
     boolean existsByArtistId(UUID artistId);
+
+    Optional<ArtworkArtistMap> findByArtworkIdAndArtistId(UUID artworkId, UUID artistId);
+
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("update ArtworkArtistMap m set m.deletedAt = :at, m.updatedAt = :at where m.artwork.id = :id and m.deletedAt is null")
     void hideByArtworkId(@org.springframework.data.repository.query.Param("id") java.util.UUID id,

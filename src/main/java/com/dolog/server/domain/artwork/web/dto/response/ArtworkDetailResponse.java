@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,13 +14,28 @@ import java.util.UUID;
 public class ArtworkDetailResponse {
     private String title;
     private String category;
-    private String material;
-    private String size;
     private String description;
+    private String shortIntro;
+    // 전시 항목 설정에서 숨긴 값은 null(목록은 빈 배열)로 내려간다.
+    private List<String> materials;
+    private BigDecimal width;
+    private BigDecimal height;
+    private BigDecimal depth;
+    private Integer productionStartYear;
+    private Integer productionStartMonth;
+    private Integer productionStartDay;
+    private Integer productionEndYear;
+    private Integer productionEndMonth;
+    private Integer productionEndDay;
     private String purchaseUrl;
+    private String purchaseChatUrl;
+    private Boolean showPurchaseButton;
     private String youtubeUrl;
     private String mainImage;
     private String locationMap;
+    private long viewCount;
+    private long likeCount;
+    private boolean liked;
     private List<DetailImageInfo> detailImages;
     private List<ParticipantInfo> participants;
 

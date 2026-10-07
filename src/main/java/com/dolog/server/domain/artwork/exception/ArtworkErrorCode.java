@@ -22,7 +22,9 @@ public enum ArtworkErrorCode implements BaseResponseCode { // 인터페이스 �
     REQUIRED_FIELDS_MISSING(400, "ARTWORK_013", "전시에서 정한 필수 항목을 채워야 공개할 수 있습니다."),
     NOT_EXHIBITION_OWNER(403, "ARTWORK_014", "해당 전시의 관리자만 처리할 수 있습니다."),
     REQUIRED_FIELD_HIDDEN(400, "ARTWORK_015", "필수 항목은 숨길 수 없습니다."),
-    // 016~018 은 공동 작가 V2(#388) 에서 사용
+    CO_ARTIST_NOT_IN_EXHIBITION(400, "ARTWORK_016", "같은 전시에 참여 중인 작가만 공동 작가로 등록할 수 있습니다."),
+    CO_ARTIST_ALREADY_LINKED(409, "ARTWORK_017", "이미 이 작품에 연결된 작가입니다."),
+    LAST_ARTIST_CANNOT_BE_REMOVED(400, "ARTWORK_018", "작품에는 작가가 한 명 이상 있어야 합니다."),
     IMAGE_FILE_REQUIRED(400, "ARTWORK_019", "등록할 이미지 파일을 하나 이상 보내야 합니다.");
 
     private final int httpStatus;
