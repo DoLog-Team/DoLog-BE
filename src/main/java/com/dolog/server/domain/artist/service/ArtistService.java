@@ -19,5 +19,5 @@ public interface ArtistService {
 
     ArtistListResponse getArtists(String search, int page, int size);
 
-    ArtistPublicResponse getArtist(UUID artistId);
+    ArtistPublicResponse getArtist(UUID artistId, String visitorId);
 }

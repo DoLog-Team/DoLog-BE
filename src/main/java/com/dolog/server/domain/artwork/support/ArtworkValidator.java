@@ -36,6 +36,17 @@ public class ArtworkValidator {
                         new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
     }
 
+    // 두록 어드민은 모든 작품을, 작가는 자기 작품만 관리한다.
+    public Artwork getManagedArtwork(UUID artworkId, UUID accountId, boolean isDologAdmin) {
+
+        if (isDologAdmin) {
+            return artworkRepository.findById(artworkId)
+                    .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+        }
+
+        return getOwnedArtwork(artworkId, getLoginArtist(accountId));
+    }
+
     public ExhibitionZone validateZone(
             UUID zoneId,
             UUID exhibitionId

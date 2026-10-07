@@ -2,9 +2,11 @@ package com.dolog.server.domain.artist.repository;
 
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.repository.projection.ArtistProfileListItemProjection;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -26,22 +28,63 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
             "WHERE p.id = :profileId")
     Optional<ArtistProfile> findByIdWithDetails(@Param("profileId") UUID profileId);
 
-    // 전시 ID로 프로필 목록 찾기
+    @Query(value = """
+            SELECT BIN_TO_UUID(p.id) AS profileId,
+                   BIN_TO_UUID(p.artist_id) AS artistId,
+                   p.name_ko AS nameKo,
+                   p.name_en AS nameEn,
+                   p.profile_img AS profileImg,
+                   p.is_public AS isPublic,
+                   p.view_count AS viewCount,
+                   COUNT(l.id) AS likeCount
+            FROM artist_profiles p
+            JOIN exhibition_artist_map m
+              ON m.exhibition_id = p.exhibition_id
+             AND m.artist_id = p.artist_id
+             AND m.status = 'JOINED'
+            LEFT JOIN artist_profile_likes l
+              ON l.artist_profile_id = p.id
+            WHERE p.exhibition_id = :exhibitionId
+            GROUP BY p.id,
+                     p.artist_id,
+                     p.name_ko,
+                     p.name_en,
+                     p.profile_img,
+                     p.is_public,
+                     p.view_count
+            ORDER BY p.name_ko ASC, p.id ASC
+            """, nativeQuery = true)
+    List<ArtistProfileListItemProjection> findListItemsByExhibitionId(
+            @Param("exhibitionId") UUID exhibitionId
+    );
+
+    Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
+
     @Query("""
         SELECT p
         FROM ArtistProfile p
         JOIN ExhibitionArtistMap m
           ON m.artist = p.artist
          AND m.exhibition = p.exhibition
-        WHERE p.exhibition.id = :exhibitionId
+        WHERE p.artist.id = :artistId
+          AND p.isPublic = true
+          AND p.exhibition.isPublic = true
           AND m.status =
               com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+        ORDER BY p.createdAt DESC, p.id DESC
         """)
-    List<ArtistProfile> findAllByExhibitionId(
-            @Param("exhibitionId") UUID exhibitionId
+    List<ArtistProfile> findLatestPublicJoinedProfile(
+            @Param("artistId") UUID artistId,
+            Pageable pageable
     );
 
-    Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
+    @Query(value = """
+            SELECT COALESCE(SUM(p.view_count), 0)
+            FROM artist_profiles p
+            WHERE p.artist_id = :artistId
+              AND p.deleted_at IS NULL
+            """, nativeQuery = true)
+    long sumViewCountByArtistId(@Param("artistId") UUID artistId);
 
     @Query("""
             SELECT p.artist.id
@@ -54,41 +97,20 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
             @Param("artistIds") Collection<UUID> artistIds
     );
 
+    @Modifying(flushAutomatically = true)
     @Query("""
-        SELECT p
-        FROM ArtistProfile p
-        JOIN ExhibitionArtistMap m
-          ON m.artist = p.artist
-         AND m.exhibition = p.exhibition
-        WHERE p.exhibition.id = :exhibitionId
-          AND m.status =
-              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
-          AND p.nameKo < :nameKo
-        ORDER BY p.nameKo DESC
-        """)
-    List<ArtistProfile> findPrevProfile(
-            @Param("exhibitionId") UUID exhibitionId,
-            @Param("nameKo") String nameKo,
-            Pageable pageable
-    );
+            UPDATE ArtistProfile p
+            SET p.viewCount = p.viewCount + 1
+            WHERE p.id = :profileId
+            """)
+    int incrementViewCount(@Param("profileId") UUID profileId);
 
     @Query("""
-        SELECT p
-        FROM ArtistProfile p
-        JOIN ExhibitionArtistMap m
-          ON m.artist = p.artist
-         AND m.exhibition = p.exhibition
-        WHERE p.exhibition.id = :exhibitionId
-          AND m.status =
-              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
-          AND p.nameKo > :nameKo
-        ORDER BY p.nameKo ASC
-        """)
-    List<ArtistProfile> findNextProfile(
-            @Param("exhibitionId") UUID exhibitionId,
-            @Param("nameKo") String nameKo,
-            Pageable pageable
-    );
+            SELECT p.viewCount
+            FROM ArtistProfile p
+            WHERE p.id = :profileId
+            """)
+    long findViewCountById(@Param("profileId") UUID profileId);
 
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
     @org.springframework.data.jpa.repository.Query("update ArtistProfile e set e.deletedAt = :at, e.updatedAt = :at where e.artist.id = :id and e.deletedAt is null")

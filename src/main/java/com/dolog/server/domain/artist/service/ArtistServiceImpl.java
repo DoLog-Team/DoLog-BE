@@ -7,14 +7,20 @@ import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.exception.artistError.ArtistAccountNotEligibleException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistAccountNotFoundException;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistAlreadyExistsException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistBadRequestException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.DuplicateArtistPhoneException;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.*;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
+import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +42,19 @@ public class ArtistServiceImpl implements ArtistService {
 
     private final ArtistRepository artistRepository;
     private final AccountRepository accountRepository;
+    private final ArtistProfileRepository artistProfileRepository;
+    private final ArtistSnsRepository artistSnsRepository;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+    private final ArtworkRepository artworkRepository;
+    private final ArtistProfileLikeRepository artistProfileLikeRepository;
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        return email.trim();
+    }
 
     // 작가 생성
     @Override
@@ -240,12 +260,106 @@ public class ArtistServiceImpl implements ArtistService {
     // 작가 상세 조회
     @Override
     @Transactional(readOnly = true)
-    public ArtistPublicResponse getArtist(UUID artistId) {
+    public ArtistPublicResponse getArtist(UUID artistId, String visitorId) {
 
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        return ArtistPublicResponse.from(artist);
+        ArtistProfile representativeProfile = artistProfileRepository
+                .findLatestPublicJoinedProfile(
+                        artistId,
+                        PageRequest.of(0, 1)
+                )
+                .stream()
+                .findFirst()
+                .orElse(null);
+
+        List<ArtistPublicResponse.SnsItem> snsList =
+                representativeProfile == null
+                        ? List.of()
+                        : artistSnsRepository
+                                .findByArtistProfileIdOrderByCreatedAtAscIdAsc(
+                                        representativeProfile.getId()
+                                )
+                                .stream()
+                                .map(sns -> new ArtistPublicResponse.SnsItem(
+                                        sns.getPlatformName(),
+                                        sns.getUrl()
+                                ))
+                                .toList();
+
+        List<ArtistPublicResponse.ExhibitionItem> exhibitions =
+                exhibitionArtistMapRepository
+                        .findPublicJoinedExhibitionsByArtistId(artistId)
+                        .stream()
+                        .map(map -> {
+                            var exhibition = map.getExhibition();
+                            var detail = exhibition.getExhibitionDetail();
+                            var exhibitionMap = exhibition.getExhibitionMap();
+
+                            String location = null;
+                            if (exhibitionMap != null) {
+                                location = exhibitionMap.getDetailLocation();
+                                if (location == null || location.isBlank()) {
+                                    location = exhibitionMap.getAddress();
+                                }
+                            }
+
+                            return new ArtistPublicResponse.ExhibitionItem(
+                                    exhibition.getId(),
+                                    detail.getTitle(),
+                                    exhibition.getSlug(),
+                                    detail.getExhibitionImg(),
+                                    exhibition.getUnivName(),
+                                    exhibition.getDeptName(),
+                                    location,
+                                    detail.getStartDate(),
+                                    detail.getEndDate()
+                            );
+                        })
+                        .toList();
+
+        List<ArtistPublicResponse.ArtworkItem> artworks = artworkRepository
+                .findPublishedByArtistId(artistId)
+                .stream()
+                .map(artwork -> new ArtistPublicResponse.ArtworkItem(
+                        artwork.getId(),
+                        artwork.getTitle(),
+                        artwork.getMainImg()
+                ))
+                .toList();
+
+        int likeCount = Math.toIntExact(
+                artistProfileLikeRepository.countByArtistId(artistId)
+        );
+        boolean liked = visitorId != null
+                && artistProfileLikeRepository.existsByArtistIdAndVisitorId(
+                artistId,
+                visitorId
+        );
+        long viewCount = artistProfileRepository
+                .sumViewCountByArtistId(artistId);
+
+        return ArtistPublicResponse.builder()
+                .artistId(artist.getId())
+                .nameKo(artist.getNameKo())
+                .nameEn(artist.getNameEn())
+                .bio(representativeProfile == null
+                        ? null
+                        : representativeProfile.getBio())
+                .profileImg(representativeProfile == null
+                        ? null
+                        : representativeProfile.getProfileImg())
+                .email(representativeProfile == null
+                        ? null
+                        : representativeProfile.getEmail())
+                .snsList(snsList)
+                .exhibitions(exhibitions)
+                .artworks(artworks)
+                .likeCount(likeCount)
+                .liked(liked)
+                .viewCount(viewCount)
+                .build();
     }
 
 

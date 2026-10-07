@@ -3,6 +3,7 @@ package com.dolog.server.domain.notification.service;
 import com.dolog.server.domain.notification.web.dto.response.NotificationListResponse;
 import com.dolog.server.domain.notification.web.dto.response.NotificationResponse;
 
+import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 
 import java.time.LocalDateTime;
@@ -22,6 +23,9 @@ public interface NotificationService {
 
     // 기준 시각 이전에 생성된 알림 삭제 (삭제 건수 반환)
     long deleteNotificationsCreatedBefore(LocalDateTime threshold);
+
+    // 특정 계정 한 명에게 알림 발송
+    void send(Account recipient, NotificationType type, Map<String, String> payload, UUID referenceId);
 
     // 전시의 참여 중(JOINED) 작가 전원에게 알림 발송 (계정이 없는 작가는 제외)
     void notifyJoinedArtists(UUID exhibitionId, NotificationType type, Map<String, String> payload, UUID referenceId);

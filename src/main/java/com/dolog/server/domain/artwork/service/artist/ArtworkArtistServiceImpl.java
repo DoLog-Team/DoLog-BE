@@ -3,13 +3,14 @@ package com.dolog.server.domain.artwork.service.artist;
 
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistMappingRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistRoleRequest;
+import com.dolog.server.domain.artwork.support.ArtworkValidator;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
-import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
-import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
-import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
@@ -20,7 +21,6 @@ import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,29 +33,43 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     private final ArtworkRepository artworkRepository;
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtworkArtistMapRepository artworkArtistMapRepository;
-    private final ArtistRepository artistRepository;
+    private final ArtworkValidator artworkValidator;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
+    // 공동 작가의 전시별 프로필을 연결해야 해서 출품된 작품에만 등록할 수 있다.
+    // 작가는 전시 필수 항목이 아니라서 작가 연결이 바뀌어도 공개 상태는 다시 검사하지 않는다.
     @Override
-    public ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request) {
-        Artwork artwork = artworkRepository.findById(artworkId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+    public ArtworkArtistMappingResponse createArtistMapping(
+            UUID accountId, UUID artworkId, ArtworkArtistMappingRequest request) {
+
+        Artist me = artworkValidator.getLoginArtist(accountId);
+        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, me);
+
+        if (artwork.getExhibition() == null) {
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
+        }
 
         ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        // 검증 및 저장 로직
-        if (!artwork.getExhibition().getId().equals(profile.getExhibition().getId())) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        if (!profile.getExhibition().getId().equals(artwork.getExhibition().getId())
+                || !isJoined(profile)) {
+            throw new ArtworkException(ArtworkErrorCode.CO_ARTIST_NOT_IN_EXHIBITION);
+        }
+
+        if (artwork.isLinkedTo(profile.getArtist().getId())) {
+            throw new ArtworkException(ArtworkErrorCode.CO_ARTIST_ALREADY_LINKED);
         }
 
         ArtworkArtistMap map = ArtworkArtistMap.builder()
                 .artwork(artwork)
                 .artist(profile.getArtist())
                 .artistProfile(profile)
-                .artistRole(request.getArtistRole())
+                .artistRole(request.getArtistRole().trim())
                 .build();
+        artwork.getArtworkArtistMaps().add(map);
 
-        return ArtworkArtistMappingResponse.of(artworkArtistMapRepository.save(map));
+        return ArtworkArtistMappingResponse.of(artworkArtistMapRepository.saveAndFlush(map));
     }
 
     /** 작품 ID 목록으로 작품별 작가명을 Map으로 반환
@@ -79,52 +93,81 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     }
 
     @Override
-    public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request) {
-        // profileId를 기반으로 매핑 데이터 조회
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
+    public ArtworkArtistMappingResponse updateArtistMapping(
+            UUID accountId, UUID artworkId, UUID artistId, ArtworkArtistRoleRequest request) {
 
-        // 역할 수정
-        map.updateRole(request.getArtistRole());
+        ArtworkArtistMap map = getOwnedMapping(accountId, artworkId, artistId);
+        map.updateRole(request.artistRole().trim());
 
         return ArtworkArtistMappingResponse.of(map);
     }
 
+    // 작가 연결이 하나도 없으면 아무도 작품을 관리할 수 없어서 마지막 연결은 지우지 않는다.
     @Override
-    public void deleteArtistMapping(UUID artworkId, UUID artistProfileId) {
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
+    public void deleteArtistMapping(UUID accountId, UUID artworkId, UUID artistId) {
 
-        artworkArtistMapRepository.delete(map);
+        ArtworkArtistMap map = getOwnedMapping(accountId, artworkId, artistId);
+
+        if (map.getArtwork().getArtworkArtistMaps().size() <= 1) {
+            throw new ArtworkException(ArtworkErrorCode.LAST_ARTIST_CANNOT_BE_REMOVED);
+        }
+
+        map.getArtwork().getArtworkArtistMaps().remove(map);
     }
 
+    private ArtworkArtistMap getOwnedMapping(UUID accountId, UUID artworkId, UUID artistId) {
+
+        Artist me = artworkValidator.getLoginArtist(accountId);
+        artworkValidator.getOwnedArtwork(artworkId, me);
+
+        return artworkArtistMapRepository.findByArtworkIdAndArtistId(artworkId, artistId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
+    }
+
+    private boolean isJoined(ArtistProfile profile) {
+
+        return exhibitionArtistMapRepository
+                .findByExhibitionIdAndArtistId(profile.getExhibition().getId(), profile.getArtist().getId())
+                .filter(map -> map.getStatus() == ExhibitionArtistStatus.JOINED)
+                .isPresent();
+    }
+
+    // 통합 수정용: 요청한 프로필 목록으로 작가 연결을 맞춘다. 프로필은 그 전시 것만, 새로 붙이는 작가는 참여 중(JOINED)이어야 한다.
+    // 이미 연결된 작가는 제외(REMOVED)됐어도 크레딧으로 남길 수 있게 참여 상태를 보지 않는다.
     @Override
-    public void updateArtworkArtists(Artwork artwork, List<UUID> artistIds, Map<UUID, String> artistRoles) {
-        // null로 넘어올 경우 빈 Map으로 정규화
-        Map<UUID, String> roles = artistRoles != null ? artistRoles : new HashMap<>();
+    public void syncArtistProfiles(Artwork artwork, UUID exhibitionId, List<UUID> profileIds, Map<UUID, String> artistRoles) {
 
-        // 기존 매핑의 역할 보존 (artistId → role)
-        Map<UUID, String> existingRoles = artwork.getArtworkArtistMaps().stream()
-                .collect(Collectors.toMap(
-                        map -> map.getArtist().getId(),
-                        ArtworkArtistMap::getArtistRole,
-                        (existing, duplicate) -> existing
-                ));
+        Map<UUID, String> roles = artistRoles == null ? Map.of() : artistRoles.entrySet().stream()
+                .filter(entry -> entry.getValue() != null)
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().trim()));
+        List<UUID> distinctIds = profileIds.stream().distinct().toList();
+        List<ArtistProfile> profiles = artistProfileRepository.findAllById(distinctIds);
 
-        // 기존 매핑 비우기
-        artwork.getArtworkArtistMaps().clear();
+        boolean invalid = profiles.size() != distinctIds.size()
+                || profiles.stream().anyMatch(profile -> !profile.getExhibition().getId().equals(exhibitionId))
+                || profiles.stream().map(profile -> profile.getArtist().getId()).distinct().count() != profiles.size()
+                || profiles.stream().anyMatch(profile -> !artwork.isLinkedTo(profile.getArtist().getId()) && !isJoined(profile));
+        if (invalid) {
+            throw new ArtworkException(ArtworkErrorCode.CO_ARTIST_NOT_IN_EXHIBITION);
+        }
 
-        // 우선순위: 요청의 artistRoles(non-null) > 기존 역할 > 빈 문자열
-        List<Artist> artists = artistRepository.findAllById(artistIds);
-        artists.forEach(artist -> {
-            String requested = roles.get(artist.getId());
-            String role = (requested != null) ? requested
-                    : existingRoles.getOrDefault(artist.getId(), "");
-            artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
-                    .artwork(artwork)
-                    .artist(artist)
-                    .artistRole(role)
-                    .build());
+        Map<UUID, ArtistProfile> profileByArtist = profiles.stream()
+                .collect(Collectors.toMap(profile -> profile.getArtist().getId(), profile -> profile));
+
+        // 빠진 작가는 연결 해제, 남은 작가는 프로필과 역할만 갱신 (지웠다 다시 넣지 않는다)
+        artwork.getArtworkArtistMaps().removeIf(map -> !profileByArtist.containsKey(map.getArtist().getId()));
+        artwork.getArtworkArtistMaps().forEach(map -> {
+            ArtistProfile profile = profileByArtist.remove(map.getArtist().getId());
+            map.linkProfile(profile);
+            if (roles.get(profile.getId()) != null) {
+                map.updateRole(roles.get(profile.getId()));
+            }
         });
+        profileByArtist.values().forEach(profile -> artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                .artwork(artwork)
+                .artist(profile.getArtist())
+                .artistProfile(profile)
+                .artistRole(roles.getOrDefault(profile.getId(), ""))
+                .build()));
     }
 }

@@ -28,6 +28,7 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     EXHIBITION_ARTIST_ALREADY_EXISTS("EXHIBITION_ARTIST_409", CONFLICT, "이미 전시에 추가된 작가입니다."),
     EXHIBITION_ARTIST_NOT_FOUND("EXHIBITION_ARTIST_404", NOT_FOUND, "해당 전시에 등록된 작가가 아닙니다."),
+    EXHIBITION_ARTIST_NOT_JOINED("EXHIBITION_ARTIST_404_2", NOT_FOUND, "참여 중인 전시가 아닙니다."),
     EXHIBITION_ARTIST_QUERY_INVALID("EXHIBITION_ARTIST_QUERY_400", BAD_REQUEST, "잘못된 전시 작가 조회 조건입니다."),
 
     HOST_NOT_FOUND("EXHIBITION_HOST_404", NOT_FOUND, "등록된 호스트 정보가 없습니다."),

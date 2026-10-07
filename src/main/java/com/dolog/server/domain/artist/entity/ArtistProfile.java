@@ -58,6 +58,13 @@ public class ArtistProfile extends BaseEntity {
     @Column(name = "profile_img")
     private String profileImg;
 
+    @Column(name = "purchase_contact_url", length = 255)
+    private String purchaseContactUrl;
+
+    @Builder.Default
+    @Column(name = "view_count", nullable = false)
+    private long viewCount = 0L;
+
     @Builder.Default
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "artistProfile", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -67,23 +74,44 @@ public class ArtistProfile extends BaseEntity {
     @OneToMany(mappedBy = "artistProfile", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ArtworkArtistMap> artworkArtistMaps = new ArrayList<>();
 
-    public void updateProfile(String nameKo, String nameEn, String bio, String email, String profileImg) {
+    public void updateProfile(
+            String nameKo,
+            String nameEn,
+            String bio,
+            String email,
+            String purchaseContactUrl,
+            Boolean isPublic,
+            String profileImg
+    ) {
         // 값이 존재할 때만 업데이트 (기존 값 유지)
         if (nameKo != null && !nameKo.isBlank()) {
-            this.nameKo = nameKo;
+            this.nameKo = nameKo.trim();
         }
         if (nameEn != null) {
-            this.nameEn = nameEn;
+            this.nameEn = normalizeNullableText(nameEn);
         }
         if (bio != null) {
-            this.bio = bio;
+            this.bio = normalizeNullableText(bio);
         }
         if (email != null) {
-            this.email = email;
+            this.email = normalizeNullableText(email);
+        }
+        if (purchaseContactUrl != null) {
+            this.purchaseContactUrl = normalizeNullableText(
+                    purchaseContactUrl
+            );
+        }
+        if (isPublic != null) {
+            this.isPublic = isPublic;
         }
         if (profileImg != null) {
             this.profileImg = profileImg;
         }
+    }
+
+    private String normalizeNullableText(String value) {
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     public void clearProfileImg() {

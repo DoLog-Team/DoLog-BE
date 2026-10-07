@@ -42,7 +42,7 @@ class ArtworkSchemaTests {
         Account account = accounts.saveAndFlush(Account.builder().role(Role.EXHIBITION_ADMIN)
                 .accountStatus(AccountStatus.ACTIVE).build());
         exhibition = exhibitions.saveAndFlush(Exhibition.builder().account(account).univName("테스트 대학")
-                .deptName("테스트 학과").slug("artwork-schema-" + UUID.randomUUID()).build());
+                .deptName("테스트 학과").slug("artwork-schema-" + UUID.randomUUID()).isPublic(true).build());
     }
 
     @Test
