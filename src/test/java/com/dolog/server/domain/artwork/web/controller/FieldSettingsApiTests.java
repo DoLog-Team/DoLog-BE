@@ -243,8 +243,6 @@ class FieldSettingsApiTests {
         assertTrue(fieldSettings.findByExhibitionId(exhibition.getId()).isEmpty());
     }
 
-    // ---------------- helpers ----------------
-
     private static String settingsJson(boolean rMain, boolean rSize, boolean rMat, boolean rMap,
                                        boolean hSize, boolean hMat, boolean hMap, boolean hPeriod, boolean hYear) {
         return "{\"required\":{\"mainImg\":" + rMain + ",\"size\":" + rSize + ",\"materials\":" + rMat

@@ -95,8 +95,6 @@ class ArtworkSubmissionApiTests {
         myProfile = join(me, exhibition, ExhibitionArtistStatus.JOINED);
     }
 
-    // ---------------- 출품 ----------------
-
     @Test
     @DisplayName("참여 중인 전시의 구역에 출품하면 전시, 구역, 프로필이 연결되고 구역 마지막 순서가 된다")
     void submitsToJoinedExhibition() throws Exception {
@@ -209,8 +207,6 @@ class ArtworkSubmissionApiTests {
                 .andExpect(status().isBadRequest());
     }
 
-    // ---------------- 출품 취소 ----------------
-
     @Test
     @DisplayName("출품을 취소하면 전시에 묶인 정보가 모두 비워지고 공개 상태는 그대로다")
     void cancelClearsExhibitionData() throws Exception {
@@ -247,8 +243,6 @@ class ArtworkSubmissionApiTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("ARTWORK_010"));
     }
-
-    // ---------------- 공개 / 비공개 ----------------
 
     @Test
     @DisplayName("출품 전 작품도 공개로 바꿀 수 있다 (두록 URL 노출)")
@@ -320,8 +314,6 @@ class ArtworkSubmissionApiTests {
                 .andExpect(status().isNotFound());
     }
 
-    // ---------------- 숨김 / 재공개 ----------------
-
     @Test
     @DisplayName("전시 소유 어드민이 숨기면 숨김 시각이 기록되고, 재공개하면 비워진다. 공개 상태는 그대로다")
     void ownerHidesAndUnhides() throws Exception {
@@ -380,8 +372,6 @@ class ArtworkSubmissionApiTests {
         assertFalse(artworks.findById(artwork.getId()).orElseThrow().isHidden());
     }
 
-
-    // ---------------- 리뷰 반영: 필수 항목 일관성 ----------------
 
     @Test
     @DisplayName("이미 공개된 작품을 필수 항목을 못 채운 채 출품하면 출품은 되고 비공개(DRAFT)로 내려간다")
@@ -449,8 +439,6 @@ class ArtworkSubmissionApiTests {
         mvc.perform(withToken(patchArtwork(unsubmitted.getId()), myToken).param("materials", ""))
                 .andExpect(status().isOk());
     }
-
-    // ---------------- 리뷰 반영: 재출품, 공동 작가, 지우님 경로 ----------------
 
     @Test
     @DisplayName("출품 취소 후 다른 전시에 다시 출품하면 이전 전시의 숨김, 프로필, 순서가 따라오지 않는다")
@@ -531,8 +519,6 @@ class ArtworkSubmissionApiTests {
         assertNull(found.getOrderIndex());
         assertNull(found.getArtworkArtistMaps().get(0).getArtistProfile());
     }
-
-    // ---------------- helpers ----------------
 
     private Account account(Role role) {
         return accounts.saveAndFlush(Account.builder().role(role).accountStatus(AccountStatus.ACTIVE).build());

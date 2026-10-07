@@ -134,36 +134,43 @@ public class ArtworkController {
 
     /* ---------------- [ 상세 이미지 관련 API ] ---------------- */
 
-    @Operation(summary = "작품 상세 이미지 등록")
+    @Operation(summary = "작품 상세 이미지 등록", description = "두록 어드민 또는 작품의 작가 본인. 순서를 안 보내면 기존 이미지 뒤에 붙습니다.")
     @PostMapping(value = "/artworks/{artworkId}/images", consumes = "multipart/form-data")
-    public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'ARTIST_ADMIN')")
+    public ResponseEntity<SuccessResponse<ArtworkImgCreateResponse>> createArtworkImages(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
-            @ModelAttribute ArtworkImgListRequest request // List 대신 래퍼 클래스 사용
+            @Valid @ModelAttribute ArtworkImgListRequest request // List 대신 래퍼 클래스 사용
     ) {
-        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, request.getImages());
-        return SuccessResponse.ok(response, "작품 상세 이미지 등록에 성공하였습니다.");
+        ArtworkImgCreateResponse response = artworkService.createArtworkImages(
+                user.getId(), isDologAdmin(user), artworkId, request.getImages());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(response, "작품 상세 이미지 등록에 성공하였습니다."));
     }
 
     // 6. 작품 상세 이미지 개별 수정 (PATCH)
     @Operation(summary = "작품 상세 이미지 수정")
     @PatchMapping(value = "/artworks/{artworkId}/images/{imageId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'ARTIST_ADMIN')")
     public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId,
             @Valid @ModelAttribute ArtworkImgUpdateRequest request) {
-        ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(artworkId, imageId, request);
+        ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(
+                user.getId(), isDologAdmin(user), artworkId, imageId, request);
         return SuccessResponse.ok(data, "상세 이미지 정보가 성공적으로 수정되었습니다.");
     }
 
     // 7. 작품 상세 이미지 개별 삭제 (DELETE)
     @Operation(summary = "작품 상세 이미지 삭제")
     @DeleteMapping("/artworks/{artworkId}/images/{imageId}")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'ARTIST_ADMIN')")
     public SuccessResponse<Void> deleteArtworkImage(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId) {
-        artworkService.deleteArtworkImage(artworkId, imageId);
+        artworkService.deleteArtworkImage(user.getId(), isDologAdmin(user), artworkId, imageId);
         return SuccessResponse.ok(null, "상세 이미지가 성공적으로 삭제되었습니다.");
     }
 
@@ -278,13 +285,19 @@ public class ArtworkController {
     /* ---------------- [ 작품 순서 정렬 관련 API ] ---------------- */
 
     // 12. 전시회 내 모든 작품 순서 일괄 재정렬 및 DB 저장 (PUT)
-    @Operation(summary = "전시회 내 전체 작품 순서 재정렬", description = "전시회 내의 작품들을 각 Zone별로 [1순위: 작가 가나다, 2순위: 작품명 가나다] 순서로 정렬하여 orderIndex(10, 20, 30...)를 DB에 일괄 갱신합니다.")
+    @Operation(summary = "전시회 내 전체 작품 순서 재정렬", description = "두록 어드민 또는 본인 전시의 전시 어드민. 전시회 내의 작품들을 각 Zone별로 [1순위: 작가 가나다, 2순위: 작품명 가나다] 순서로 정렬하여 orderIndex(10, 20, 30...)를 DB에 일괄 갱신합니다.")
     @PutMapping("/exhibitions/{exhibitionId}/artworks/reorder")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
     public SuccessResponse<Void> reorderExhibitionArtworks(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId) {
 
-        artworkOrderService.reorderArtworkIndices(exhibitionId);
+        artworkOrderService.reorderArtworkIndices(exhibitionId, user.getId(), isDologAdmin(user));
         return SuccessResponse.ok(null, "전시회 내 모든 작품의 순서가 성공적으로 재정렬되어 저장되었습니다.");
+    }
+
+    private boolean isDologAdmin(CustomUserDetails user) {
+        return user.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_DOLOG_ADMIN".equals(authority.getAuthority()));
     }
 }
