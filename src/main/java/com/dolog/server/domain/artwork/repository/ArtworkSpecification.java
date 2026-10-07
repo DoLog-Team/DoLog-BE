@@ -53,6 +53,12 @@ public class ArtworkSpecification {
                 cb.equal(root.get("status"), ArtworkStatus.PUBLISHED);
     }
 
+    // 게시 전 전시의 작품은 이용자에게 보이지 않는다
+    public static Specification<Artwork> inPublishedExhibition() {
+        return (root, query, cb) ->
+                cb.isTrue(root.get("exhibition").get("isPublic"));
+    }
+
     public static Specification<Artwork> hasExhibition() {
         return (root, query, cb) ->
                 cb.isNotNull(root.get("exhibition"));
