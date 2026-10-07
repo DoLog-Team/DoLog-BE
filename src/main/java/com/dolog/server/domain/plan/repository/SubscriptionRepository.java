@@ -24,4 +24,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     List<Subscription> findByStatusOrderByCreatedAtDesc(SubscriptionStatus status);
 
     List<Subscription> findByStatusAndEndedAtBefore(SubscriptionStatus status, LocalDateTime time);
+
+    List<Subscription> findByStatusAndEndedAtBetween(SubscriptionStatus status, LocalDateTime from, LocalDateTime to);
 }

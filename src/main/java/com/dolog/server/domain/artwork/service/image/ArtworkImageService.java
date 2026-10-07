@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ArtworkImageService {
-    ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests);
-    ArtworkImgUpdateResponse updateArtworkImage(UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request);
-    void deleteArtworkImage(UUID artworkId, UUID imageId);
+    ArtworkImgCreateResponse createArtworkImages(UUID accountId, boolean isDologAdmin, UUID artworkId, List<ArtworkImgCreateRequest> requests);
+    ArtworkImgUpdateResponse updateArtworkImage(UUID accountId, boolean isDologAdmin, UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request);
+    void deleteArtworkImage(UUID accountId, boolean isDologAdmin, UUID artworkId, UUID imageId);
     void updateArtworkImages(Artwork artwork, List<ArtworkUpdateFullRequest.ImageUpdateDto> imageDtos);
 }

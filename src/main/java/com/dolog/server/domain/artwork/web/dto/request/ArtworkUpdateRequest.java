@@ -12,7 +12,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class ArtworkUpdateRequest {
+public class ArtworkUpdateRequest implements ArtworkInfoFields {
 
     // 보낸 필드만 반영한다. 빈 문자열로 필수값을 지우는 것은 막는다.
     @Pattern(regexp = "(?s).*\\S.*")

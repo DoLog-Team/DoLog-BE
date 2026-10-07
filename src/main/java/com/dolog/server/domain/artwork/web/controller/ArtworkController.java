@@ -7,11 +7,16 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
+import com.dolog.server.domain.artwork.service.view.ArtworkViewService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
+import com.dolog.server.domain.like.exception.LikeException;
+import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,6 +35,8 @@ public class ArtworkController {
 
     private final ArtworkService artworkService;
     private final ArtworkDetailQueryService artworkDetailService;
+    private final VisitorIdResolver visitorIdResolver;
+    private final ArtworkViewService artworkViewService;
     private final ArtworkOrderService artworkOrderService;
 
     // 1. 작품 전체 목록 조회
@@ -127,72 +134,82 @@ public class ArtworkController {
 
     /* ---------------- [ 상세 이미지 관련 API ] ---------------- */
 
-    @Operation(summary = "작품 상세 이미지 등록")
+    @Operation(summary = "작품 상세 이미지 등록", description = "두록 어드민 또는 작품의 작가 본인. 순서를 안 보내면 기존 이미지 뒤에 붙습니다.")
     @PostMapping(value = "/artworks/{artworkId}/images", consumes = "multipart/form-data")
-    public SuccessResponse<ArtworkImgCreateResponse> createArtworkImages(
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'ARTIST_ADMIN')")
+    public ResponseEntity<SuccessResponse<ArtworkImgCreateResponse>> createArtworkImages(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
-            @ModelAttribute ArtworkImgListRequest request // List 대신 래퍼 클래스 사용
+            @Valid @ModelAttribute ArtworkImgListRequest request // List 대신 래퍼 클래스 사용
     ) {
-        ArtworkImgCreateResponse response = artworkService.createArtworkImages(artworkId, request.getImages());
-        return SuccessResponse.ok(response, "작품 상세 이미지 등록에 성공하였습니다.");
+        ArtworkImgCreateResponse response = artworkService.createArtworkImages(
+                user.getId(), isDologAdmin(user), artworkId, request.getImages());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(response, "작품 상세 이미지 등록에 성공하였습니다."));
     }
 
     // 6. 작품 상세 이미지 개별 수정 (PATCH)
     @Operation(summary = "작품 상세 이미지 수정")
     @PatchMapping(value = "/artworks/{artworkId}/images/{imageId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'ARTIST_ADMIN')")
     public SuccessResponse<ArtworkImgUpdateResponse> updateArtworkImage(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId,
             @Valid @ModelAttribute ArtworkImgUpdateRequest request) {
-        ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(artworkId, imageId, request);
+        ArtworkImgUpdateResponse data = artworkService.updateArtworkImage(
+                user.getId(), isDologAdmin(user), artworkId, imageId, request);
         return SuccessResponse.ok(data, "상세 이미지 정보가 성공적으로 수정되었습니다.");
     }
 
     // 7. 작품 상세 이미지 개별 삭제 (DELETE)
     @Operation(summary = "작품 상세 이미지 삭제")
     @DeleteMapping("/artworks/{artworkId}/images/{imageId}")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'ARTIST_ADMIN')")
     public SuccessResponse<Void> deleteArtworkImage(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
             @PathVariable UUID imageId) {
-        artworkService.deleteArtworkImage(artworkId, imageId);
+        artworkService.deleteArtworkImage(user.getId(), isDologAdmin(user), artworkId, imageId);
         return SuccessResponse.ok(null, "상세 이미지가 성공적으로 삭제되었습니다.");
     }
 
     /* ---------------- [ 작가 매핑 관련 API ] ---------------- */
 
-    // 8. 작품 작가 매핑 등록 (POST)
-    @Operation(summary = "작품 공동 작가 등록")
+    // 8. 작품 공동 작가 등록 (POST)
+    @Operation(summary = "작품 공동 작가 등록", description = "본인 작품이고 전시에 출품된 경우에만, 같은 전시에 참여 중인 작가의 프로필을 연결합니다.")
     @PostMapping("/artworks/{artworkId}/artists")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
-    public SuccessResponse<ArtworkArtistMappingResponse> createArtistMapping(
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public ResponseEntity<SuccessResponse<ArtworkArtistMappingResponse>> createArtistMapping(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
             @Valid @RequestBody ArtworkArtistMappingRequest request) {
-        ArtworkArtistMappingResponse data = artworkService.createArtistMapping(artworkId, request);
-        return SuccessResponse.created(data);
+        ArtworkArtistMappingResponse data = artworkService.createArtistMapping(user.getId(), artworkId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data));
     }
 
-    // 9. 작품 작가 매핑 수정 (PATCH)
-    @Operation(summary = "작품 공동 작가 수정")
-    @PatchMapping("/artworks/{artworkId}/artists/{artistProfileId}")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    // 9. 작품 공동 작가 역할 수정 (PATCH)
+    @Operation(summary = "작품 공동 작가 수정", description = "본인 작품에 연결된 작가(artistId)의 역할을 수정합니다.")
+    @PatchMapping("/artworks/{artworkId}/artists/{artistId}")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtworkArtistMappingResponse> updateArtistMapping(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
-            @PathVariable UUID artistProfileId,
-            @RequestBody ArtworkArtistMappingRequest request) {
-        ArtworkArtistMappingResponse data = artworkService.updateArtistMapping(artworkId, artistProfileId, request);
+            @PathVariable UUID artistId,
+            @Valid @RequestBody ArtworkArtistRoleRequest request) {
+        ArtworkArtistMappingResponse data = artworkService.updateArtistMapping(user.getId(), artworkId, artistId, request);
         return SuccessResponse.ok(data, "작가 역할이 성공적으로 수정되었습니다.");
     }
 
-    // 10. 작품 작가 매핑 삭제 (DELETE)
-    @Operation(summary = "작품 공동 작가 삭제")
-    @DeleteMapping("/artworks/{artworkId}/artists/{artistProfileId}")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    // 10. 작품 공동 작가 삭제 (DELETE)
+    @Operation(summary = "작품 공동 작가 삭제", description = "본인 작품에 연결된 작가(artistId)를 해제합니다. 마지막 남은 작가는 해제할 수 없습니다.")
+    @DeleteMapping("/artworks/{artworkId}/artists/{artistId}")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<Void> deleteArtistMapping(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
-            @PathVariable UUID artistProfileId) {
-        artworkService.deleteArtistMapping(artworkId, artistProfileId);
+            @PathVariable UUID artistId) {
+        artworkService.deleteArtistMapping(user.getId(), artworkId, artistId);
         return SuccessResponse.ok(null, "작가 연결이 성공적으로 해제되었습니다.");
     }
 
@@ -209,7 +226,9 @@ public class ArtworkController {
     }
 
     // 11. 작품 전체 정보 수정 (PUT)
-    @Operation(summary = "작품 전체 정보 수정")
+    @Operation(summary = "작품 전체 정보 수정", description = "두록 어드민 전용. path 의 전시에 출품된 작품만 다룹니다. "
+            + "공동 작가는 그 전시의 프로필(artistProfileIds)로 맞추고, images 를 보내면 그 목록으로 이미지를 맞춥니다. "
+            + "선택 값은 안 보내면 기존 값을 유지합니다.")
     @PutMapping(value = "/exhibitions/{exhibitionId}/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkUpdateFullResponse> updateArtworkFull(
@@ -222,24 +241,65 @@ public class ArtworkController {
         return SuccessResponse.ok(data, "작품 정보 및 연관 데이터가 성공적으로 동기화되었습니다.");
     }
 
-    @Operation(summary = "작품 상세 조회")
+    @Operation(summary = "작품 상세 조회 (전시 URL)", description = "공개이면서 작품과 작품 그룹이 숨김이 아닌 작품만 조회합니다. 전시의 항목 숨김 설정이 적용됩니다.")
     @GetMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
     public SuccessResponse<ArtworkDetailResponse> getArtworkDetail(
             @PathVariable UUID exhibitionId,
-            @PathVariable UUID artworkId) {
-        return SuccessResponse.ok(artworkDetailService.getArtworkDetail(exhibitionId, artworkId), "작품 상세 조회 성공");
+            @PathVariable UUID artworkId,
+            HttpServletRequest request) {
+        return SuccessResponse.ok(
+                artworkDetailService.getArtworkDetail(exhibitionId, artworkId, visitorIdOf(request)),
+                "작품 상세 조회 성공");
+    }
+
+    @Operation(summary = "작품 상세 조회 (두록 URL)", description = "공개 작품이면 숨김 여부와 상관없이 조회합니다.")
+    @GetMapping("/artworks/{artworkId}")
+    public SuccessResponse<ArtworkDetailResponse> getDologArtworkDetail(
+            @PathVariable UUID artworkId,
+            HttpServletRequest request) {
+        return SuccessResponse.ok(
+                artworkDetailService.getDologArtworkDetail(artworkId, visitorIdOf(request)),
+                "작품 상세 조회 성공");
+    }
+
+    @Operation(summary = "작품 조회수 기록",
+            description = "비로그인 가능. 이용자가 작품 상세 페이지에 일정 시간 머문 뒤 브라우저에서 한 번 호출합니다. "
+                    + "같은 방문자(visitor_id)는 작품마다 한 번만 셉니다. "
+                    + "visitor_id 가 없으면 좋아요와 같은 방식으로 새로 발급해 쿠키로 내려줍니다.")
+    @PostMapping("/artworks/{artworkId}/views")
+    public SuccessResponse<ArtworkViewResponse> recordArtworkView(
+            @PathVariable UUID artworkId,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        String visitorId = visitorIdResolver.resolveOrIssue(request, response, null);
+        return SuccessResponse.ok(artworkViewService.recordView(artworkId, visitorId), "조회수가 기록되었습니다.");
+    }
+
+    // 좋아요 여부 확인용이라, 방문자 ID 형식이 잘못돼도 상세 조회는 막지 않는다.
+    private String visitorIdOf(HttpServletRequest request) {
+        try {
+            return visitorIdResolver.resolve(request, null).orElse(null);
+        } catch (LikeException e) {
+            return null;
+        }
     }
 
     /* ---------------- [ 작품 순서 정렬 관련 API ] ---------------- */
 
     // 12. 전시회 내 모든 작품 순서 일괄 재정렬 및 DB 저장 (PUT)
-    @Operation(summary = "전시회 내 전체 작품 순서 재정렬", description = "전시회 내의 작품들을 각 Zone별로 [1순위: 작가 가나다, 2순위: 작품명 가나다] 순서로 정렬하여 orderIndex(10, 20, 30...)를 DB에 일괄 갱신합니다.")
+    @Operation(summary = "전시회 내 전체 작품 순서 재정렬", description = "두록 어드민 또는 본인 전시의 전시 어드민. 전시회 내의 작품들을 각 Zone별로 [1순위: 작가 가나다, 2순위: 작품명 가나다] 순서로 정렬하여 orderIndex(10, 20, 30...)를 DB에 일괄 갱신합니다.")
     @PutMapping("/exhibitions/{exhibitionId}/artworks/reorder")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @PreAuthorize("hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')")
     public SuccessResponse<Void> reorderExhibitionArtworks(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId) {
 
-        artworkOrderService.reorderArtworkIndices(exhibitionId);
+        artworkOrderService.reorderArtworkIndices(exhibitionId, user.getId(), isDologAdmin(user));
         return SuccessResponse.ok(null, "전시회 내 모든 작품의 순서가 성공적으로 재정렬되어 저장되었습니다.");
+    }
+
+    private boolean isDologAdmin(CustomUserDetails user) {
+        return user.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_DOLOG_ADMIN".equals(authority.getAuthority()));
     }
 }

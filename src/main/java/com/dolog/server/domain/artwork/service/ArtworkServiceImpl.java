@@ -7,11 +7,11 @@ import com.dolog.server.domain.artwork.service.artwork.command.ArtworkOrderProce
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkSubmissionProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkVisibilityProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkUpdateProcessor;
-import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkQueryService;
 import com.dolog.server.domain.artwork.service.exhibition.ArtworkExhibitionService;
 import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistMappingRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistRoleRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
@@ -22,7 +22,6 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkStatusUpdateReques
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkHiddenUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullResponse;
@@ -43,7 +42,6 @@ import java.util.UUID;
 public class ArtworkServiceImpl implements ArtworkService {
 
     private final ArtworkQueryService artworkQueryService;
-    private final ArtworkDetailQueryService artworkDetailQueryService;
 
     private final ArtworkCreateProcessor artworkCreateProcessor;
     private final ArtworkUpdateProcessor artworkUpdateProcessor;
@@ -74,19 +72,6 @@ public class ArtworkServiceImpl implements ArtworkService {
                 category,
                 search,
                 sort
-        );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ArtworkDetailResponse getArtworkDetail(
-            UUID exhibitionId,
-            UUID artworkId
-    ) {
-
-        return artworkDetailQueryService.getArtworkDetail(
-                exhibitionId,
-                artworkId
         );
     }
 
@@ -124,6 +109,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     ) {
 
         return artworkUpdateProcessor.updateFull(
+                exhibitionId,
                 artworkId,
                 request
         );
@@ -207,40 +193,33 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public ArtworkArtistMappingResponse createArtistMapping(
+            UUID accountId,
             UUID artworkId,
             ArtworkArtistMappingRequest request
     ) {
 
-        return artworkArtistService.createArtistMapping(
-                artworkId,
-                request
-        );
+        return artworkArtistService.createArtistMapping(accountId, artworkId, request);
     }
 
     @Override
     public ArtworkArtistMappingResponse updateArtistMapping(
+            UUID accountId,
             UUID artworkId,
-            UUID artistProfileId,
-            ArtworkArtistMappingRequest request
+            UUID artistId,
+            ArtworkArtistRoleRequest request
     ) {
 
-        return artworkArtistService.updateArtistMapping(
-                artworkId,
-                artistProfileId,
-                request
-        );
+        return artworkArtistService.updateArtistMapping(accountId, artworkId, artistId, request);
     }
 
     @Override
     public void deleteArtistMapping(
+            UUID accountId,
             UUID artworkId,
-            UUID artistProfileId
+            UUID artistId
     ) {
 
-        artworkArtistService.deleteArtistMapping(
-                artworkId,
-                artistProfileId
-        );
+        artworkArtistService.deleteArtistMapping(accountId, artworkId, artistId);
     }
 
     //============================================================
@@ -249,11 +228,15 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public ArtworkImgCreateResponse createArtworkImages(
+            UUID accountId,
+            boolean isDologAdmin,
             UUID artworkId,
             List<ArtworkImgCreateRequest> requests
     ) {
 
         return artworkImageService.createArtworkImages(
+                accountId,
+                isDologAdmin,
                 artworkId,
                 requests
         );
@@ -261,12 +244,16 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public ArtworkImgUpdateResponse updateArtworkImage(
+            UUID accountId,
+            boolean isDologAdmin,
             UUID artworkId,
             UUID imageId,
             ArtworkImgUpdateRequest request
     ) {
 
         return artworkImageService.updateArtworkImage(
+                accountId,
+                isDologAdmin,
                 artworkId,
                 imageId,
                 request
@@ -275,11 +262,15 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public void deleteArtworkImage(
+            UUID accountId,
+            boolean isDologAdmin,
             UUID artworkId,
             UUID imageId
     ) {
 
         artworkImageService.deleteArtworkImage(
+                accountId,
+                isDologAdmin,
                 artworkId,
                 imageId
         );

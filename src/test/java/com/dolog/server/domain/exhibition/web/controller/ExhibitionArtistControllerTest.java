@@ -220,6 +220,33 @@ class ExhibitionArtistControllerTest {
     }
 
     @Test
+    @DisplayName("전시 나가기는 토큰의 계정을 사용하고 data 없이 200을 반환한다")
+    void leavesExhibitionAndReturnsEmptyResponse() {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+        CustomUserDetails user = new CustomUserDetails(
+                accountId,
+                1L,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_ARTIST_ADMIN"))
+        );
+
+        SuccessResponse<Void> response = controller.leaveExhibition(
+                user,
+                exhibitionId
+        );
+
+        assertEquals(200, response.getHttpStatus());
+        assertEquals("SUCCESS_200", response.getCode());
+        assertEquals("전시 나가기 성공", response.getMessage());
+        assertNull(response.getData());
+        verify(exhibitionArtistService).leaveExhibition(
+                accountId,
+                exhibitionId
+        );
+    }
+
+    @Test
     @DisplayName("참여 코드 검증 응답은 greetingFormat을 null로 포함한다")
     void validatesJoinCodeWithNullGreetingFormat() {
         UUID accountId = UUID.randomUUID();

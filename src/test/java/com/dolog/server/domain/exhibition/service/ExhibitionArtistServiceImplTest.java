@@ -365,6 +365,205 @@ class ExhibitionArtistServiceImplTest {
     }
 
     @Test
+    @DisplayName("참여 작가는 전시를 나가면 WITHDRAWN으로 전환되고 출품만 취소된다")
+    void artistLeavesExhibitionAndKeepsProfile() {
+        UUID accountId = UUID.randomUUID();
+        Account artistAccount = account(accountId, Role.ARTIST_ADMIN);
+        Artist artist = Artist.builder()
+                .id(UUID.randomUUID())
+                .account(artistAccount)
+                .nameKo("나가는 작가")
+                .build();
+        Exhibition exhibition = buildExhibition(UUID.randomUUID());
+        ExhibitionArtistMap map = map(
+                exhibition,
+                artist,
+                ExhibitionArtistStatus.JOINED
+        );
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(UUID.randomUUID())
+                .artist(artist)
+                .exhibition(exhibition)
+                .nameKo("유지할 프로필")
+                .isPublic(true)
+                .build();
+        Artwork artwork = artwork(exhibition, artist);
+        artwork.getArtworkArtistMaps().get(0).linkProfile(profile);
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibition.getId(),
+                        artist.getId(),
+                        ExhibitionArtistStatus.JOINED
+                ))
+                .thenReturn(true);
+        when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(map));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                List.of(artist.getId())
+        )).thenReturn(List.of(artwork));
+        when(exhibitionArtistMapRepository.findJoinedArtistIds(
+                eq(exhibition.getId()),
+                anyCollection()
+        )).thenReturn(List.of());
+
+        service.leaveExhibition(accountId, exhibition.getId());
+
+        InOrder lockOrder = inOrder(
+                artistRepository,
+                exhibitionArtistMapRepository,
+                exhibitionRepository
+        );
+        lockOrder.verify(artistRepository).findByAccountId(accountId);
+        lockOrder.verify(exhibitionArtistMapRepository)
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibition.getId(),
+                        artist.getId(),
+                        ExhibitionArtistStatus.JOINED
+                );
+        lockOrder.verify(exhibitionRepository)
+                .findByIdForUpdate(exhibition.getId());
+        lockOrder.verify(exhibitionArtistMapRepository)
+                .findByExhibitionIdAndArtistId(
+                        exhibition.getId(),
+                        artist.getId()
+                );
+
+        assertEquals(ExhibitionArtistStatus.WITHDRAWN, map.getStatus());
+        assertNull(artwork.getExhibition());
+        assertNull(artwork.getExhibitionZone());
+        assertNull(artwork.getArtworkArtistMaps().get(0).getArtistProfile());
+        assertEquals("유지할 프로필", profile.getNameKo());
+        verify(artworkSubmissionCanceller).cancel(artwork);
+        verify(exhibitionArtistMapRepository, never()).delete(any());
+        verifyNoInteractions(accountRepository, artistProfileRepository);
+    }
+
+    @Test
+    @DisplayName("참여 중이지 않은 작가는 전시 행 락 없이 404를 받는다")
+    void nonJoinedArtistCannotLeaveExhibition() {
+        UUID accountId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
+        Artist artist = artist("미참여 작가", "not-joined@test.com");
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibitionId,
+                        artist.getId(),
+                        ExhibitionArtistStatus.JOINED
+                ))
+                .thenReturn(false);
+
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.leaveExhibition(accountId, exhibitionId)
+        );
+
+        assertEquals(
+                ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_JOINED,
+                exception.getErrorCode()
+        );
+        verify(exhibitionRepository, never()).findByIdForUpdate(any());
+        verifyNoInteractions(artworkRepository, artistProfileRepository);
+    }
+
+    @Test
+    @DisplayName("락 대기 중 참여 상태가 바뀌면 출품을 건드리지 않고 404를 반환한다")
+    void rechecksJoinedStatusAfterExhibitionLock() {
+        UUID accountId = UUID.randomUUID();
+        Artist artist = artist("이미 제외된 작가", "removed-race@test.com");
+        Exhibition exhibition = buildExhibition(UUID.randomUUID());
+        ExhibitionArtistMap removedMap = map(
+                exhibition,
+                artist,
+                ExhibitionArtistStatus.REMOVED
+        );
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibition.getId(),
+                        artist.getId(),
+                        ExhibitionArtistStatus.JOINED
+                ))
+                .thenReturn(true);
+        when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(removedMap));
+
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.leaveExhibition(accountId, exhibition.getId())
+        );
+
+        assertEquals(
+                ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_JOINED,
+                exception.getErrorCode()
+        );
+        assertEquals(ExhibitionArtistStatus.REMOVED, removedMap.getStatus());
+        verifyNoInteractions(artworkRepository, artistProfileRepository);
+    }
+
+    @Test
+    @DisplayName("참여 중인 공동 작가가 남아 있으면 나가도 공동 작품은 전시에 유지한다")
+    void leavingArtistKeepsJointArtworkWhenCoArtistRemainsJoined() {
+        UUID accountId = UUID.randomUUID();
+        Artist leavingArtist = artist("나가는 공동 작가", "leaving-joint@test.com");
+        Artist joinedArtist = artist("남는 공동 작가", "remaining-joint@test.com");
+        Exhibition exhibition = buildExhibition(UUID.randomUUID());
+        ExhibitionArtistMap leavingMap = map(
+                exhibition,
+                leavingArtist,
+                ExhibitionArtistStatus.JOINED
+        );
+        Artwork artwork = artwork(exhibition, leavingArtist, joinedArtist);
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(leavingArtist));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibition.getId(),
+                        leavingArtist.getId(),
+                        ExhibitionArtistStatus.JOINED
+                ))
+                .thenReturn(true);
+        when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                leavingArtist.getId()
+        )).thenReturn(Optional.of(leavingMap));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                List.of(leavingArtist.getId())
+        )).thenReturn(List.of(artwork));
+        when(exhibitionArtistMapRepository.findJoinedArtistIds(
+                eq(exhibition.getId()),
+                anyCollection()
+        )).thenReturn(List.of(joinedArtist.getId()));
+
+        service.leaveExhibition(accountId, exhibition.getId());
+
+        assertEquals(ExhibitionArtistStatus.WITHDRAWN, leavingMap.getStatus());
+        assertSame(exhibition, artwork.getExhibition());
+        assertNotNull(artwork.getExhibitionZone());
+        verify(artworkSubmissionCanceller, never()).cancel(artwork);
+    }
+
+    @Test
     @DisplayName("전시 관리자는 자신의 전시에 작가를 즉시 JOINED 상태로 추가한다")
     void exhibitionAdminAddsArtistAsJoined() {
         UUID ownerId = UUID.randomUUID();

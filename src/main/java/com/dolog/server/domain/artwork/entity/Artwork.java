@@ -149,24 +149,6 @@ public class Artwork extends BaseEntity implements Orderable {
         if (youtubeUrl != null) this.youtubeUrl = youtubeUrl;
     }
 
-    /**
-     * 모든 정보 업데이트
-     */
-    public void updateAllInfo(String title, String description, String category, ExhibitionZone exhibitionZone,
-                              String material, String size, String mainImg, String locationMap,
-                              String purchaseUrl, String youtubeUrl) {
-        if (title != null) this.title = title;
-        if (description != null) this.description = description;
-        if (category != null) this.category = category;
-        if (exhibitionZone != null) this.exhibitionZone = exhibitionZone;
-        if (material != null) this.material = material;
-        if (size != null) this.size = size;
-        if (mainImg != null) this.mainImg = mainImg;
-        if (locationMap != null) this.locationMap = locationMap;
-        if (purchaseUrl != null) this.purchaseUrl = purchaseUrl;
-        if (youtubeUrl != null) this.youtubeUrl = youtubeUrl;
-    }
-
     // 아래 update 메서드들은 PATCH 용으로 null(안 보냄)은 무시하고, 선택 문자열의 빈 값은 비우기(null)로 본다.
     public void updateText(String title, String category, String description, String shortIntro) {
         if (title != null) this.title = title;
@@ -224,13 +206,16 @@ public class Artwork extends BaseEntity implements Orderable {
         return hiddenAt != null;
     }
 
-    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 숨김이면 비노출
+    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 작품이나 구역이 숨김이면 비노출.
+    // 출품된 작품은 전시가 게시된 뒤에만 보인다 (출품 안 한 개인 작품은 공개면 노출).
     public boolean isVisibleOnDolog() {
-        return status == ArtworkStatus.PUBLISHED;
+        return status == ArtworkStatus.PUBLISHED
+                && (exhibition == null || exhibition.isPublic());
     }
 
     public boolean isVisibleOnExhibition() {
-        return isVisibleOnDolog() && !isHidden();
+        return isVisibleOnDolog() && !isHidden()
+                && (exhibitionZone == null || !exhibitionZone.isHidden());
     }
 
     // 공백 이름은 버린다. multipart 에서 빈 값 하나만 보내면 재료 전체 삭제가 된다.

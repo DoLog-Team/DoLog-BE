@@ -3,6 +3,7 @@ package com.dolog.server.domain.artwork.service.exhibition;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.web.dto.response.CategoryArtworkResponse;
+import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
@@ -30,9 +31,11 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
 
     @Override
     public ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search) {
-        // 1. 전시회 존재 여부 확인
-        if (!exhibitionRepository.existsById(exhibitionId)) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        // 1. 전시회 존재 여부 확인. 게시 전 전시는 전시 상세 조회와 같이 403
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+        if (!exhibition.isPublic()) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_PUBLIC);
         }
 
         // 2. 안내 지도 리스트 조회
