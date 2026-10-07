@@ -10,7 +10,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Setter
 @NoArgsConstructor
 public class ArtworkImgUpdateRequest {
-    private String imageUrl;
     private MultipartFile imageFile;
     private String description;
     private Integer orderIndex;

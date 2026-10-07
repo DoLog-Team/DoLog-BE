@@ -249,11 +249,15 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public ArtworkImgCreateResponse createArtworkImages(
+            UUID accountId,
+            boolean isDologAdmin,
             UUID artworkId,
             List<ArtworkImgCreateRequest> requests
     ) {
 
         return artworkImageService.createArtworkImages(
+                accountId,
+                isDologAdmin,
                 artworkId,
                 requests
         );
@@ -261,12 +265,16 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public ArtworkImgUpdateResponse updateArtworkImage(
+            UUID accountId,
+            boolean isDologAdmin,
             UUID artworkId,
             UUID imageId,
             ArtworkImgUpdateRequest request
     ) {
 
         return artworkImageService.updateArtworkImage(
+                accountId,
+                isDologAdmin,
                 artworkId,
                 imageId,
                 request
@@ -275,11 +283,15 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public void deleteArtworkImage(
+            UUID accountId,
+            boolean isDologAdmin,
             UUID artworkId,
             UUID imageId
     ) {
 
         artworkImageService.deleteArtworkImage(
+                accountId,
+                isDologAdmin,
                 artworkId,
                 imageId
         );

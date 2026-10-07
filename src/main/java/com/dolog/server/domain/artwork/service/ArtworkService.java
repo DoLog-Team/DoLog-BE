@@ -14,7 +14,7 @@ public interface ArtworkService {
 
     ArtworkDetailResponse getArtworkDetail(UUID exhibitionId,UUID artworkId);
 
-    ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests);
+    ArtworkImgCreateResponse createArtworkImages(UUID accountId, boolean isDologAdmin, UUID artworkId, List<ArtworkImgCreateRequest> requests);
 
     ArtworkCreateResponse updateArtwork(UUID accountId, UUID artworkId, ArtworkUpdateRequest request);
 
@@ -31,9 +31,9 @@ public interface ArtworkService {
     void reorderArtwork(UUID artworkId, Integer prev, Integer next);
     void moveArtworkZone(UUID artworkId, UUID zoneId, Integer prev, Integer next);
 
-    ArtworkImgUpdateResponse updateArtworkImage(UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request);
+    ArtworkImgUpdateResponse updateArtworkImage(UUID accountId, boolean isDologAdmin, UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request);
 
-    void deleteArtworkImage(UUID artworkId, UUID imageId);
+    void deleteArtworkImage(UUID accountId, boolean isDologAdmin, UUID artworkId, UUID imageId);
 
     ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request);
 

@@ -33,6 +33,13 @@ public class ArtworkFileHandler {
     }
 
     /**
+     * 작품 상세 이미지 업로드. 파일이 없으면 null. 롤백되면 올린 파일을 지운다.
+     */
+    public String uploadDetailImage(MultipartFile file) {
+        return uploadTo(file, "artworks/detail");
+    }
+
+    /**
      * 커밋된 뒤에 파일을 지운다. 트랜잭션 밖이면 바로 지운다.
      */
     public void deleteAfterCommit(String fileUrl) {
