@@ -31,6 +31,7 @@ public class ArtworkVisibilityProcessor {
     private final ArtworkValidator artworkValidator;
     private final ArtworkFieldRequirement artworkFieldRequirement;
     private final NotificationService notificationService;
+    private final ArtworkPlanLimitService artworkPlanLimitService;
 
     // 작가 본인의 공개/임시저장 전환. 전시 어드민의 숨김(hidden_at)은 건드리지 않는다.
     public ArtworkStatusResponse changeStatus(
@@ -74,10 +75,12 @@ public class ArtworkVisibilityProcessor {
         if (!hidden) {
             artwork.unhide();
             if (wasHidden) {
+                artworkPlanLimitService.recompute(artwork.getExhibition().getId());
                 notifyArtists(artwork, NotificationType.ARTWORK_SHOWN);
             }
         } else if (!wasHidden) {
             artwork.hide(LocalDateTime.now());
+            artworkPlanLimitService.recompute(artwork.getExhibition().getId());
             notifyArtists(artwork, NotificationType.ARTWORK_HIDDEN);
         }
 

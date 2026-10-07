@@ -41,6 +41,7 @@ public class ArtworkSubmissionProcessor {
     private final ArtworkFieldRequirement artworkFieldRequirement;
     private final ArtworkSubmissionCanceller artworkSubmissionCanceller;
     private final NotificationService notificationService;
+    private final ArtworkPlanLimitService artworkPlanLimitService;
 
     public ArtworkSubmitResponse submit(
             UUID accountId,
@@ -77,6 +78,7 @@ public class ArtworkSubmissionProcessor {
         );
         artworkOrderAdapter.assign(artwork);
         artworkFieldRequirement.draftIfUnsatisfied(artwork);
+        artworkPlanLimitService.recompute(exhibition.getId());
 
         return ArtworkSubmitResponse.from(artwork);
     }
@@ -96,6 +98,7 @@ public class ArtworkSubmissionProcessor {
         String artworkTitle = artwork.getTitle();
 
         artworkSubmissionCanceller.cancel(artwork);
+        artworkPlanLimitService.recompute(exhibition.getId());
 
         notificationService.send(
                 exhibition.getAccount(),
