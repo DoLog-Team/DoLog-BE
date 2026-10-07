@@ -10,8 +10,11 @@ import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
+import com.dolog.server.domain.like.exception.LikeException;
+import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,6 +33,7 @@ public class ArtworkController {
 
     private final ArtworkService artworkService;
     private final ArtworkDetailQueryService artworkDetailService;
+    private final VisitorIdResolver visitorIdResolver;
     private final ArtworkOrderService artworkOrderService;
 
     // 1. 작품 전체 목록 조회
@@ -222,12 +226,34 @@ public class ArtworkController {
         return SuccessResponse.ok(data, "작품 정보 및 연관 데이터가 성공적으로 동기화되었습니다.");
     }
 
-    @Operation(summary = "작품 상세 조회")
+    @Operation(summary = "작품 상세 조회 (전시 URL)", description = "공개이면서 작품과 작품 그룹이 숨김이 아닌 작품만 조회합니다. 전시의 항목 숨김 설정이 적용됩니다.")
     @GetMapping("/exhibitions/{exhibitionId}/artworks/{artworkId}")
     public SuccessResponse<ArtworkDetailResponse> getArtworkDetail(
             @PathVariable UUID exhibitionId,
-            @PathVariable UUID artworkId) {
-        return SuccessResponse.ok(artworkDetailService.getArtworkDetail(exhibitionId, artworkId), "작품 상세 조회 성공");
+            @PathVariable UUID artworkId,
+            HttpServletRequest request) {
+        return SuccessResponse.ok(
+                artworkDetailService.getArtworkDetail(exhibitionId, artworkId, visitorIdOf(request)),
+                "작품 상세 조회 성공");
+    }
+
+    @Operation(summary = "작품 상세 조회 (두록 URL)", description = "공개 작품이면 숨김 여부와 상관없이 조회합니다.")
+    @GetMapping("/artworks/{artworkId}")
+    public SuccessResponse<ArtworkDetailResponse> getDologArtworkDetail(
+            @PathVariable UUID artworkId,
+            HttpServletRequest request) {
+        return SuccessResponse.ok(
+                artworkDetailService.getDologArtworkDetail(artworkId, visitorIdOf(request)),
+                "작품 상세 조회 성공");
+    }
+
+    // 좋아요 여부 확인용이라, 방문자 ID 형식이 잘못돼도 상세 조회는 막지 않는다.
+    private String visitorIdOf(HttpServletRequest request) {
+        try {
+            return visitorIdResolver.resolve(request, null).orElse(null);
+        } catch (LikeException e) {
+            return null;
+        }
     }
 
     /* ---------------- [ 작품 순서 정렬 관련 API ] ---------------- */

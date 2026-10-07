@@ -55,6 +55,7 @@ public class ArtworkQueryService {
 
         Specification<Artwork> spec = Specification
                 .where(ArtworkSpecification.hasExhibition())
+                .and(ArtworkSpecification.isPublished())
                 .and(ArtworkSpecification.withExhibitionFetch())
                 .and(ArtworkSpecification.withCategory(category))
                 .and(ArtworkSpecification.withSearch(search));
@@ -105,6 +106,7 @@ public class ArtworkQueryService {
 
         Specification<Artwork> spec = Specification
                 .where(ArtworkSpecification.hasExhibition())
+                .and(ArtworkSpecification.isPublished())
                 .and(ArtworkSpecification.withExhibitionFetch())
                 .and(ArtworkSpecification.withCategory(category))
                 .and(ArtworkSpecification.withSearch(search));

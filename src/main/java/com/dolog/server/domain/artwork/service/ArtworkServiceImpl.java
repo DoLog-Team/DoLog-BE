@@ -7,7 +7,6 @@ import com.dolog.server.domain.artwork.service.artwork.command.ArtworkOrderProce
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkSubmissionProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkVisibilityProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkUpdateProcessor;
-import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkQueryService;
 import com.dolog.server.domain.artwork.service.exhibition.ArtworkExhibitionService;
 import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
@@ -22,7 +21,6 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkStatusUpdateReques
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkHiddenUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullResponse;
@@ -43,7 +41,6 @@ import java.util.UUID;
 public class ArtworkServiceImpl implements ArtworkService {
 
     private final ArtworkQueryService artworkQueryService;
-    private final ArtworkDetailQueryService artworkDetailQueryService;
 
     private final ArtworkCreateProcessor artworkCreateProcessor;
     private final ArtworkUpdateProcessor artworkUpdateProcessor;
@@ -74,19 +71,6 @@ public class ArtworkServiceImpl implements ArtworkService {
                 category,
                 search,
                 sort
-        );
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ArtworkDetailResponse getArtworkDetail(
-            UUID exhibitionId,
-            UUID artworkId
-    ) {
-
-        return artworkDetailQueryService.getArtworkDetail(
-                exhibitionId,
-                artworkId
         );
     }
 

@@ -19,6 +19,16 @@ import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
 
+    // 전시 URL 노출 조건: 공개 + 작품 숨김 아님 + 구역 숨김 아님. 쿼리마다 `LEFT JOIN a.exhibitionZone vz` 가 필요하다.
+    String EXHIBITION_VISIBLE =
+            " AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED" +
+            " AND a.hiddenAt IS NULL AND (vz.id IS NULL OR vz.hidden = false) ";
+
+    // 두록 URL 은 공개만 본다. exhibitionView 가 true 면 전시 URL 조건까지 본다.
+    String VISIBLE_BY_VIEW =
+            " AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED" +
+            " AND (:exhibitionView = false OR (a.hiddenAt IS NULL AND (vz.id IS NULL OR vz.hidden = false))) ";
+
     // 삭제될 zone에 속한 작품들의 zone을 해제한다 (작품은 유지)
     @Modifying(flushAutomatically = true)
     @Query("UPDATE Artwork a SET a.exhibitionZone = null WHERE a.exhibitionZone IN :zones")
@@ -44,12 +54,12 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
      * 작품 목록 조회 (전시 + zone + 카테고리 필터)
      */
     @Query("SELECT DISTINCT a FROM Artwork a " +
-            "LEFT JOIN FETCH a.exhibitionZone " +
+            "LEFT JOIN FETCH a.exhibitionZone vz " +
             "LEFT JOIN FETCH a.artworkArtistMaps aam " +
             "LEFT JOIN FETCH aam.artist " +
             "LEFT JOIN FETCH aam.artistProfile " +
-            "WHERE a.exhibition.id = :exhibitionId " +
-            "AND (:zone IS NULL OR a.exhibitionZone.name = :zone) " +
+            "WHERE a.exhibition.id = :exhibitionId " + EXHIBITION_VISIBLE +
+            "AND (:zone IS NULL OR vz.name = :zone) " +
             "AND (:category IS NULL OR a.category = :category) " +
             "ORDER BY a.orderIndex ASC")
     List<Artwork> findArtworksForList(@Param("exhibitionId") UUID exhibitionId,
@@ -71,11 +81,12 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
      * 검색 (작품명 + 작가명)
      */
     @Query("SELECT DISTINCT a FROM Artwork a " +
+            "LEFT JOIN FETCH a.exhibitionZone vz " +
             "LEFT JOIN FETCH a.artworkArtistMaps am " +
             "LEFT JOIN FETCH am.artist art " +
             "LEFT JOIN FETCH am.artistProfile " +
             "WHERE (a.title LIKE %:search% OR art.nameKo LIKE %:search%) " +
-            "AND a.exhibition.id = :exhibitionId")
+            "AND a.exhibition.id = :exhibitionId" + EXHIBITION_VISIBLE)
     List<Artwork> findArtworksBySearch(@Param("exhibitionId") UUID exhibitionId,
                                        @Param("search") String search);
 
@@ -90,7 +101,10 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             "     ELSE 0 END as score " +
             "FROM artworks a " +
             "LEFT JOIN artwork_artist_maps am ON a.id = am.artwork_id AND am.deleted_at IS NULL " +
+            "LEFT JOIN exhibition_zones vz ON vz.id = a.zone_id " +
             "WHERE a.deleted_at IS NULL AND a.exhibition_id = :exhibitionId " +
+            "AND a.status = 'PUBLISHED' " +
+            "AND (:exhibitionView = false OR (a.hidden_at IS NULL AND (vz.id IS NULL OR vz.is_hidden = false))) " +
             "AND a.id != :artworkId " +
             "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) OR a.category = :category) " +
             "ORDER BY score DESC, a.id DESC",
@@ -99,6 +113,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             @Param("exhibitionId") UUID exhibitionId,
             @Param("artworkId") UUID artworkId,
             @Param("category") String category,
+            @Param("exhibitionView") boolean exhibitionView,
             Pageable pageable
     );
 
@@ -115,25 +130,29 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
 
     // 1. 같은 존
     @Query("SELECT a FROM Artwork a " +
-            "WHERE a.exhibition.id = :exhibitionId " +
-            "AND a.exhibitionZone.id = :zoneId " +
+            "LEFT JOIN a.exhibitionZone vz " +
+            "WHERE a.exhibition.id = :exhibitionId" + VISIBLE_BY_VIEW +
+            "AND vz.id = :zoneId " +
             "AND a.orderIndex < :orderIndex " +
             "ORDER BY a.orderIndex DESC")
     List<Artwork> findPrevInSameZone(
             @Param("exhibitionId") UUID exhibitionId,
             @Param("zoneId") UUID zoneId,
             @Param("orderIndex") Integer orderIndex,
+            @Param("exhibitionView") boolean exhibitionView,
             Pageable pageable
     );
 
     // 2. (위 쿼리 결과가 없을 때) 이전 존
     @Query("SELECT a FROM Artwork a " +
-            "WHERE a.exhibition.id = :exhibitionId " +
-            "AND a.exhibitionZone.orderId < :zoneOrderId " +
-            "ORDER BY a.exhibitionZone.orderId DESC, a.orderIndex DESC")
+            "LEFT JOIN a.exhibitionZone vz " +
+            "WHERE a.exhibition.id = :exhibitionId" + VISIBLE_BY_VIEW +
+            "AND vz.orderId < :zoneOrderId " +
+            "ORDER BY vz.orderId DESC, a.orderIndex DESC")
     List<Artwork> findPrevInPrevZone(
             @Param("exhibitionId") UUID exhibitionId,
             @Param("zoneOrderId") Integer zoneOrderId,
+            @Param("exhibitionView") boolean exhibitionView,
             Pageable pageable
     );
 
@@ -142,25 +161,29 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
      */
     // 1. 같은 존
     @Query("SELECT a FROM Artwork a " +
-            "WHERE a.exhibition.id = :exhibitionId " +
-            "AND a.exhibitionZone.id = :zoneId " +
+            "LEFT JOIN a.exhibitionZone vz " +
+            "WHERE a.exhibition.id = :exhibitionId" + VISIBLE_BY_VIEW +
+            "AND vz.id = :zoneId " +
             "AND a.orderIndex > :orderIndex " +
             "ORDER BY a.orderIndex ASC")
     List<Artwork> findNextInSameZone(
             @Param("exhibitionId") UUID exhibitionId,
             @Param("zoneId") UUID zoneId,
             @Param("orderIndex") Integer orderIndex,
+            @Param("exhibitionView") boolean exhibitionView,
             Pageable pageable
     );
 
     // 2. (위 쿼리 결과가 없을 때) 다음 존
     @Query("SELECT a FROM Artwork a " +
-            "WHERE a.exhibition.id = :exhibitionId " +
-            "AND a.exhibitionZone.orderId > :zoneOrderId " +
-            "ORDER BY a.exhibitionZone.orderId ASC, a.orderIndex ASC")
+            "LEFT JOIN a.exhibitionZone vz " +
+            "WHERE a.exhibition.id = :exhibitionId" + VISIBLE_BY_VIEW +
+            "AND vz.orderId > :zoneOrderId " +
+            "ORDER BY vz.orderId ASC, a.orderIndex ASC")
     List<Artwork> findNextInNextZone(
             @Param("exhibitionId") UUID exhibitionId,
             @Param("zoneOrderId") Integer zoneOrderId,
+            @Param("exhibitionView") boolean exhibitionView,
             Pageable pageable
     );
 
@@ -180,4 +203,9 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
 
     List<Artwork> findByExhibitionIdAndStatus(UUID exhibitionId, ArtworkStatus status);
+
+    // 동시 조회에도 값이 빠지지 않게 DB 에서 더한다. updated_at 은 바꾸지 않는다.
+    @Modifying
+    @Query("UPDATE Artwork a SET a.viewCount = a.viewCount + 1 WHERE a.id = :artworkId")
+    void increaseViewCount(@Param("artworkId") UUID artworkId);
 }
