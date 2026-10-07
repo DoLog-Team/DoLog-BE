@@ -234,4 +234,14 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     @Query(value = "INSERT IGNORE INTO artwork_view_logs (artwork_id, visitor_id, created_at) " +
             "VALUES (:artworkId, :visitorId, NOW(6))", nativeQuery = true)
     int insertViewLogIfAbsent(@Param("artworkId") UUID artworkId, @Param("visitorId") String visitorId);
+
+    @Query("""
+            SELECT DISTINCT a
+            FROM Artwork a
+            JOIN a.artworkArtistMaps m
+            WHERE m.artist.id = :artistId
+              AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED
+            ORDER BY a.createdAt DESC, a.id DESC
+            """)
+    List<Artwork> findPublishedByArtistId(@Param("artistId") UUID artistId);
 }

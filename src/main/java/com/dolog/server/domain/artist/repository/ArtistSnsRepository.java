@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface ArtistSnsRepository extends JpaRepository<ArtistSns, UUID> {
     List<ArtistSns> findByArtistProfileId(UUID profileId);
+
+    List<ArtistSns> findByArtistProfileIdOrderByCreatedAtAscIdAsc(UUID profileId);
 }
