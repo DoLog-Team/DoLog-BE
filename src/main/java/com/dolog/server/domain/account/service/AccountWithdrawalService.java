@@ -3,14 +3,19 @@ package com.dolog.server.domain.account.service;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.bts.repository.BtsArtworkMapRepository;
 import com.dolog.server.domain.bts.repository.BtsRepository;
+import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 
 import lombok.RequiredArgsConstructor;
@@ -23,6 +28,7 @@ import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -39,6 +45,7 @@ public class AccountWithdrawalService {
     private final BtsArtworkMapRepository btsMaps;
     private final RefreshTokenRepository tokens;
     private final ExhibitionArtistMapRepository exhibitionMaps;
+    private final NotificationService notificationService;
 
     @Transactional
     public void withdraw(UUID accountId) {
@@ -72,6 +79,12 @@ public class AccountWithdrawalService {
                 btsMaps.hideByArtworkIds(deletedArtworkIds, now);
             }
             UUID artistUuid = uuid(artistId);
+
+            // 알림은 탈퇴 처리로 상태가 바뀌기 전에, 소속 중이던 전시를 미리 조회해둔다.
+            List<ExhibitionArtistMap> exhibitionsToNotify = exhibitionMaps.findAllByArtistIdAndStatusIn(
+                    artistUuid, List.of(ExhibitionArtistStatus.PENDING, ExhibitionArtistStatus.JOINED));
+            String artistName = artists.findById(artistUuid).map(Artist::getNameKo).orElse("");
+
             artworkMaps.hideByArtistId(artistUuid, now);
             bts.hideByArtistId(artistUuid, now);
             profiles.hideByArtistId(artistUuid, now);
@@ -80,9 +93,26 @@ public class AccountWithdrawalService {
                     List.of(ExhibitionArtistStatus.PENDING, ExhibitionArtistStatus.JOINED),
                     ExhibitionArtistStatus.WITHDRAWN, now);
             artists.hideById(artistUuid, now);
+
+            for (ExhibitionArtistMap map : exhibitionsToNotify) {
+                Exhibition exhibition = map.getExhibition();
+                notificationService.send(
+                        exhibition.getAccount(),
+                        NotificationType.ARTIST_ACCOUNT_DELETED,
+                        Map.of("artistName", artistName, "exhibitionName", resolveExhibitionName(exhibition)),
+                        exhibition.getId()
+                );
+            }
         }
         tokens.deleteAllByAccountId(accountId);
         account.withdraw(now);
+    }
+
+    // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다
+    private static String resolveExhibitionName(Exhibition exhibition) {
+        return exhibition.getExhibitionDetail() != null
+                ? exhibition.getExhibitionDetail().getTitle()
+                : exhibition.getSlug();
     }
 
     private static UUID uuid(byte[] value) {
