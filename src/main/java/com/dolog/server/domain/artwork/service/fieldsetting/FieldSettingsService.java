@@ -61,6 +61,12 @@ public class FieldSettingsService {
         ExhibitionFieldSettings settings = fieldSettingsRepository.findByExhibitionId(exhibitionId)
                 .orElseGet(() -> fieldSettingsRepository.save(ExhibitionFieldSettings.defaultsFor(exhibition)));
 
+        // 비공개 알림 문구에 "어떤 항목이 새로 필수가 됐는지" 넣기 위해, 바뀌기 전 값을 먼저 기억해둔다.
+        boolean wasMainImgRequired = settings.isRequiredMainImg();
+        boolean wasSizeRequired = settings.isRequiredSize();
+        boolean wasMaterialsRequired = settings.isRequiredMaterials();
+        boolean wasLocationMapRequired = settings.isRequiredLocationMap();
+
         FieldSettingsRequest.Required required = request.required();
         FieldSettingsRequest.Hidden hidden = request.hidden();
         settings.update(
@@ -69,23 +75,42 @@ public class FieldSettingsService {
                 hidden.productionPeriod(), hidden.productionYear()
         );
 
+        String newlyRequiredFieldNames = newlyRequiredFieldNames(
+                wasMainImgRequired, wasSizeRequired, wasMaterialsRequired, wasLocationMapRequired, settings);
+
         List<Artwork> published = artworkRepository.findByExhibitionIdAndStatus(exhibitionId, ArtworkStatus.PUBLISHED);
         List<Artwork> drafted = artworkFieldRequirement.draftUnsatisfied(settings, published);
-        drafted.forEach(artwork -> notifyArtists(artwork, NotificationType.ARTWORK_UNPUBLISHED));
+        drafted.forEach(artwork -> notifyArtists(artwork, NotificationType.ARTWORK_UNPUBLISHED, newlyRequiredFieldNames));
 
         List<Artwork> autoDraftedCandidates = artworkRepository
                 .findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(exhibitionId, ArtworkStatus.DRAFT);
         List<Artwork> republished = artworkFieldRequirement.republishAutoDrafted(settings, autoDraftedCandidates);
-        republished.forEach(artwork -> notifyArtists(artwork, NotificationType.ARTWORK_REPUBLISHED));
+        republished.forEach(artwork -> notifyArtists(artwork, NotificationType.ARTWORK_REPUBLISHED, null));
     }
 
-    // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀)
-    private void notifyArtists(Artwork artwork, NotificationType type) {
+    // 새로 필수가 된 항목 이름을 콤마로 이어 붙인다. 하나도 없으면 빈 문자열.
+    private String newlyRequiredFieldNames(
+            boolean wasMainImgRequired, boolean wasSizeRequired,
+            boolean wasMaterialsRequired, boolean wasLocationMapRequired,
+            ExhibitionFieldSettings settings
+    ) {
+        List<String> names = new java.util.ArrayList<>();
+        if (!wasMainImgRequired && settings.isRequiredMainImg()) names.add("대표 이미지");
+        if (!wasSizeRequired && settings.isRequiredSize()) names.add("작품 사이즈");
+        if (!wasMaterialsRequired && settings.isRequiredMaterials()) names.add("재료 및 기법");
+        if (!wasLocationMapRequired && settings.isRequiredLocationMap()) names.add("위치 이미지");
+        return String.join(", ", names);
+    }
+
+    // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀). requiredFieldNames는 비공개 알림일 때만 쓴다.
+    private void notifyArtists(Artwork artwork, NotificationType type, String requiredFieldNames) {
         Exhibition exhibition = artwork.getExhibition();
-        Map<String, String> payload = Map.of(
-                "exhibitionName", resolveExhibitionName(exhibition),
-                "artworkTitle", artwork.getTitle()
-        );
+        Map<String, String> payload = new java.util.HashMap<>();
+        payload.put("exhibitionName", resolveExhibitionName(exhibition));
+        payload.put("artworkTitle", artwork.getTitle());
+        if (requiredFieldNames != null) {
+            payload.put("requiredFieldNames", requiredFieldNames);
+        }
 
         for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
             Artist artist = map.getArtist();

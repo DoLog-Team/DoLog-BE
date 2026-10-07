@@ -98,10 +98,16 @@ public class ArtworkUpdateProcessor {
         // 공개로 바꾸거나 공개 작품의 필수 항목을 지우면 공개/비공개 API 와 같은 400
         artworkFieldRequirement.requireIfPublished(artwork);
 
-        if (Boolean.TRUE.equals(request.getHidden()) && !artwork.isHidden()) {
+        boolean wasHidden = artwork.isHidden();
+
+        if (Boolean.TRUE.equals(request.getHidden()) && !wasHidden) {
             artwork.hide(LocalDateTime.now());
+            notifyArtists(artwork, NotificationType.ARTWORK_HIDDEN, null);
         } else if (Boolean.FALSE.equals(request.getHidden())) {
             artwork.unhide();
+            if (wasHidden) {
+                notifyArtists(artwork, NotificationType.ARTWORK_SHOWN, null);
+            }
         }
 
         artworkRepository.saveAndFlush(artwork);
@@ -134,14 +140,15 @@ public class ArtworkUpdateProcessor {
         }
     }
 
-    // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀)
+    // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀). zoneName은 그룹 배치 알림일 때만 쓴다.
     private void notifyArtists(Artwork artwork, NotificationType type, String zoneName) {
         Exhibition exhibition = artwork.getExhibition();
-        Map<String, String> payload = Map.of(
-                "exhibitionName", resolveExhibitionName(exhibition),
-                "artworkTitle", artwork.getTitle(),
-                "zoneName", zoneName
-        );
+        Map<String, String> payload = new java.util.HashMap<>();
+        payload.put("exhibitionName", resolveExhibitionName(exhibition));
+        payload.put("artworkTitle", artwork.getTitle());
+        if (zoneName != null) {
+            payload.put("zoneName", zoneName);
+        }
 
         for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
             Artist artist = map.getArtist();
