@@ -10,6 +10,5 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class ArtistProfileListResponse {
-    private int total;
-    private List<ArtistProfileResponse> artistProfiles;
+    private List<ArtistProfileListItemResponse> profiles;
 }

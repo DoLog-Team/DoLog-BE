@@ -5,15 +5,22 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistProfileService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistProfileResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.global.response.SuccessResponse;
+import com.dolog.server.global.security.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,34 +37,22 @@ public class ArtistProfileController {
 
     private final ArtistProfileService artistProfileService;
 
-    /**
-     * 작가 프로필 목록 조회 (전체 조회 및 전시회별 필터링)
-     * GET exhibitions/artists-profiles
-     * GET exhibitions/artists-profiles?exhibitionId={uuid}
-     * * GET exhibitions/artists-profiles?artistProfileId={uuid}
-     */
-    @Operation(summary = "전시 작가(프로필) 목록 조회")
+    @Operation(summary = "관리자용 전시 작가 프로필 목록 조회")
     @GetMapping
+    @PreAuthorize(
+            "hasAnyRole('DOLOG_ADMIN', 'EXHIBITION_ADMIN')"
+    )
     public SuccessResponse<ArtistProfileListResponse> getArtistProfileList(
-            @RequestParam(value = "exhibitionId", required = false) String exhibitionIdStr
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam UUID exhibitionId
     ) {
-        UUID exhibitionId = null;
+        ArtistProfileListResponse response =
+                artistProfileService.getArtistProfileList(
+                        user.getId(),
+                        exhibitionId
+                );
 
-        // "null" 문자열이 들어오거나 비어있는 경우를 방어
-        if (exhibitionIdStr != null && !exhibitionIdStr.isBlank() && !exhibitionIdStr.equals("null")) {
-            exhibitionId = UUID.fromString(exhibitionIdStr);
-        }
-
-        // 서비스 호출 (서비스는 UUID를 받도록 유지)
-        List<ArtistProfileResponse> responses = artistProfileService.getArtistProfileList(exhibitionId);
-
-        // 데이터 포장
-        ArtistProfileListResponse data = ArtistProfileListResponse.builder()
-                .total(responses.size())
-                .artistProfiles(responses)
-                .build();
-
-        return SuccessResponse.ok(data, "작가 프로필 목록 조회 성공");
+        return SuccessResponse.ok(response, "프로필 목록 조회 성공");
     }
 
     // 프로필 상세 조회
@@ -74,29 +69,66 @@ public class ArtistProfileController {
     // 프로필 생성
     @Operation(summary = "전시 작가 프로필 생성")
     @PostMapping(
-            consumes = "multipart/form-data"
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     @PreAuthorize("hasRole('DOLOG_ADMIN')")
-    public SuccessResponse<ArtistProfileResponse> createArtistProfile(
-            @ModelAttribute ArtistProfileCreateRequest request
+    public ResponseEntity<SuccessResponse<ArtistProfileCreateResponse>>
+    createArtistProfile(
+            @Valid
+            @RequestPart("request")
+            ArtistProfileCreateRequest request,
+
+            @RequestPart(
+                    value = "profileImg",
+                    required = false
+            )
+            MultipartFile profileImg
     ) throws IOException {
 
-        ArtistProfileResponse response = artistProfileService.createArtistProfile(
-                request.getExhibitionId(), request
-        );
-        return SuccessResponse.ok(response, "작가 프로필 등록 성공");
+        ArtistProfileCreateResponse response =
+                artistProfileService.createArtistProfile(
+                        request,
+                        profileImg
+                );
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(SuccessResponse.created(
+                        response,
+                        "프로필 등록 성공"
+                ));
     }
 
     // 프로필 수정
     @Operation(summary = "전시 작가 프로필 수정")
-    @PatchMapping(value = "/{profileId}", consumes = "multipart/form-data")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
-    public SuccessResponse<ArtistProfileResponse> updateArtistProfile(
+    @PatchMapping(
+            value = "/{profileId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @PreAuthorize(
+            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+    )
+    public SuccessResponse<ArtistProfileUpdateResponse> updateArtistProfile(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID profileId,
-            @ModelAttribute ArtistProfileCreateRequest request
+            @Valid
+            @RequestPart("request")
+            ArtistProfileUpdateRequest request,
+
+            @RequestPart(
+                    value = "profileImg",
+                    required = false
+            )
+            MultipartFile profileImg
     ) throws IOException {
-        ArtistProfileResponse response = artistProfileService.updateArtistProfile(profileId, request);
-        return SuccessResponse.ok(response, "작가 프로필 수정 성공");
+        ArtistProfileUpdateResponse response =
+                artistProfileService.updateArtistProfile(
+                        user.getId(),
+                        profileId,
+                        request,
+                        profileImg
+                );
+
+        return SuccessResponse.ok(response, "프로필 수정 성공");
     }
 
 
