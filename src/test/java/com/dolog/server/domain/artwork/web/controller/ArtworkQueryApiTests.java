@@ -343,6 +343,29 @@ class ArtworkQueryApiTests {
                 .andExpect(jsonPath("$.data.sameCategoryArtworks[*].id", contains(prevHidden.getId().toString())));
     }
 
+    // ---------------- 게시 전 전시 ----------------
+
+    @Test
+    @DisplayName("게시 전 전시의 작품은 전시 URL 목록(403), 상세(404), 두록 URL 상세(404), 전체 목록 어디에도 안 나온다")
+    void unpublishedExhibitionHidesArtworks() throws Exception {
+        exhibition = exhibition(false);
+        zone = zone(exhibition, "1구역", 1);
+        myProfile = join(me, exhibition, ExhibitionArtistStatus.JOINED);
+        String keyword = "게시전-" + UUID.randomUUID();
+        Artwork artwork = submitted(artworkOf(me, keyword), zone, ArtworkStatus.PUBLISHED);
+        endRequest();
+
+        mvc.perform(api(get("/api/exhibitions/{id}/artworks", exhibition.getId())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("EXHIBITION_403_1"));
+        mvc.perform(api(exhibitionDetail(artwork))).andExpect(status().isNotFound());
+        mvc.perform(api(dologDetail(artwork))).andExpect(status().isNotFound());
+        mvc.perform(api(get("/api/artworks").param("search", keyword)))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+        mvc.perform(api(get("/api/artworks").param("main", "true").param("search", keyword)))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
     // ---------------- 작품 전체 목록 (C-01) ----------------
 
     @Test
@@ -390,8 +413,13 @@ class ArtworkQueryApiTests {
     }
 
     private Exhibition exhibition() {
+        return exhibition(true);
+    }
+
+    private Exhibition exhibition(boolean published) {
         return exhibitions.saveAndFlush(Exhibition.builder().account(account(Role.EXHIBITION_ADMIN))
-                .univName("테스트 대학").deptName("테스트 학과").slug("query-" + UUID.randomUUID()).build());
+                .univName("테스트 대학").deptName("테스트 학과").slug("query-" + UUID.randomUUID())
+                .isPublic(published).build());
     }
 
     private ExhibitionZone zone(Exhibition exhibition, String name, int orderId) {
