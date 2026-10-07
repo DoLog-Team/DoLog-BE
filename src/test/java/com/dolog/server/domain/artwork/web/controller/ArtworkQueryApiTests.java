@@ -162,8 +162,8 @@ class ArtworkQueryApiTests {
     }
 
     @Test
-    @DisplayName("상세 응답에 V2 필드가 담기고, 조회할 때마다 조회수가 1씩 오른다")
-    void detailHasV2FieldsAndCountsViews() throws Exception {
+    @DisplayName("상세 응답에 V2 필드가 담기고, 상세 조회만으로는 조회수가 오르지 않는다")
+    void detailHasV2FieldsWithoutCountingViews() throws Exception {
         Artwork artwork = Artwork.builder().title("파도의 그릇").category("도자").description("설명")
                 .shortIntro("물결 그릇").width(new BigDecimal("32.0")).height(new BigDecimal("30.0"))
                 .depth(new BigDecimal("7.0")).productionStartYear(2026).productionEndYear(2026)
@@ -188,7 +188,7 @@ class ArtworkQueryApiTests {
                 .andExpect(jsonPath("$.data.purchaseChatUrl").value("https://chat"))
                 .andExpect(jsonPath("$.data.showPurchaseButton").value(true))
                 .andExpect(jsonPath("$.data.locationMap").value("https://s3/map.webp"))
-                .andExpect(jsonPath("$.data.viewCount").value(1))
+                .andExpect(jsonPath("$.data.viewCount").value(0))
                 .andExpect(jsonPath("$.data.likeCount").value(0))
                 .andExpect(jsonPath("$.data.liked").value(false))
                 .andExpect(jsonPath("$.data.participants[0].role").value("도예"))
@@ -198,22 +198,10 @@ class ArtworkQueryApiTests {
         endRequest();
 
         mvc.perform(api(dologDetail(artwork)))
-                .andExpect(jsonPath("$.data.viewCount").value(2));
+                .andExpect(jsonPath("$.data.viewCount").value(0));
         endRequest();
 
-        assertEquals(2L, artworks.findById(artwork.getId()).orElseThrow().getViewCount());
-    }
-
-    @Test
-    @DisplayName("없는 작품, 비공개 작품을 조회하면 조회수가 오르지 않는다")
-    void notFoundDoesNotCountView() throws Exception {
-        Artwork draft = submitted(artworkOf(me, "비공개"), zone, ArtworkStatus.DRAFT);
-        endRequest();
-
-        mvc.perform(api(dologDetail(draft))).andExpect(status().isNotFound());
-        endRequest();
-
-        assertEquals(0L, artworks.findById(draft.getId()).orElseThrow().getViewCount());
+        assertEquals(0L, artworks.findById(artwork.getId()).orElseThrow().getViewCount());
     }
 
     @Test
