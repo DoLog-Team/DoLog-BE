@@ -109,6 +109,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     ) {
 
         return artworkUpdateProcessor.updateFull(
+                exhibitionId,
                 artworkId,
                 request
         );
