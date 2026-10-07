@@ -66,6 +66,44 @@ class ArtistProfileRequestValidationTest {
         assertTrue(validator.validate(request).isEmpty());
     }
 
+    @Test
+    @DisplayName("SNS 추가 요청은 플랫폼 이름과 HTTP(S) URL이 필수다")
+    void validatesArtistSnsCreateRequest() {
+        ArtistSnsRequest request = new ArtistSnsRequest(
+                "",
+                "instagram.com/dolog"
+        );
+
+        assertFalse(validator.validate(request).isEmpty());
+
+        request = new ArtistSnsRequest(
+                "instagram",
+                "https://instagram.com/dolog"
+        );
+
+        assertTrue(validator.validate(request).isEmpty());
+    }
+
+    @Test
+    @DisplayName("SNS 수정 요청은 하나 이상의 유효한 필드를 요구한다")
+    void validatesArtistSnsUpdateRequest() {
+        ArtistSnsUpdateRequest request =
+                new ArtistSnsUpdateRequest(null, null);
+
+        assertFalse(validator.validate(request).isEmpty());
+
+        request = new ArtistSnsUpdateRequest(
+                null,
+                "https://behance.net/dolog"
+        );
+
+        assertTrue(validator.validate(request).isEmpty());
+
+        request = new ArtistSnsUpdateRequest(" ", null);
+
+        assertFalse(validator.validate(request).isEmpty());
+    }
+
     private ArtistProfileCreateRequest validCreateRequest() {
         ArtistProfileCreateRequest request =
                 new ArtistProfileCreateRequest();

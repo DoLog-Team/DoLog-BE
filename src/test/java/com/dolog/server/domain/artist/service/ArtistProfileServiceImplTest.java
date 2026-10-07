@@ -5,6 +5,7 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.entity.ArtistSns;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAccessDeniedException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
@@ -13,6 +14,8 @@ import com.dolog.server.domain.artist.repository.projection.ArtistProfileListIte
 import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -389,6 +392,284 @@ class ArtistProfileServiceImplTest {
 
         verify(profileRepository, never())
                 .findListItemsByExhibitionId(exhibition.getId());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 자신의 프로필에 SNS를 추가하고 snsId를 받는다")
+    void artistAdminAddsSnsToOwnProfile() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        UUID snsId = UUID.randomUUID();
+        ArtistSnsRequest request = new ArtistSnsRequest(
+                " instagram ",
+                " https://instagram.com/dolog "
+        );
+
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(artistSnsRepository.save(any(ArtistSns.class)))
+                .thenAnswer(invocation -> {
+                    ArtistSns sns = invocation.getArgument(0);
+                    return ArtistSns.builder()
+                            .id(snsId)
+                            .artistProfile(sns.getArtistProfile())
+                            .platformName(sns.getPlatformName())
+                            .url(sns.getUrl())
+                            .build();
+                });
+
+        var response = service.addArtistSns(
+                artistAccount.getId(),
+                profile.getId(),
+                request
+        );
+
+        ArgumentCaptor<ArtistSns> snsCaptor =
+                ArgumentCaptor.forClass(ArtistSns.class);
+        verify(artistSnsRepository).save(snsCaptor.capture());
+        assertEquals(snsId, response.snsId());
+        assertEquals("instagram", snsCaptor.getValue().getPlatformName());
+        assertEquals(
+                "https://instagram.com/dolog",
+                snsCaptor.getValue().getUrl()
+        );
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 다른 작가 프로필에 SNS를 추가할 수 없다")
+    void artistAdminCannotAddSnsToOtherProfile() {
+        Account actor = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.addArtistSns(
+                        actor.getId(),
+                        profile.getId(),
+                        new ArtistSnsRequest(
+                                "instagram",
+                                "https://instagram.com/dolog"
+                        )
+                )
+        );
+
+        verify(artistSnsRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("공개 프로필의 SNS 목록은 비로그인 사용자도 조회할 수 있다")
+    void anonymousGetsPublicProfileSnsList() {
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        UUID snsId = UUID.randomUUID();
+        ArtistSns sns = ArtistSns.builder()
+                .id(snsId)
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(artistSnsRepository.findByArtistProfileId(profile.getId()))
+                .thenReturn(List.of(sns));
+
+        var response = service.getArtistSnsList(
+                null,
+                profile.getId()
+        );
+
+        assertEquals(1, response.snsList().size());
+        assertEquals(snsId, response.snsList().get(0).getSnsId());
+        assertEquals(
+                "instagram",
+                response.snsList().get(0).getPlatformName()
+        );
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자는 비공개 프로필의 SNS 목록을 조회할 수 없다")
+    void anonymousCannotGetPrivateProfileSnsList() {
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        profile.togglePublicStatus(false);
+
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.getArtistSnsList(null, profile.getId())
+        );
+
+        verify(artistSnsRepository, never())
+                .findByArtistProfileId(profile.getId());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 자신의 비공개 프로필 SNS 목록을 조회할 수 있다")
+    void artistAdminGetsOwnPrivateProfileSnsList() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        profile.togglePublicStatus(false);
+
+        when(profileRepository.findById(profile.getId()))
+                .thenReturn(Optional.of(profile));
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(artistSnsRepository.findByArtistProfileId(profile.getId()))
+                .thenReturn(List.of());
+
+        var response = service.getArtistSnsList(
+                artistAccount.getId(),
+                profile.getId()
+        );
+
+        assertTrue(response.snsList().isEmpty());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 자신의 SNS URL만 수정할 수 있다")
+    void artistAdminUpdatesOwnSnsPartially() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/old")
+                .build();
+
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        var response = service.updateArtistSns(
+                artistAccount.getId(),
+                sns.getId(),
+                new ArtistSnsUpdateRequest(
+                        null,
+                        " https://instagram.com/new "
+                )
+        );
+
+        assertEquals(sns.getId(), response.snsId());
+        assertEquals("instagram", sns.getPlatformName());
+        assertEquals("https://instagram.com/new", sns.getUrl());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 다른 작가의 SNS를 수정할 수 없다")
+    void artistAdminCannotUpdateOtherArtistSns() {
+        Account actor = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.updateArtistSns(
+                        actor.getId(),
+                        sns.getId(),
+                        new ArtistSnsUpdateRequest("behance", null)
+                )
+        );
+
+        assertEquals("instagram", sns.getPlatformName());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 자신의 SNS를 삭제할 수 있다")
+    void artistAdminDeletesOwnSns() {
+        Account artistAccount = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(artistAccount),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(accountRepository.findById(artistAccount.getId()))
+                .thenReturn(Optional.of(artistAccount));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        service.deleteArtistSns(artistAccount.getId(), sns.getId());
+
+        verify(artistSnsRepository).delete(sns);
+        verify(artistSnsRepository, never())
+                .findByArtistProfileId(profile.getId());
+    }
+
+    @Test
+    @DisplayName("작가 어드민은 다른 작가의 SNS를 삭제할 수 없다")
+    void artistAdminCannotDeleteOtherArtistSns() {
+        Account actor = account(Role.ARTIST_ADMIN);
+        ArtistProfile profile = profile(
+                artist(account(Role.ARTIST_ADMIN)),
+                exhibition(account(Role.EXHIBITION_ADMIN))
+        );
+        ArtistSns sns = ArtistSns.builder()
+                .id(UUID.randomUUID())
+                .artistProfile(profile)
+                .platformName("instagram")
+                .url("https://instagram.com/dolog")
+                .build();
+
+        when(accountRepository.findById(actor.getId()))
+                .thenReturn(Optional.of(actor));
+        when(artistSnsRepository.findById(sns.getId()))
+                .thenReturn(Optional.of(sns));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.deleteArtistSns(
+                        actor.getId(),
+                        sns.getId()
+                )
+        );
+
+        verify(artistSnsRepository, never()).delete(any());
     }
 
     private void prepareUpdate(

@@ -12,10 +12,14 @@ import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
@@ -204,6 +208,23 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         throw new ArtistProfileAccessDeniedException();
     }
 
+    private void requireCanViewProfile(
+            UUID accountId,
+            ArtistProfile profile
+    ) {
+        if (profile.isPublic()) {
+            return;
+        }
+
+        if (accountId == null) {
+            throw new ArtistProfileAccessDeniedException();
+        }
+
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        requireCanUpdateProfile(actor, profile);
+    }
+
     // 관리자용 프로필 목록 조회
     @Override
     @Transactional(readOnly = true)
@@ -336,55 +357,83 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // SNS 추가
     @Transactional
     @Override
-    public ArtistSnsResponse addArtistSns(UUID profileId, ArtistSnsRequest request) {
+    public ArtistSnsCreateResponse addArtistSns(
+            UUID accountId,
+            UUID profileId,
+            ArtistSnsRequest request
+    ) {
+
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
 
         // 1. 프로필 존재 확인
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
+        requireCanUpdateProfile(actor, profile);
 
         // 2. SNS 엔티티 생성 및 저장
         ArtistSns sns = ArtistSns.builder()
                 .artistProfile(profile)
-                .platformName(request.getPlatformName())
-                .url(request.getUrl())
+                .platformName(request.getPlatformName().trim())
+                .url(request.getUrl().trim())
                 .build();
 
         ArtistSns savedSns = artistSnsRepository.save(sns);
 
         // 3. 응답 반환
-        return ArtistSnsResponse.from(savedSns);
+        return new ArtistSnsCreateResponse(savedSns.getId());
     }
 
 
     // SNS 삭제
     @Transactional
     @Override
-    public List<ArtistSnsResponse> deleteArtistSns(UUID snsId) {
-        // 1. 삭제할 SNS 조회 (프로필 ID를 알아내기 위해 먼저 조회)
+    public void deleteArtistSns(UUID accountId, UUID snsId) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
         ArtistSns sns = artistSnsRepository.findById(snsId)
                 .orElseThrow(ArtistSnsNotFoundException::new);
 
-        UUID profileId = sns.getArtistProfile().getId();
-
-        // 2. 삭제 수행
+        requireCanUpdateProfile(actor, sns.getArtistProfile());
         artistSnsRepository.delete(sns);
-
-        // 3. 삭제 후 해당 프로필의 "남은 SNS 목록"을 다시 조회해서 반환
-        return artistSnsRepository.findByArtistProfileId(profileId)
-                .stream()
-                .map(ArtistSnsResponse::from)
-                .toList();
     }
 
     // SNS 목록 조회
     @Transactional(readOnly = true)
     @Override
-    public List<ArtistSnsResponse> getArtistSnsList(UUID profileId) {
+    public ArtistSnsListResponse getArtistSnsList(
+            UUID accountId,
+            UUID profileId
+    ) {
+        ArtistProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(ArtistProfileNotFoundException::new);
+        requireCanViewProfile(accountId, profile);
 
-        // DB에서 해당 프로필 ID를 외래키로 가진 SNS들을 다 긁어옵니다.
-        return artistSnsRepository.findByArtistProfileId(profileId)
+        List<ArtistSnsResponse> snsList =
+                artistSnsRepository.findByArtistProfileId(profileId)
                 .stream()
                 .map(ArtistSnsResponse::from)
                 .toList();
+
+        return new ArtistSnsListResponse(snsList);
+    }
+
+    // SNS 수정
+    @Transactional
+    @Override
+    public ArtistSnsUpdateResponse updateArtistSns(
+            UUID accountId,
+            UUID snsId,
+            ArtistSnsUpdateRequest request
+    ) {
+        Account actor = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        ArtistSns sns = artistSnsRepository.findById(snsId)
+                .orElseThrow(ArtistSnsNotFoundException::new);
+
+        requireCanUpdateProfile(actor, sns.getArtistProfile());
+        sns.update(request.getPlatformName(), request.getUrl());
+
+        return new ArtistSnsUpdateResponse(sns.getId());
     }
 }

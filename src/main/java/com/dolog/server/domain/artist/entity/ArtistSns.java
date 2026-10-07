@@ -28,4 +28,13 @@ public class ArtistSns extends BaseEntity {
 
     @Column(nullable = false)
     private String url;
+
+    public void update(String platformName, String url) {
+        if (platformName != null) {
+            this.platformName = platformName.trim();
+        }
+        if (url != null) {
+            this.url = url.trim();
+        }
+    }
 }
