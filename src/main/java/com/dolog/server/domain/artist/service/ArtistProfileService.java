@@ -37,7 +37,11 @@ public interface ArtistProfileService {
             UUID exhibitionId
     );
 
-    ArtistProfileDetailResponse getArtistProfileDetail(UUID profileId);
+    ArtistProfileDetailResponse getArtistProfileDetail(
+            UUID accountId,
+            UUID profileId,
+            String visitorId
+    );
 
 //    SNS
     ArtistSnsCreateResponse addArtistSns(

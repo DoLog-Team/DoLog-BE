@@ -1,8 +1,5 @@
 package com.dolog.server.domain.artist.web.dto.response;
 
-import com.dolog.server.domain.artist.entity.ArtistProfile;
-import com.dolog.server.domain.bts.entity.Bts;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -15,30 +12,28 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ArtistProfileDetailResponse {
     private UUID profileId;
     private UUID artistId;
+    private UUID exhibitionId;
     private String nameKo;
     private String nameEn;
-    private String profileImage;
-    private boolean isPublic;
     private String bio;
-    private ContactInfo contact;
-    private List<BtsSummary> behindTheScenes;
+    private String profileImg;
+    private String email;
+    private List<SnsInfo> snsList;
+    private String purchaseContactUrl;
     private List<ArtworkSummary> artworks;
     private NeighborArtist prevArtist;
     private NeighborArtist nextArtist;
+    private int likeCount;
+    private boolean liked;
+    private long viewCount;
 
     @Getter
     @Builder
-    public static class ContactInfo {
-        private String email;
-        private List<SnsInfo> snsList;
-    }
-
-    @Getter
-    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class SnsInfo {
         private UUID snsId;
         private String platformName;
@@ -47,24 +42,21 @@ public class ArtistProfileDetailResponse {
 
     @Getter
     @Builder
-    public static class BtsSummary {
-        private UUID btsId;
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ArtworkSummary {
+        private UUID artworkId;
         private String title;
         private String mainImg;
     }
 
     @Getter
     @Builder
-    public static class ArtworkSummary {
-        private UUID artworkId;
-        private String title;
-        private String image;
-    }
-
-    @Getter
-    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class NeighborArtist {
-        private UUID id;
-        private String name;
+        private UUID profileId;
+        private String nameKo;
+        private String profileImg;
     }
 }

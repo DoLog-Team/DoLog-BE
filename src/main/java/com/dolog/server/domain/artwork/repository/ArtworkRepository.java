@@ -43,6 +43,24 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             @Param("artistIds") List<UUID> artistIds
     );
 
+    @Query("""
+            SELECT DISTINCT a
+            FROM Artwork a
+            JOIN a.artworkArtistMaps m
+            WHERE m.artist.id = :artistId
+              AND a.exhibition.id = :exhibitionId
+              AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED
+              AND a.hiddenAt IS NULL
+            ORDER BY
+              CASE WHEN a.orderIndex IS NULL THEN 1 ELSE 0 END,
+              a.orderIndex ASC,
+              a.id ASC
+            """)
+    List<Artwork> findVisibleInExhibitionByArtistId(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("artistId") UUID artistId
+    );
+
     // ==============================================================================
     // 메인 화면 랜덤 페이징 쿼리
     // ==============================================================================

@@ -29,14 +29,16 @@ import com.dolog.server.domain.artist.exception.artistProfileError.ArtistSnsNotF
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
-import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
-import com.dolog.server.domain.bts.repository.BtsRepository;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.entity.enums.SortType;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
+import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.util.FileService;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
@@ -44,9 +46,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import org.springframework.data.domain.PageRequest;
-
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,9 +62,10 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final ExhibitionRepository exhibitionRepository;
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+    private final ArtworkRepository artworkRepository;
+    private final ArtistProfileLikeRepository artistProfileLikeRepository;
     private final FileService fileService;
     private final ArtistSnsRepository artistSnsRepository;
-    private final BtsRepository btsRepository;
     private final ArtistProfileImageValidator profileImageValidator;
 
     // 프로필 생성
@@ -188,30 +192,58 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
             Account actor,
             ArtistProfile profile
     ) {
-        if (actor.getRole() == Role.DOLOG_ADMIN) {
-            return;
-        }
-
-        if (actor.getRole() == Role.EXHIBITION_ADMIN
-                && profile.getExhibition().getAccount().getId()
-                .equals(actor.getId())) {
-            return;
-        }
-
-        if (actor.getRole() == Role.ARTIST_ADMIN
-                && profile.getArtist().getAccount() != null
-                && profile.getArtist().getAccount().getId()
-                .equals(actor.getId())) {
+        if (canUpdateProfile(actor, profile)) {
             return;
         }
 
         throw new ArtistProfileAccessDeniedException();
     }
 
+    private boolean canUpdateProfile(
+            Account actor,
+            ArtistProfile profile
+    ) {
+        if (actor.getRole() == Role.DOLOG_ADMIN) {
+            return true;
+        }
+
+        if (actor.getRole() == Role.EXHIBITION_ADMIN
+                && profile.getExhibition().getAccount().getId()
+                .equals(actor.getId())) {
+            return true;
+        }
+
+        return actor.getRole() == Role.ARTIST_ADMIN
+                && profile.getArtist().getAccount() != null
+                && profile.getArtist().getAccount().getId()
+                .equals(actor.getId());
+    }
+
     private void requireCanViewProfile(
             UUID accountId,
             ArtistProfile profile
     ) {
+        boolean joined = exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        profile.getExhibition().getId(),
+                        profile.getArtist().getId(),
+                        ExhibitionArtistStatus.JOINED
+                );
+
+        // 공개 전시에서 빠진 작가의 프로필 존재 여부는 일반 요청에 노출하지 않는다.
+        if (!joined) {
+            if (accountId == null) {
+                throw new ArtistProfileNotFoundException();
+            }
+
+            Account actor = accountRepository.findById(accountId)
+                    .orElseThrow(JwtInvalidException::new);
+            if (!canUpdateProfile(actor, profile)) {
+                throw new ArtistProfileNotFoundException();
+            }
+            return;
+        }
+
         if (profile.isPublic()) {
             return;
         }
@@ -270,14 +302,24 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
     // 프로필 상세 조회
     @Override
-    @Transactional(readOnly = true)
-    public ArtistProfileDetailResponse getArtistProfileDetail(UUID profileId) {
-        // 1. 프로필 조회
+    @Transactional
+    public ArtistProfileDetailResponse getArtistProfileDetail(
+            UUID accountId,
+            UUID profileId,
+            String visitorId
+    ) {
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
+        requireCanViewProfile(accountId, profile);
 
-        // 2. SNS 리스트 변환
-        List<ArtistProfileDetailResponse.SnsInfo> snsList = profile.getSnsList().stream()
+        int updatedRows = profileRepository.incrementViewCount(profileId);
+        if (updatedRows != 1) {
+            throw new ArtistProfileNotFoundException();
+        }
+        long viewCount = profileRepository.findViewCountById(profileId);
+
+        List<ArtistProfileDetailResponse.SnsInfo> snsList =
+                artistSnsRepository.findByArtistProfileId(profileId).stream()
                 .map(sns -> ArtistProfileDetailResponse.SnsInfo.builder()
                         .snsId(sns.getId())
                         .platformName(sns.getPlatformName())
@@ -285,70 +327,120 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .toList();
 
-        // 3. BTS 리스트 변환
-        List<ArtistProfileDetailResponse.BtsSummary> btsResponses = btsRepository
-                .findAllByArtistProfileIdAndExhibitionId(profile.getId(), profile.getExhibition().getId())
-                .stream()
-                .map(bts -> ArtistProfileDetailResponse.BtsSummary.builder()
-                        .btsId(bts.getId())
-                        .title(bts.getTitle())
-                        .mainImg(bts.getMainImg())
-                        .build())
-                .toList();
-
-        // 4. 작품 리스트 변환
+        UUID artistId = profile.getArtist().getId();
         UUID exhibitionId = profile.getExhibition().getId();
-
-        List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses = profile.getArtworkArtistMaps().stream()
-                .map(ArtworkArtistMap::getArtwork)
-                .filter(artwork -> artwork.getExhibition() != null
-                        && exhibitionId.equals(artwork.getExhibition().getId()))
+        List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses =
+                artworkRepository.findVisibleInExhibitionByArtistId(
+                                exhibitionId,
+                                artistId
+                        )
+                .stream()
                 .map(artwork -> ArtistProfileDetailResponse.ArtworkSummary.builder()
                         .artworkId(artwork.getId())
                         .title(artwork.getTitle())
-                        .image(artwork.getMainImg())
+                        .mainImg(artwork.getMainImg())
                         .build())
                 .toList();
 
-        // 5. prev / next 계산 (DB에서 직접 조회)
-        String currentNameKo = profile.getNameKo();
+        ArtistNeighbors neighbors = findArtistNeighbors(profile);
+        int likeCount = Math.toIntExact(
+                artistProfileLikeRepository.countByArtistProfileId(profileId)
+        );
+        boolean liked = visitorId != null
+                && artistProfileLikeRepository
+                .existsByArtistProfileIdAndVisitorId(
+                        profileId,
+                        visitorId
+                );
 
-        List<ArtistProfile> prevList = profileRepository.findPrevProfile(exhibitionId, currentNameKo, PageRequest.of(0, 1));
-        List<ArtistProfile> nextList = profileRepository.findNextProfile(exhibitionId, currentNameKo, PageRequest.of(0, 1));
-
-        ArtistProfile prev = prevList.isEmpty() ? null : prevList.get(0);
-        ArtistProfile next = nextList.isEmpty() ? null : nextList.get(0);
-
-
-        // 6. 최종 DTO 조립
         return ArtistProfileDetailResponse.builder()
                 .profileId(profile.getId())
-                .artistId(profile.getArtist().getId())
+                .artistId(artistId)
+                .exhibitionId(exhibitionId)
                 .nameKo(profile.getNameKo())
                 .nameEn(profile.getNameEn())
-                .profileImage(profile.getProfileImg())
-                .isPublic(profile.isPublic())
                 .bio(profile.getBio())
-                .contact(ArtistProfileDetailResponse.ContactInfo.builder()
-                        .email(profile.getEmail())
-                        .snsList(snsList)
-                        .build())
-                .behindTheScenes(btsResponses)
+                .profileImg(profile.getProfileImg())
+                .email(profile.getEmail())
+                .snsList(snsList)
+                .purchaseContactUrl(profile.getPurchaseContactUrl())
                 .artworks(artworkResponses)
-                .prevArtist(prev != null
-                        ? ArtistProfileDetailResponse.NeighborArtist.builder()
-                        .id(prev.getId())
-                        .name(prev.getNameKo())
-                        .build()
-                        : null)
-
-                .nextArtist(next != null
-                        ? ArtistProfileDetailResponse.NeighborArtist.builder()
-                        .id(next.getId())
-                        .name(next.getNameKo())
-                        .build()
-                        : null)
+                .prevArtist(neighbors.previous())
+                .nextArtist(neighbors.next())
+                .likeCount(likeCount)
+                .liked(liked)
+                .viewCount(viewCount)
                 .build();
+    }
+
+    private ArtistNeighbors findArtistNeighbors(ArtistProfile profile) {
+        List<ExhibitionArtistItemResponse> artists = new ArrayList<>(
+                exhibitionArtistMapRepository.findArtists(
+                        profile.getExhibition().getId()
+                )
+        );
+
+        SortType sortType = profile.getExhibition().getExhibitionDetail()
+                != null
+                ? profile.getExhibition().getExhibitionDetail().getSortType()
+                : SortType.ABC;
+
+        if (sortType == SortType.RANDOM) {
+            Collections.shuffle(artists);
+        } else {
+            artists.sort(
+                    Comparator.comparing(
+                                    ExhibitionArtistItemResponse::getNameKo,
+                                    Comparator.nullsLast(
+                                            Comparator.naturalOrder()
+                                    )
+                            )
+                            .thenComparing(
+                                    ExhibitionArtistItemResponse::getProfileId,
+                                    Comparator.nullsLast(
+                                            Comparator.naturalOrder()
+                                    )
+                            )
+            );
+        }
+
+        int currentIndex = -1;
+        for (int index = 0; index < artists.size(); index++) {
+            if (profile.getId().equals(artists.get(index).getProfileId())) {
+                currentIndex = index;
+                break;
+            }
+        }
+
+        if (currentIndex < 0) {
+            return new ArtistNeighbors(null, null);
+        }
+
+        ArtistProfileDetailResponse.NeighborArtist previous =
+                currentIndex > 0
+                        ? toNeighbor(artists.get(currentIndex - 1))
+                        : null;
+        ArtistProfileDetailResponse.NeighborArtist next =
+                currentIndex < artists.size() - 1
+                        ? toNeighbor(artists.get(currentIndex + 1))
+                        : null;
+        return new ArtistNeighbors(previous, next);
+    }
+
+    private ArtistProfileDetailResponse.NeighborArtist toNeighbor(
+            ExhibitionArtistItemResponse artist
+    ) {
+        return ArtistProfileDetailResponse.NeighborArtist.builder()
+                .profileId(artist.getProfileId())
+                .nameKo(artist.getNameKo())
+                .profileImg(artist.getProfileImg())
+                .build();
+    }
+
+    private record ArtistNeighbors(
+            ArtistProfileDetailResponse.NeighborArtist previous,
+            ArtistProfileDetailResponse.NeighborArtist next
+    ) {
     }
 
 
