@@ -19,19 +19,19 @@ public class SubscriptionCreateResponse {
     private UUID planId;
     private String planName;
     private BillingCycle billingCycle;
-    private BigDecimal price;
+    private BigDecimal paidAmount;
     private Integer months;
     private SubscriptionStatus status;
     private LocalDateTime createdAt;
 
-    public static SubscriptionCreateResponse of(Subscription subscription, BigDecimal price) {
+    public static SubscriptionCreateResponse of(Subscription subscription) {
         return SubscriptionCreateResponse.builder()
                 .subscriptionId(subscription.getId())
                 .exhibitionId(subscription.getExhibition().getId())
                 .planId(subscription.getPlan().getId())
                 .planName(subscription.getPlan().getName())
                 .billingCycle(subscription.getBillingCycle())
-                .price(price)
+                .paidAmount(subscription.getPaidAmount())
                 .months(subscription.getMonths())
                 .status(subscription.getStatus())
                 .createdAt(subscription.getCreatedAt())

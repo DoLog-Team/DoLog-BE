@@ -92,7 +92,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         Subscription saved = subscriptionRepository.save(subscription);
 
-        return SubscriptionCreateResponse.of(saved, planPrice.getPrice());
+        return SubscriptionCreateResponse.of(saved);
     }
 
     @Override
@@ -115,7 +115,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         UUID previousPlanId = previousPlan.getId();
         String previousPlanName = previousPlan.getName();
 
-        Plan targetPlan = planRepository.findById(request.getTargetPlanId())
+        Plan targetPlan = planRepository.findById(request.getPlanId())
                 .orElseThrow(() -> new PlanException(PlanErrorCode.PLAN_NOT_FOUND));
 
         requireActivePlan(targetPlan);
