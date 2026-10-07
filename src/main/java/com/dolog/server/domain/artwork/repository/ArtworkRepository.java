@@ -180,4 +180,14 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
 
     List<Artwork> findByExhibitionIdAndStatus(UUID exhibitionId, ArtworkStatus status);
+
+    @Query("""
+            SELECT DISTINCT a
+            FROM Artwork a
+            JOIN a.artworkArtistMaps m
+            WHERE m.artist.id = :artistId
+              AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED
+            ORDER BY a.createdAt DESC, a.id DESC
+            """)
+    List<Artwork> findPublishedByArtistId(@Param("artistId") UUID artistId);
 }

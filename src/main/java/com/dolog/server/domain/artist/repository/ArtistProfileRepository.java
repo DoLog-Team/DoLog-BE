@@ -44,6 +44,32 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
     Optional<ArtistProfile> findByArtistAndExhibition(Artist artist, Exhibition exhibition);
 
     @Query("""
+        SELECT p
+        FROM ArtistProfile p
+        JOIN ExhibitionArtistMap m
+          ON m.artist = p.artist
+         AND m.exhibition = p.exhibition
+        WHERE p.artist.id = :artistId
+          AND p.isPublic = true
+          AND p.exhibition.isPublic = true
+          AND m.status =
+              com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+        ORDER BY p.createdAt DESC, p.id DESC
+        """)
+    List<ArtistProfile> findLatestPublicJoinedProfile(
+            @Param("artistId") UUID artistId,
+            Pageable pageable
+    );
+
+    @Query(value = """
+            SELECT COALESCE(SUM(p.view_count), 0)
+            FROM artist_profiles p
+            WHERE p.artist_id = :artistId
+              AND p.deleted_at IS NULL
+            """, nativeQuery = true)
+    long sumViewCountByArtistId(@Param("artistId") UUID artistId);
+
+    @Query("""
             SELECT p.artist.id
             FROM ArtistProfile p
             WHERE p.exhibition.id = :exhibitionId

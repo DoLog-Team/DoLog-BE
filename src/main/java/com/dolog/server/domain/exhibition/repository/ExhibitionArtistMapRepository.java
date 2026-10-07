@@ -64,6 +64,26 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             @Param("artistIds") Collection<UUID> artistIds
     );
 
+    @Query("""
+            SELECT DISTINCT m
+            FROM ExhibitionArtistMap m
+            JOIN FETCH m.exhibition e
+            JOIN FETCH e.exhibitionDetail d
+            LEFT JOIN FETCH e.exhibitionMap em
+            JOIN ArtistProfile p
+              ON p.artist = m.artist
+             AND p.exhibition = e
+            WHERE m.artist.id = :artistId
+              AND m.status =
+                  com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
+              AND e.isPublic = true
+              AND p.isPublic = true
+            ORDER BY d.startDate DESC, e.id DESC
+            """)
+    List<ExhibitionArtistMap> findPublicJoinedExhibitionsByArtistId(
+            @Param("artistId") UUID artistId
+    );
+
     @EntityGraph(attributePaths = {"artist", "artist.account"})
     @Query(
             value = """
