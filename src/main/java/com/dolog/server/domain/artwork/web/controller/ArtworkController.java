@@ -226,7 +226,9 @@ public class ArtworkController {
     }
 
     // 11. 작품 전체 정보 수정 (PUT)
-    @Operation(summary = "작품 전체 정보 수정")
+    @Operation(summary = "작품 전체 정보 수정", description = "두록 어드민 전용. path 의 전시에 출품된 작품만 다룹니다. "
+            + "공동 작가는 그 전시의 프로필(artistProfileIds)로 맞추고, images 를 보내면 그 목록으로 이미지를 맞춥니다. "
+            + "선택 값은 안 보내면 기존 값을 유지합니다.")
     @PutMapping(value = "/exhibitions/{exhibitionId}/artworks/{artworkId}", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtworkUpdateFullResponse> updateArtworkFull(

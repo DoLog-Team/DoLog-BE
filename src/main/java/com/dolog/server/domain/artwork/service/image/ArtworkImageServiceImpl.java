@@ -13,12 +13,10 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
-import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -34,7 +32,6 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
     private final ArtworkImgRepository artworkImgRepository;
     private final ArtworkValidator artworkValidator;
     private final ArtworkFileHandler artworkFileHandler;
-    private final FileService fileService; // S3 업로드 로직이 담긴 서비스
 
     // 작가 본인 작품(두록 어드민은 전체)에만 이미지를 붙인다. 순서를 안 보내면 기존 이미지 뒤에 이어 붙인다.
     @Override
@@ -48,11 +45,7 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
             throw new ArtworkException(ArtworkErrorCode.IMAGE_FILE_REQUIRED);
         }
 
-        int nextOrder = artwork.getArtworkImg().stream()
-                .map(ArtworkImg::getOrderIndex)
-                .filter(Objects::nonNull)
-                .max(Integer::compare)
-                .orElse(0) + 1;
+        int nextOrder = nextOrderOf(artwork);
 
         List<ArtworkImg> imgs = new ArrayList<>();
         for (ArtworkImgCreateRequest req : requests) {
@@ -109,74 +102,61 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
                         : ArtworkErrorCode.ARTWORK_IMAGE_NOT_FOUND));
     }
 
+    // 통합 수정용: 요청 목록으로 이미지를 맞춘다. 빠진 기존 이미지와 교체된 파일은 커밋된 뒤에 S3 에서 지운다.
+    // 기존 이미지는 id 로 유지하고, 새 이미지는 파일로만 받는다 (명세: 유지는 URL, 추가는 imageFile). 순서가 없으면 끝에 붙인다.
     @Override
-    @Transactional
     public void updateArtworkImages(Artwork artwork, List<ArtworkUpdateFullRequest.ImageUpdateDto> imageDtos) {
-        // 1. 검증: 이 작품에 속한 이미지가 맞는지 체크
-        List<UUID> existingImgIds = artwork.getArtworkImg().stream()
-                .map(ArtworkImg::getId)
-                .toList();
 
-        imageDtos.stream()
+        Set<UUID> existingIds = artwork.getArtworkImg().stream().map(ArtworkImg::getId).collect(Collectors.toSet());
+        Set<UUID> requestedIds = imageDtos.stream()
                 .map(ArtworkUpdateFullRequest.ImageUpdateDto::getId)
-                .filter(Objects::nonNull)
-                .forEach(id -> {
-                    if (!existingImgIds.contains(id)) {
-                        throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
-                    }
-                });
-
-        // 2. 삭제: 요청 목록에 없는 기존 이미지 제거
-        Set<String> requestIds = imageDtos.stream()
-                .map(img -> img.getId() != null ? img.getId().toString() : null)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
+        if (!existingIds.containsAll(requestedIds)) {
+            throw new ArtworkException(ArtworkErrorCode.INVALID_ARTWORK_IMAGE);
+        }
+        if (imageDtos.stream().anyMatch(dto -> dto.getId() == null
+                && (dto.getImageFile() == null || dto.getImageFile().isEmpty()))) {
+            throw new ArtworkException(ArtworkErrorCode.IMAGE_FILE_REQUIRED);
+        }
+
         artwork.getArtworkImg().removeIf(img -> {
-            if (!requestIds.contains(img.getId().toString())) {
-                fileService.deleteFile(img.getImageUrl()); // 💡 S3에서도 삭제 호출
-                return true;
+            if (requestedIds.contains(img.getId())) {
+                return false;
             }
-            return false;
+            artworkFileHandler.deleteAfterCommit(img.getImageUrl());
+            return true;
         });
 
-        // 3. 수정 및 추가
-        imageDtos.forEach(imgDto -> {
-            String finalUrl; // 람다 내부에서 사용할 '유사 final' 변수
-
-            try {
-                if (imgDto.getImageFile() != null && !imgDto.getImageFile().isEmpty()) {
-                    // ✅ 해결 1: 인수를 2개로 맞춤 ("artworks/detail" 추가)
-                    // ✅ 해결 2: try-catch로 IOException을 처리함
-                    finalUrl = fileService.uploadFile(imgDto.getImageFile(), "artworks/detail");
-                } else {
-                    finalUrl = imgDto.getImageUrl();
-                }
-            } catch (IOException e) {
-                // 💡 람다 내부에서는 체크드 예외를 밖으로 던질 수 없으므로 언체크드 예외로 감싸서 던집니다.
-                throw new ArtworkException(ArtworkErrorCode.FILE_UPLOAD_ERROR);
+        for (ArtworkUpdateFullRequest.ImageUpdateDto dto : imageDtos.stream().filter(dto -> dto.getId() != null).toList()) {
+            ArtworkImg img = artwork.getArtworkImg().stream()
+                    .filter(existing -> existing.getId().equals(dto.getId()))
+                    .findFirst()
+                    .orElseThrow();
+            String uploadedUrl = artworkFileHandler.uploadDetailImage(dto.getImageFile());
+            if (uploadedUrl != null) {
+                artworkFileHandler.deleteAfterCommit(img.getImageUrl());
             }
+            img.update(uploadedUrl, TextUtils.normalizeNewlines(dto.getDescription()), dto.getOrderIndex());
+        }
 
-            if (imgDto.getId() != null) {
-                artwork.getArtworkImg().stream()
-                        .filter(img -> img.getId().equals(imgDto.getId()))
-                        .findFirst()
-                        .ifPresent(img -> {// 💡 만약 파일이 새로 들어왔다면, 기존 S3 파일 삭제 시도
-                            if (imgDto.getImageFile() != null && !imgDto.getImageFile().isEmpty()) {
-                                fileService.deleteFile(img.getImageUrl());
-                            }
-                            img.update(finalUrl, TextUtils.normalizeNewlines(imgDto.getDescription()), imgDto.getOrderIndex());
-                        });
-            } else {
-                if (finalUrl != null) {
-                    artwork.getArtworkImg().add(ArtworkImg.builder()
-                            .artwork(artwork)
-                            .imageUrl(finalUrl)
-                            .description(imgDto.getDescription())
-                            .orderIndex(imgDto.getOrderIndex())
-                            .build());
-                }
-            }
-        });
+        int nextOrder = nextOrderOf(artwork);
+        for (ArtworkUpdateFullRequest.ImageUpdateDto dto : imageDtos.stream().filter(dto -> dto.getId() == null).toList()) {
+            artwork.getArtworkImg().add(ArtworkImg.builder()
+                    .artwork(artwork)
+                    .imageUrl(artworkFileHandler.uploadDetailImage(dto.getImageFile()))
+                    .description(TextUtils.normalizeNewlines(dto.getDescription()))
+                    .orderIndex(dto.getOrderIndex() != null ? dto.getOrderIndex() : nextOrder++)
+                    .build());
+        }
+    }
+
+    private int nextOrderOf(Artwork artwork) {
+        return artwork.getArtworkImg().stream()
+                .map(ArtworkImg::getOrderIndex)
+                .filter(Objects::nonNull)
+                .max(Integer::compare)
+                .orElse(0) + 1;
     }
 }
