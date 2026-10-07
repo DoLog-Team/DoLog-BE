@@ -1,5 +1,6 @@
 package com.dolog.server.domain.notification.service;
 
+import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.notification.entity.Notification;
@@ -63,6 +64,17 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void markAllAsRead(UUID accountId) {
         notificationRepository.markAllAsRead(accountId);
+    }
+
+    @Override
+    @Transactional
+    public void send(Account recipient, NotificationType type, Map<String, String> payload, UUID referenceId) {
+        notificationRepository.save(Notification.builder()
+                .recipient(recipient)
+                .type(type)
+                .payload(payload)
+                .referenceId(referenceId)
+                .build());
     }
 
     @Override
