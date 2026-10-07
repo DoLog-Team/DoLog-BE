@@ -35,11 +35,11 @@ public interface ArtworkService {
 
     void deleteArtworkImage(UUID artworkId, UUID imageId);
 
-    ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request);
+    ArtworkArtistMappingResponse createArtistMapping(UUID accountId, UUID artworkId, ArtworkArtistMappingRequest request);
 
-    ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistId, ArtworkArtistMappingRequest request);
+    ArtworkArtistMappingResponse updateArtistMapping(UUID accountId, UUID artworkId, UUID artistId, ArtworkArtistRoleRequest request);
 
-    void deleteArtistMapping(UUID artworkId, UUID artistId);
+    void deleteArtistMapping(UUID accountId, UUID artworkId, UUID artistId);
 
     ExhibitionArtworkListResponse getExhibitionArtworkList(UUID exhibitionId, String zone, String category, String search);
 

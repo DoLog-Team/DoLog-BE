@@ -12,6 +12,7 @@ import com.dolog.server.domain.artwork.service.artwork.query.ArtworkQueryService
 import com.dolog.server.domain.artwork.service.exhibition.ArtworkExhibitionService;
 import com.dolog.server.domain.artwork.service.image.ArtworkImageService;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistMappingRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistRoleRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
@@ -207,40 +208,33 @@ public class ArtworkServiceImpl implements ArtworkService {
 
     @Override
     public ArtworkArtistMappingResponse createArtistMapping(
+            UUID accountId,
             UUID artworkId,
             ArtworkArtistMappingRequest request
     ) {
 
-        return artworkArtistService.createArtistMapping(
-                artworkId,
-                request
-        );
+        return artworkArtistService.createArtistMapping(accountId, artworkId, request);
     }
 
     @Override
     public ArtworkArtistMappingResponse updateArtistMapping(
+            UUID accountId,
             UUID artworkId,
-            UUID artistProfileId,
-            ArtworkArtistMappingRequest request
+            UUID artistId,
+            ArtworkArtistRoleRequest request
     ) {
 
-        return artworkArtistService.updateArtistMapping(
-                artworkId,
-                artistProfileId,
-                request
-        );
+        return artworkArtistService.updateArtistMapping(accountId, artworkId, artistId, request);
     }
 
     @Override
     public void deleteArtistMapping(
+            UUID accountId,
             UUID artworkId,
-            UUID artistProfileId
+            UUID artistId
     ) {
 
-        artworkArtistService.deleteArtistMapping(
-                artworkId,
-                artistProfileId
-        );
+        artworkArtistService.deleteArtistMapping(accountId, artworkId, artistId);
     }
 
     //============================================================
