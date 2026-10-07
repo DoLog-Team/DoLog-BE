@@ -162,37 +162,40 @@ public class ArtworkController {
 
     /* ---------------- [ 작가 매핑 관련 API ] ---------------- */
 
-    // 8. 작품 작가 매핑 등록 (POST)
-    @Operation(summary = "작품 공동 작가 등록")
+    // 8. 작품 공동 작가 등록 (POST)
+    @Operation(summary = "작품 공동 작가 등록", description = "본인 작품이고 전시에 출품된 경우에만, 같은 전시에 참여 중인 작가의 프로필을 연결합니다.")
     @PostMapping("/artworks/{artworkId}/artists")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
-    public SuccessResponse<ArtworkArtistMappingResponse> createArtistMapping(
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public ResponseEntity<SuccessResponse<ArtworkArtistMappingResponse>> createArtistMapping(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
             @Valid @RequestBody ArtworkArtistMappingRequest request) {
-        ArtworkArtistMappingResponse data = artworkService.createArtistMapping(artworkId, request);
-        return SuccessResponse.created(data);
+        ArtworkArtistMappingResponse data = artworkService.createArtistMapping(user.getId(), artworkId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data));
     }
 
-    // 9. 작품 작가 매핑 수정 (PATCH)
-    @Operation(summary = "작품 공동 작가 수정")
-    @PatchMapping("/artworks/{artworkId}/artists/{artistProfileId}")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    // 9. 작품 공동 작가 역할 수정 (PATCH)
+    @Operation(summary = "작품 공동 작가 수정", description = "본인 작품에 연결된 작가(artistId)의 역할을 수정합니다.")
+    @PatchMapping("/artworks/{artworkId}/artists/{artistId}")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtworkArtistMappingResponse> updateArtistMapping(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
-            @PathVariable UUID artistProfileId,
-            @RequestBody ArtworkArtistMappingRequest request) {
-        ArtworkArtistMappingResponse data = artworkService.updateArtistMapping(artworkId, artistProfileId, request);
+            @PathVariable UUID artistId,
+            @Valid @RequestBody ArtworkArtistRoleRequest request) {
+        ArtworkArtistMappingResponse data = artworkService.updateArtistMapping(user.getId(), artworkId, artistId, request);
         return SuccessResponse.ok(data, "작가 역할이 성공적으로 수정되었습니다.");
     }
 
-    // 10. 작품 작가 매핑 삭제 (DELETE)
-    @Operation(summary = "작품 공동 작가 삭제")
-    @DeleteMapping("/artworks/{artworkId}/artists/{artistProfileId}")
-    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    // 10. 작품 공동 작가 삭제 (DELETE)
+    @Operation(summary = "작품 공동 작가 삭제", description = "본인 작품에 연결된 작가(artistId)를 해제합니다. 마지막 남은 작가는 해제할 수 없습니다.")
+    @DeleteMapping("/artworks/{artworkId}/artists/{artistId}")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<Void> deleteArtistMapping(
+            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
-            @PathVariable UUID artistProfileId) {
-        artworkService.deleteArtistMapping(artworkId, artistProfileId);
+            @PathVariable UUID artistId) {
+        artworkService.deleteArtistMapping(user.getId(), artworkId, artistId);
         return SuccessResponse.ok(null, "작가 연결이 성공적으로 해제되었습니다.");
     }
 

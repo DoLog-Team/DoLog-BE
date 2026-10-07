@@ -3,9 +3,11 @@ package com.dolog.server.domain.artwork.service.artist;
 
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistMappingRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkArtistRoleRequest;
+import com.dolog.server.domain.artwork.support.ArtworkValidator;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
-import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
-import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
@@ -34,28 +36,43 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtworkArtistMapRepository artworkArtistMapRepository;
     private final ArtistRepository artistRepository;
+    private final ArtworkValidator artworkValidator;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
+    // 공동 작가의 전시별 프로필을 연결해야 해서 출품된 작품에만 등록할 수 있다.
+    // 작가는 전시 필수 항목이 아니라서 작가 연결이 바뀌어도 공개 상태는 다시 검사하지 않는다.
     @Override
-    public ArtworkArtistMappingResponse createArtistMapping(UUID artworkId, ArtworkArtistMappingRequest request) {
-        Artwork artwork = artworkRepository.findById(artworkId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
+    public ArtworkArtistMappingResponse createArtistMapping(
+            UUID accountId, UUID artworkId, ArtworkArtistMappingRequest request) {
+
+        Artist me = artworkValidator.getLoginArtist(accountId);
+        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, me);
+
+        if (artwork.getExhibition() == null) {
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
+        }
 
         ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        // 검증 및 저장 로직
-        if (!artwork.getExhibition().getId().equals(profile.getExhibition().getId())) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        if (!profile.getExhibition().getId().equals(artwork.getExhibition().getId())
+                || !isJoined(profile)) {
+            throw new ArtworkException(ArtworkErrorCode.CO_ARTIST_NOT_IN_EXHIBITION);
+        }
+
+        if (artwork.isLinkedTo(profile.getArtist().getId())) {
+            throw new ArtworkException(ArtworkErrorCode.CO_ARTIST_ALREADY_LINKED);
         }
 
         ArtworkArtistMap map = ArtworkArtistMap.builder()
                 .artwork(artwork)
                 .artist(profile.getArtist())
                 .artistProfile(profile)
-                .artistRole(request.getArtistRole())
+                .artistRole(request.getArtistRole().trim())
                 .build();
+        artwork.getArtworkArtistMaps().add(map);
 
-        return ArtworkArtistMappingResponse.of(artworkArtistMapRepository.save(map));
+        return ArtworkArtistMappingResponse.of(artworkArtistMapRepository.saveAndFlush(map));
     }
 
     /** 작품 ID 목록으로 작품별 작가명을 Map으로 반환
@@ -79,23 +96,43 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     }
 
     @Override
-    public ArtworkArtistMappingResponse updateArtistMapping(UUID artworkId, UUID artistProfileId, ArtworkArtistMappingRequest request) {
-        // profileId를 기반으로 매핑 데이터 조회
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
+    public ArtworkArtistMappingResponse updateArtistMapping(
+            UUID accountId, UUID artworkId, UUID artistId, ArtworkArtistRoleRequest request) {
 
-        // 역할 수정
-        map.updateRole(request.getArtistRole());
+        ArtworkArtistMap map = getOwnedMapping(accountId, artworkId, artistId);
+        map.updateRole(request.artistRole().trim());
 
         return ArtworkArtistMappingResponse.of(map);
     }
 
+    // 작가 연결이 하나도 없으면 아무도 작품을 관리할 수 없어서 마지막 연결은 지우지 않는다.
     @Override
-    public void deleteArtistMapping(UUID artworkId, UUID artistProfileId) {
-        ArtworkArtistMap map = artworkArtistMapRepository.findByArtworkIdAndArtistProfileId(artworkId, artistProfileId)
-                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
+    public void deleteArtistMapping(UUID accountId, UUID artworkId, UUID artistId) {
 
-        artworkArtistMapRepository.delete(map);
+        ArtworkArtistMap map = getOwnedMapping(accountId, artworkId, artistId);
+
+        if (map.getArtwork().getArtworkArtistMaps().size() <= 1) {
+            throw new ArtworkException(ArtworkErrorCode.LAST_ARTIST_CANNOT_BE_REMOVED);
+        }
+
+        map.getArtwork().getArtworkArtistMaps().remove(map);
+    }
+
+    private ArtworkArtistMap getOwnedMapping(UUID accountId, UUID artworkId, UUID artistId) {
+
+        Artist me = artworkValidator.getLoginArtist(accountId);
+        artworkValidator.getOwnedArtwork(artworkId, me);
+
+        return artworkArtistMapRepository.findByArtworkIdAndArtistId(artworkId, artistId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
+    }
+
+    private boolean isJoined(ArtistProfile profile) {
+
+        return exhibitionArtistMapRepository
+                .findByExhibitionIdAndArtistId(profile.getExhibition().getId(), profile.getArtist().getId())
+                .filter(map -> map.getStatus() == ExhibitionArtistStatus.JOINED)
+                .isPresent();
     }
 
     @Override
