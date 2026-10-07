@@ -204,8 +204,16 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
 
     List<Artwork> findByExhibitionIdAndStatus(UUID exhibitionId, ArtworkStatus status);
 
-    // 동시 조회에도 값이 빠지지 않게 DB 에서 더한다. updated_at 은 바꾸지 않는다.
+    // 동시 요청에도 값이 빠지지 않게 DB 에서 더한다. updated_at 은 바꾸지 않는다.
     @Modifying
     @Query("UPDATE Artwork a SET a.viewCount = a.viewCount + 1 WHERE a.id = :artworkId")
     void increaseViewCount(@Param("artworkId") UUID artworkId);
+
+    // 이 방문자의 첫 조회면 기록하고 1, 이미 있으면 0. UNIQUE(artwork_id, visitor_id) 라 동시에 와도 한 번만 1.
+    // ON DUPLICATE KEY UPDATE 는 MySQL 드라이버 기본값(CLIENT_FOUND_ROWS)에서 중복도 1 을 돌려줘 구분이 안 된다.
+    // IGNORE 가 삼킬 수 있는 다른 오류(FK, 길이)는 호출 전에 작품 존재와 visitorId 형식(64자)을 확인해 막는다.
+    @Modifying
+    @Query(value = "INSERT IGNORE INTO artwork_view_logs (artwork_id, visitor_id, created_at) " +
+            "VALUES (:artworkId, :visitorId, NOW(6))", nativeQuery = true)
+    int insertViewLogIfAbsent(@Param("artworkId") UUID artworkId, @Param("visitorId") String visitorId);
 }

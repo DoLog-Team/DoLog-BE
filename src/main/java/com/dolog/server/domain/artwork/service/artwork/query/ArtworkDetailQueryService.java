@@ -33,7 +33,6 @@ public class ArtworkDetailQueryService {
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
     // 전시 URL: 공개 + 작품 숨김 아님 + 구역 숨김 아님
-    @Transactional
     public ArtworkDetailResponse getArtworkDetail(
             UUID exhibitionId,
             UUID artworkId,
@@ -48,7 +47,6 @@ public class ArtworkDetailQueryService {
     }
 
     // 두록 URL: 공개면 숨김과 상관없이 노출
-    @Transactional
     public ArtworkDetailResponse getDologArtworkDetail(
             UUID artworkId,
             String visitorId
@@ -69,8 +67,6 @@ public class ArtworkDetailQueryService {
 
         UUID artworkId = artwork.getId();
         UUID exhibitionId = artwork.getExhibition() != null ? artwork.getExhibition().getId() : null;
-
-        artworkRepository.increaseViewCount(artworkId);
 
         // 작품 정보 숨기기는 전시 웹사이트에서만 적용한다 (기능명세 "작품 정보 숨기기 설정").
         ExhibitionFieldSettings settings = exhibitionView && exhibitionId != null
@@ -115,7 +111,7 @@ public class ArtworkDetailQueryService {
                 .youtubeUrl(artwork.getYoutubeUrl())
                 .mainImage(artwork.getMainImg())
                 .locationMap(hideLocationMap ? null : artwork.getLocationMap())
-                .viewCount(artwork.getViewCount() + 1)
+                .viewCount(artwork.getViewCount())
                 .likeCount(artworkLikeRepository.countByArtworkId(artworkId))
                 .liked(visitorId != null && artworkLikeRepository.existsByArtworkIdAndVisitorId(artworkId, visitorId))
                 .detailImages(

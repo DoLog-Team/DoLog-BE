@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
+import com.dolog.server.domain.artwork.service.view.ArtworkViewService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
@@ -15,6 +16,7 @@ import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,6 +36,7 @@ public class ArtworkController {
     private final ArtworkService artworkService;
     private final ArtworkDetailQueryService artworkDetailService;
     private final VisitorIdResolver visitorIdResolver;
+    private final ArtworkViewService artworkViewService;
     private final ArtworkOrderService artworkOrderService;
 
     // 1. 작품 전체 목록 조회
@@ -245,6 +248,19 @@ public class ArtworkController {
         return SuccessResponse.ok(
                 artworkDetailService.getDologArtworkDetail(artworkId, visitorIdOf(request)),
                 "작품 상세 조회 성공");
+    }
+
+    @Operation(summary = "작품 조회수 기록",
+            description = "비로그인 가능. 이용자가 작품 상세 페이지에 일정 시간 머문 뒤 브라우저에서 한 번 호출합니다. "
+                    + "같은 방문자(visitor_id)는 작품마다 한 번만 셉니다. "
+                    + "visitor_id 가 없으면 좋아요와 같은 방식으로 새로 발급해 쿠키로 내려줍니다.")
+    @PostMapping("/artworks/{artworkId}/views")
+    public SuccessResponse<ArtworkViewResponse> recordArtworkView(
+            @PathVariable UUID artworkId,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        String visitorId = visitorIdResolver.resolveOrIssue(request, response, null);
+        return SuccessResponse.ok(artworkViewService.recordView(artworkId, visitorId), "조회수가 기록되었습니다.");
     }
 
     // 좋아요 여부 확인용이라, 방문자 ID 형식이 잘못돼도 상세 조회는 막지 않는다.
