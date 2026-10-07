@@ -68,6 +68,8 @@ public class SecurityConfig {
                         // 비로그인 방문자 좋아요 (visitor_id 쿠키 기반)
                         .requestMatchers(HttpMethod.POST, "/artworks/*/likes", "/artist-profiles/*/likes").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/artworks/*/likes", "/artist-profiles/*/likes").permitAll()
+                        // 비로그인 방문자 작품 조회수
+                        .requestMatchers(HttpMethod.POST, "/artworks/*/views").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/refresh",
                                 "/auth/social/login", "/auth/exhibition/login").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
