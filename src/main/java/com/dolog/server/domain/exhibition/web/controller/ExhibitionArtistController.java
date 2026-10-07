@@ -96,6 +96,24 @@ public class ExhibitionArtistController {
         );
     }
 
+    @Operation(summary = "작가 본인 전시 나가기")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @DeleteMapping("/{exhibitionId}/artists/me")
+    public SuccessResponse<Void> leaveExhibition(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId
+    ) {
+        exhibitionArtistService.leaveExhibition(
+                user.getId(),
+                exhibitionId
+        );
+
+        return SuccessResponse.ok(
+                null,
+                "전시 나가기 성공"
+        );
+    }
+
     @Operation(summary = "작가 참여 코드 검증")
     @PreAuthorize("hasRole('ARTIST_ADMIN')")
     @PostMapping("/join/validate")

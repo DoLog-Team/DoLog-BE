@@ -27,6 +27,7 @@ public interface ExhibitionArtistService {
             UUID exhibitionId,
             UUID artistId
     );
+    void leaveExhibition(UUID accountId, UUID exhibitionId);
     ArtistJoinCodeValidateResponse validateJoinCode(UUID accountId, String joinCode);
     ArtistJoinResponse joinExhibition(UUID accountId, String joinCode, String greeting);
     ExhibitionArtistStatusUpdateResponse updateArtistStatuses(
