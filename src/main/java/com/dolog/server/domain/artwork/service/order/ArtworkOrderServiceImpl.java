@@ -4,6 +4,10 @@ import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.service.artist.ArtworkArtistService;
+import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
+import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -21,10 +25,18 @@ public class ArtworkOrderServiceImpl implements ArtworkOrderService {
 
     private final ArtworkRepository artworkRepository;
     private final ArtworkArtistService artworkArtistService;
+    private final ExhibitionRepository exhibitionRepository;
 
     @Override
     @Transactional
-    public void reorderArtworkIndices(UUID exhibitionId) {
+    public void reorderArtworkIndices(UUID exhibitionId, UUID accountId, boolean isDologAdmin) {
+        // 두록 어드민은 모든 전시, 전시 어드민은 본인 전시만 (작품 그룹 API 와 같은 규칙)
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+        if (!isDologAdmin && !exhibition.getAccount().getId().equals(accountId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
+        }
+
         // 1. 해당 전시회의 모든 작품 조회
         Specification<Artwork> spec = Specification.where(ArtworkSpecification.withExhibitionFetch())
                 .and((root, query, cb) -> cb.equal(root.get("exhibition").get("id"), exhibitionId));

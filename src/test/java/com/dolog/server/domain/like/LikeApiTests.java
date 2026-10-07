@@ -74,8 +74,6 @@ class LikeApiTests {
         published = artwork(ArtworkStatus.PUBLISHED);
     }
 
-    // ---------------- 작품 좋아요 ----------------
-
     @Test
     @DisplayName("처음 온 방문자가 좋아요를 누르면 visitor_id 를 발급해 쿠키와 응답으로 내려주고 201")
     void issuesVisitorIdOnFirstLike() throws Exception {
@@ -285,8 +283,6 @@ class LikeApiTests {
         assertEquals(0L, artworkLikes.countByArtworkId(id));
     }
 
-    // ---------------- 작가 좋아요 ----------------
-
     @Test
     @DisplayName("참여 중인 작가의 프로필에 좋아요/취소할 수 있다")
     void likeAndCancelJoinedArtistProfile() throws Exception {
@@ -314,8 +310,6 @@ class LikeApiTests {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ARTIST_PROFILE_404"));
     }
-
-    // ---------------- helpers ----------------
 
     private Account account(Role role) {
         return accounts.saveAndFlush(Account.builder().role(role).accountStatus(AccountStatus.ACTIVE).build());

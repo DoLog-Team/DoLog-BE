@@ -81,8 +81,6 @@ class ArtworkCommandApiTests {
         otherToken = token(other.getAccount());
     }
 
-    // ---------------- 등록 ----------------
-
     @Test
     @DisplayName("작가 어드민이 작품을 등록하면 본인 작품으로 전시 미소속 DRAFT 상태로 생성된다")
     void createsDraftArtworkForLoginArtist() throws Exception {
@@ -197,8 +195,6 @@ class ArtworkCommandApiTests {
                         .param("title", "작품").param("description", "설명"))
                 .andExpect(status().isUnauthorized());
     }
-
-    // ---------------- 수정 ----------------
 
     @Test
     @DisplayName("본인 작품을 수정하면 보낸 필드만 바뀌고 상태는 그대로다")
@@ -362,8 +358,6 @@ class ArtworkCommandApiTests {
         verify(fileService, never()).deleteFile(any());
     }
 
-    // ---------------- 삭제 ----------------
-
     @Test
     @DisplayName("본인 작품을 삭제하면 숨겨지고, 재료는 보관 기간 동안 남으며 BTS 연결은 조회되지 않는다")
     void deletesOwnArtworkWithRelations() throws Exception {
@@ -408,8 +402,6 @@ class ArtworkCommandApiTests {
         mvc.perform(withToken(delete("/api/artworks/{id}", UUID.randomUUID()).contextPath("/api"), otherToken))
                 .andExpect(status().isNotFound());
     }
-
-    // ---------------- helpers ----------------
 
     private Artist artist(String name) {
         Account account = accounts.saveAndFlush(Account.builder().role(Role.ARTIST_ADMIN)
