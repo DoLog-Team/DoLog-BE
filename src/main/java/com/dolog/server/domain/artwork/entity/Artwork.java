@@ -127,6 +127,10 @@ public class Artwork extends BaseEntity implements Orderable {
     @Column(name = "plan_limit_exceeded_at")
     private LocalDateTime planLimitExceededAt;
 
+    // 전시 필수 항목 설정 때문에 시스템이 자동으로 비공개 처리했는지. 작가가 직접 상태를 바꾸면 비워진다.
+    @Column(name = "auto_drafted_at")
+    private LocalDateTime autoDraftedAt;
+
     @Builder.Default
     @Column(name = "view_count", nullable = false)
     private long viewCount = 0L;
@@ -194,8 +198,26 @@ public class Artwork extends BaseEntity implements Orderable {
                 .anyMatch(map -> map.getArtist().getId().equals(artistId));
     }
 
+    // 작가·관리자가 직접 상태를 바꾸는 경우. 시스템이 걸어둔 자동 비공개 표시는 더 이상 유효하지 않으므로 지운다.
     public void changeStatus(ArtworkStatus status) {
         this.status = status;
+        this.autoDraftedAt = null;
+    }
+
+    // 전시 필수 항목을 못 채워 시스템이 자동으로 비공개 처리하는 경우
+    public void autoDraft(LocalDateTime at) {
+        this.status = ArtworkStatus.DRAFT;
+        this.autoDraftedAt = at;
+    }
+
+    // 항목 설정이 완화되어 시스템이 자동으로 다시 공개 처리하는 경우
+    public void autoPublish() {
+        this.status = ArtworkStatus.PUBLISHED;
+        this.autoDraftedAt = null;
+    }
+
+    public boolean isAutoDrafted() {
+        return autoDraftedAt != null;
     }
 
     public void hide(LocalDateTime hiddenAt) {

@@ -72,6 +72,11 @@ public class FieldSettingsService {
         List<Artwork> published = artworkRepository.findByExhibitionIdAndStatus(exhibitionId, ArtworkStatus.PUBLISHED);
         List<Artwork> drafted = artworkFieldRequirement.draftUnsatisfied(settings, published);
         drafted.forEach(artwork -> notifyArtists(artwork, NotificationType.ARTWORK_UNPUBLISHED));
+
+        List<Artwork> autoDraftedCandidates = artworkRepository
+                .findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(exhibitionId, ArtworkStatus.DRAFT);
+        List<Artwork> republished = artworkFieldRequirement.republishAutoDrafted(settings, autoDraftedCandidates);
+        republished.forEach(artwork -> notifyArtists(artwork, NotificationType.ARTWORK_REPUBLISHED));
     }
 
     // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀)
