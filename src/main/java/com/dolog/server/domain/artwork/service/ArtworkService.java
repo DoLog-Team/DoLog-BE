@@ -12,8 +12,6 @@ public interface ArtworkService {
 
     ArtworkCreateResponse createArtwork(UUID accountId, ArtworkCreateRequest request);
 
-    ArtworkDetailResponse getArtworkDetail(UUID exhibitionId,UUID artworkId);
-
     ArtworkImgCreateResponse createArtworkImages(UUID artworkId, List<ArtworkImgCreateRequest> requests);
 
     ArtworkCreateResponse updateArtwork(UUID accountId, UUID artworkId, ArtworkUpdateRequest request);
