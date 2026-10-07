@@ -8,6 +8,7 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @org.hibernate.annotations.SQLRestriction("deleted_at IS NULL")
@@ -48,5 +49,18 @@ public class Artist extends BaseEntity {
         if (nameKo != null) this.nameKo = nameKo;
         if (nameEn != null) this.nameEn = nameEn;
         if (phone != null) this.phone = phone;
+    }
+
+    public void softDelete(LocalDateTime deletedAt) {
+        if (this.deletedAt == null) {
+            this.deletedAt = deletedAt;
+        }
+    }
+
+    public void restore(String nameKo, String nameEn, String phone) {
+        this.deletedAt = null;
+        this.nameKo = nameKo;
+        this.nameEn = nameEn;
+        this.phone = phone;
     }
 }

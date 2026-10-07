@@ -6,13 +6,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
-import com.dolog.server.domain.artist.web.dto.response.ArtistResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
 import com.dolog.server.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,7 +30,8 @@ public class AdminArtistController {
     // 작가 생성
     @Operation(summary = "작가 생성")
     @PostMapping
-    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<ArtistCreateResponse> createArtist(
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody @Valid ArtistCreateRequest request
@@ -37,27 +39,28 @@ public class AdminArtistController {
         ArtistCreateResponse data =
                 artistService.createArtist(user.getId(), request);
 
-        return SuccessResponse.created(data);
+        return SuccessResponse.created(data, "작가 등록 성공");
     }
 
     // 작가 수정
     @Operation(summary = "작가 수정")
     @PatchMapping("/{artistId}")
-    @PreAuthorize("hasRole('ARTIST_ADMIN')")
-    public SuccessResponse<ArtistResponse> updateArtist(
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    public SuccessResponse<ArtistUpdateResponse> updateArtist(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artistId,
             @RequestBody @Valid ArtistUpdateRequest request
     ) {
         return SuccessResponse.ok(
-                artistService.updateArtist(user.getId(), artistId, request)
+                artistService.updateArtist(user.getId(), artistId, request),
+                "작가 수정 성공"
         );
     }
 
     //작가 삭제
     @Operation(summary = "작가 삭제")
     @DeleteMapping("/{artistId}")
-    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
     public SuccessResponse<Void> deleteArtist(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artistId
@@ -66,7 +69,7 @@ public class AdminArtistController {
 
         return SuccessResponse.<Void>ok(
                 null,
-                "작가가 삭제되었습니다."
+                "작가 삭제 성공"
         );
     }
 }

@@ -1,21 +1,20 @@
 package com.dolog.server.domain.artist.service;
 
 import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.account.entity.enums.AccountStatus;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.exception.artistError.ArtistAccountNotEligibleException;
+import com.dolog.server.domain.artist.exception.artistError.ArtistAccountNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistAlreadyExistsException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistBadRequestException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.DuplicateArtistPhoneException;
-import com.dolog.server.domain.artist.exception.artistError.ArtistHasLinkedDataException;
-import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
 import com.dolog.server.domain.artist.web.dto.response.*;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
-import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
-import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -26,9 +25,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -37,55 +35,53 @@ public class ArtistServiceImpl implements ArtistService {
 
     private final ArtistRepository artistRepository;
     private final AccountRepository accountRepository;
-    private final ArtistProfileRepository artistProfileRepository;
-    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
-    private final ArtworkArtistMapRepository artworkArtistMapRepository;
-
-    private String normalizeEmail(String email) {
-        if (email == null || email.isBlank()) {
-            return null;
-        }
-
-        return email.trim();
-    }
 
     // 작가 생성
     @Override
     public ArtistCreateResponse createArtist(
-            UUID accountId,
+            UUID actorAccountId,
             ArtistCreateRequest request
     ) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(JwtInvalidException::new);
+        requireDologAdmin(actorAccountId);
 
-        if (account.getRole() != Role.ARTIST_ADMIN) {
-            throw new AccessDeniedException(
-                    "작가 계정만 작가 정보를 생성할 수 있습니다."
-            );
-        }
-
-        if (artistRepository.existsByAccount(account)) {
-            throw new ArtistAlreadyExistsException();
-        }
-
-        String requestEmail = normalizeEmail(request.getEmail());
-        String accountEmail = normalizeEmail(account.getEmail());
-
-        if (requestEmail != null
-                && (accountEmail == null
-                || !requestEmail.equalsIgnoreCase(accountEmail))) {
-            throw new ArtistBadRequestException();
-        }
+        Account targetAccount = accountRepository
+                .findByIdForUpdate(request.getAccountId())
+                .orElseThrow(ArtistAccountNotFoundException::new);
+        requireEligibleArtistAccount(targetAccount);
 
         String phone = normalizePhone(request.getPhone());
+        String nameKo = request.getNameKo().trim();
 
-        if (phone != null && artistRepository.existsByPhone(phone)) {
+        var existingArtist = artistRepository
+                .findByAccountIdIncludingDeleted(targetAccount.getId());
+
+        if (existingArtist.isPresent()) {
+            Artist artist = existingArtist.get();
+
+            if (artist.getDeletedAt() == null) {
+                throw new ArtistAlreadyExistsException();
+            }
+
+            if (phone != null
+                    && artistRepository.countByPhoneIncludingDeletedAndIdNot(
+                    phone,
+                    artist.getId()
+            ) > 0) {
+                throw new DuplicateArtistPhoneException();
+            }
+
+            artist.restore(nameKo, request.getNameEn(), phone);
+            return ArtistCreateResponse.from(artist);
+        }
+
+        if (phone != null
+                && artistRepository.countByPhoneIncludingDeleted(phone) > 0) {
             throw new DuplicateArtistPhoneException();
         }
 
         Artist artist = Artist.builder()
-                .account(account)
-                .nameKo(request.getNameKo().trim())
+                .account(targetAccount)
+                .nameKo(nameKo)
                 .nameEn(request.getNameEn())
                 .phone(phone)
                 .build();
@@ -93,6 +89,24 @@ public class ArtistServiceImpl implements ArtistService {
         artistRepository.save(artist);
 
         return ArtistCreateResponse.from(artist);
+    }
+
+    private Account requireDologAdmin(UUID actorAccountId) {
+        Account actor = accountRepository.findById(actorAccountId)
+                .orElseThrow(JwtInvalidException::new);
+
+        if (actor.getRole() != Role.DOLOG_ADMIN) {
+            throw new AccessDeniedException("두록 관리자만 작가 정보를 관리할 수 있습니다.");
+        }
+
+        return actor;
+    }
+
+    private void requireEligibleArtistAccount(Account targetAccount) {
+        if (targetAccount.getRole() != Role.ARTIST_ADMIN
+                || targetAccount.getAccountStatus() != AccountStatus.ACTIVE) {
+            throw new ArtistAccountNotEligibleException();
+        }
     }
 
     private String normalizePhone(String phone) {
@@ -123,9 +137,14 @@ public class ArtistServiceImpl implements ArtistService {
 
     // 업데이트
     @Override
-    public ArtistResponse updateArtist(UUID accountId, UUID artistId, ArtistUpdateRequest request) {
+    public ArtistUpdateResponse updateArtist(
+            UUID actorAccountId,
+            UUID artistId,
+            ArtistUpdateRequest request
+    ) {
+        requireDologAdmin(actorAccountId);
 
-        Artist artist = artistRepository.findByIdAndAccountId(artistId, accountId)
+        Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
         String nameKo = normalizeOptionalNameKo(request.getNameKo());
@@ -135,7 +154,10 @@ public class ArtistServiceImpl implements ArtistService {
             phone = normalizePhone(phone);
 
             if (phone != null
-                    && artistRepository.existsByPhoneAndIdNot(phone, artistId)) {
+                    && artistRepository.countByPhoneIncludingDeletedAndIdNot(
+                    phone,
+                    artistId
+            ) > 0) {
                 throw new DuplicateArtistPhoneException();
             }
         }
@@ -146,26 +168,22 @@ public class ArtistServiceImpl implements ArtistService {
                 phone
         );
 
-        return ArtistResponse.from(artist);
+        return ArtistUpdateResponse.from(artist);
     }
 
     // 삭제
     @Override
     public void deleteArtist(
-            UUID accountId,
+            UUID actorAccountId,
             UUID artistId
     ) {
+        requireDologAdmin(actorAccountId);
+
         Artist artist = artistRepository
-                .findByIdAndAccountId(artistId, accountId)
+                .findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        if (artistProfileRepository.existsByArtistId(artistId)
-                || exhibitionArtistMapRepository.existsByArtistId(artistId)
-                || artworkArtistMapRepository.existsByArtistId(artistId)) {
-            throw new ArtistHasLinkedDataException();
-        }
-
-        artistRepository.delete(artist);
+        artist.softDelete(LocalDateTime.now());
     }
 
 
