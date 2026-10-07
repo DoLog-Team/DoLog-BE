@@ -268,12 +268,30 @@ class ArtworkQueryApiTests {
         fieldSettings.saveAndFlush(settings);
         endRequest();
 
-        mvc.perform(api(dologDetail(artwork)))
+        mvc.perform(api(exhibitionDetail(artwork)))
                 .andExpect(jsonPath("$.data.productionStartYear").value(nullValue()))
                 .andExpect(jsonPath("$.data.productionEndYear").value(nullValue()))
                 .andExpect(jsonPath("$.data.productionEndMonth").value(nullValue()))
                 .andExpect(jsonPath("$.data.width").value(32.0))
                 .andExpect(jsonPath("$.data.materials", hasSize(1)));
+    }
+
+    @Test
+    @DisplayName("작품 정보 숨기기는 전시 웹사이트에만 적용하고 두록 URL 상세는 모두 보여준다")
+    void hiddenFieldSettingsDoNotApplyToDologUrl() throws Exception {
+        Artwork artwork = fullArtwork();
+        ExhibitionFieldSettings settings = ExhibitionFieldSettings.defaultsFor(exhibition);
+        settings.update(false, false, false, false, true, true, true, false, true);
+        fieldSettings.saveAndFlush(settings);
+        endRequest();
+
+        mvc.perform(api(dologDetail(artwork)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.width").value(32.0))
+                .andExpect(jsonPath("$.data.materials", contains("유채")))
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/map.webp"))
+                .andExpect(jsonPath("$.data.productionStartYear").value(2025))
+                .andExpect(jsonPath("$.data.productionEndDay").value(15));
     }
 
     @Test

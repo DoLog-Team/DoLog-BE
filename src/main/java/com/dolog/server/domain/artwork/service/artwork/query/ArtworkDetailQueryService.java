@@ -72,7 +72,8 @@ public class ArtworkDetailQueryService {
 
         artworkRepository.increaseViewCount(artworkId);
 
-        ExhibitionFieldSettings settings = exhibitionId != null
+        // 작품 정보 숨기기는 전시 웹사이트에서만 적용한다 (기능명세 "작품 정보 숨기기 설정").
+        ExhibitionFieldSettings settings = exhibitionView && exhibitionId != null
                 ? fieldSettingsRepository.findByExhibitionId(exhibitionId).orElse(null)
                 : null;
         boolean hideSize = settings != null && settings.isHiddenSize();
