@@ -12,7 +12,7 @@ import java.util.UUID;
 public class SubscriptionPlanChangeRequest {
 
     @NotNull
-    private UUID targetPlanId;
+    private UUID planId;
 
     @NotNull
     private BillingCycle billingCycle;
