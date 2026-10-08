@@ -277,12 +277,14 @@ class SocialLoginTests {
     private final com.dolog.server.domain.bts.repository.BtsArtworkMapRepository withdrawalBtsMaps = mock(com.dolog.server.domain.bts.repository.BtsArtworkMapRepository.class);
     private final com.dolog.server.domain.account.repository.RefreshTokenRepository withdrawalTokens = mock(com.dolog.server.domain.account.repository.RefreshTokenRepository.class);
     private final com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository withdrawalExhibitions = mock(com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository.class);
+    private final com.dolog.server.domain.notification.service.NotificationService withdrawalNotifications = mock(com.dolog.server.domain.notification.service.NotificationService.class);
 
     private com.dolog.server.domain.account.service.AccountWithdrawalService withdrawalService(
             AccountRepository accounts, org.springframework.jdbc.core.JdbcTemplate jdbc) {
         return new com.dolog.server.domain.account.service.AccountWithdrawalService(accounts, jdbc,
                 withdrawalArtists, withdrawalProfiles, withdrawalArtworks, withdrawalMaps,
-                withdrawalBts, withdrawalBtsMaps, withdrawalTokens, withdrawalExhibitions);
+                withdrawalBts, withdrawalBtsMaps, withdrawalTokens, withdrawalExhibitions,
+                withdrawalNotifications);
     }
 
     @Test
