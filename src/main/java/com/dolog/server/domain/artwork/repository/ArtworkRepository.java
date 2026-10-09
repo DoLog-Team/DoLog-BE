@@ -19,15 +19,15 @@ import java.util.UUID;
 
 public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpecificationExecutor<Artwork> {
 
-    // 전시 URL 노출 조건: 공개 + 작품 숨김 아님 + 구역 숨김 아님. 쿼리마다 `LEFT JOIN a.exhibitionZone vz` 가 필요하다.
+    // 전시 URL 노출 조건: 공개 + 작품 숨김 아님 + 플랜 한도 초과 아님 + 구역 숨김 아님. 쿼리마다 `LEFT JOIN a.exhibitionZone vz` 가 필요하다.
     String EXHIBITION_VISIBLE =
             " AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED" +
-            " AND a.hiddenAt IS NULL AND (vz.id IS NULL OR vz.hidden = false) ";
+            " AND a.hiddenAt IS NULL AND a.planLimitExceededAt IS NULL AND (vz.id IS NULL OR vz.hidden = false) ";
 
     // 두록 URL 은 공개만 본다. exhibitionView 가 true 면 전시 URL 조건까지 본다.
     String VISIBLE_BY_VIEW =
             " AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED" +
-            " AND (:exhibitionView = false OR (a.hiddenAt IS NULL AND (vz.id IS NULL OR vz.hidden = false))) ";
+            " AND (:exhibitionView = false OR (a.hiddenAt IS NULL AND a.planLimitExceededAt IS NULL AND (vz.id IS NULL OR vz.hidden = false))) ";
 
     // 삭제될 zone에 속한 작품들의 zone을 해제한다 (작품은 유지)
     @Modifying(flushAutomatically = true)
@@ -51,6 +51,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
               AND a.exhibition.id = :exhibitionId
               AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED
               AND a.hiddenAt IS NULL
+              AND a.planLimitExceededAt IS NULL
             ORDER BY
               CASE WHEN a.orderIndex IS NULL THEN 1 ELSE 0 END,
               a.orderIndex ASC,
@@ -122,7 +123,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             "LEFT JOIN exhibition_zones vz ON vz.id = a.zone_id " +
             "WHERE a.deleted_at IS NULL AND a.exhibition_id = :exhibitionId " +
             "AND a.status = 'PUBLISHED' " +
-            "AND (:exhibitionView = false OR (a.hidden_at IS NULL AND (vz.id IS NULL OR vz.is_hidden = false))) " +
+            "AND (:exhibitionView = false OR (a.hidden_at IS NULL AND a.plan_limit_exceeded_at IS NULL AND (vz.id IS NULL OR vz.is_hidden = false))) " +
             "AND a.id != :artworkId " +
             "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) OR a.category = :category) " +
             "ORDER BY score DESC, a.id DESC",
@@ -221,6 +222,17 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             @org.springframework.data.repository.query.Param("at") java.time.LocalDateTime at);
 
     List<Artwork> findByExhibitionIdAndStatus(UUID exhibitionId, ArtworkStatus status);
+
+    // 시스템이 항목설정 때문에 자동으로 비공개한 작품 (항목설정이 완화되면 다시 공개할 후보)
+    List<Artwork> findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(UUID exhibitionId, ArtworkStatus status);
+
+    // 플랜 한도 재계산 대상: 출품됐고(exhibition 연결) 관리자 숨김이 아닌 작품을 연결 순서대로
+    List<Artwork> findByExhibitionIdAndHiddenAtIsNullOrderByOrderIndexAsc(UUID exhibitionId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE Artwork a SET a.planLimitExceededAt = null " +
+            "WHERE a.exhibition.id = :exhibitionId AND a.planLimitExceededAt IS NOT NULL")
+    void clearPlanLimitExceededByExhibitionId(@Param("exhibitionId") UUID exhibitionId);
 
     // 동시 요청에도 값이 빠지지 않게 DB 에서 더한다. updated_at 은 바꾸지 않는다.
     @Modifying

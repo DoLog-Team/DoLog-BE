@@ -19,10 +19,13 @@ import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -37,6 +40,8 @@ public class ArtworkSubmissionProcessor {
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtworkFieldRequirement artworkFieldRequirement;
     private final ArtworkSubmissionCanceller artworkSubmissionCanceller;
+    private final NotificationService notificationService;
+    private final ArtworkPlanLimitService artworkPlanLimitService;
 
     public ArtworkSubmitResponse submit(
             UUID accountId,
@@ -73,6 +78,7 @@ public class ArtworkSubmissionProcessor {
         );
         artworkOrderAdapter.assign(artwork);
         artworkFieldRequirement.draftIfUnsatisfied(artwork);
+        artworkPlanLimitService.recompute(exhibition.getId());
 
         return ArtworkSubmitResponse.from(artwork);
     }
@@ -85,11 +91,32 @@ public class ArtworkSubmissionProcessor {
         Artist artist = artworkValidator.getLoginArtist(accountId);
         Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
 
-        if (artwork.getExhibition() == null) {
+        Exhibition exhibition = artwork.getExhibition();
+        if (exhibition == null) {
             throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
         }
+        String artworkTitle = artwork.getTitle();
 
         artworkSubmissionCanceller.cancel(artwork);
+        artworkPlanLimitService.recompute(exhibition.getId());
+
+        notificationService.send(
+                exhibition.getAccount(),
+                NotificationType.ARTWORK_CANCELLED,
+                Map.of(
+                        "artistName", artist.getNameKo(),
+                        "artworkTitle", artworkTitle,
+                        "exhibitionName", resolveExhibitionName(exhibition)
+                ),
+                exhibition.getId()
+        );
+    }
+
+    // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibition.getExhibitionDetail() != null
+                ? exhibition.getExhibitionDetail().getTitle()
+                : exhibition.getSlug();
     }
 
     private Exhibition getJoinedExhibition(UUID exhibitionId, Artist artist) {

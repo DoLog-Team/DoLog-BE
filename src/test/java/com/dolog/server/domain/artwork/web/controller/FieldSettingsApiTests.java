@@ -125,9 +125,26 @@ class FieldSettingsApiTests {
     }
 
     @Test
-    @DisplayName("필수 항목을 완화해도 비공개로 내려간 작품이 자동으로 다시 공개되지는 않는다")
-    void relaxingDoesNotRepublish() throws Exception {
+    @DisplayName("필수 항목을 완화하면 그 설정 때문에 자동 비공개됐던 작품은 다시 공개된다")
+    void relaxingRepublishesAutoDrafted() throws Exception {
         Artwork missing = artwork(exhibition, ArtworkStatus.PUBLISHED, null);
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken)
+                        .content(settingsJson(true, false, false, false, false, false, false, false, false)))
+                .andExpect(status().isOk());
+        endRequest();
+        assertEquals(ArtworkStatus.DRAFT, statusOf(missing));
+
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken).content(ALL_FALSE))
+                .andExpect(status().isOk());
+
+        endRequest();
+        assertEquals(ArtworkStatus.PUBLISHED, statusOf(missing));
+    }
+
+    @Test
+    @DisplayName("필수 항목을 완화해도 작가가 직접 비공개로 둔 작품은 다시 공개되지 않는다")
+    void relaxingDoesNotRepublishManualDraft() throws Exception {
+        Artwork manualDraft = artwork(exhibition, ArtworkStatus.DRAFT, null);
         mvc.perform(withToken(put(exhibition.getId()), ownerToken)
                         .content(settingsJson(true, false, false, false, false, false, false, false, false)))
                 .andExpect(status().isOk());
@@ -137,7 +154,7 @@ class FieldSettingsApiTests {
                 .andExpect(status().isOk());
 
         endRequest();
-        assertEquals(ArtworkStatus.DRAFT, statusOf(missing));
+        assertEquals(ArtworkStatus.DRAFT, statusOf(manualDraft));
     }
 
     @Test

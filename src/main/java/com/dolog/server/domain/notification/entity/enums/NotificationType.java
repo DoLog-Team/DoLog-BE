@@ -12,6 +12,11 @@ public enum NotificationType {
     ZONE_HIDDEN,                // 작품 그룹 숨김
     ZONE_SHOWN,                 // 작품 그룹 재공개
     ARTWORK_HIDDEN,             // 작품 숨김 처리 (관리자 조치)
+    ARTWORK_SHOWN,              // 작품 숨김 해제 (관리자 조치)
+    ARTWORK_GROUP_ASSIGNED,     // 작품을 다른 그룹으로 배치 (관리자 조치)
+    ARTWORK_GROUP_REMOVED,      // 소속 그룹이 삭제되어 그룹 해제됨
+    ARTWORK_UNPUBLISHED,        // 전시 필수 항목 설정 변경으로 자동 비공개 처리
+    ARTWORK_REPUBLISHED,        // 전시 필수 항목 설정 완화로 자동 재공개 처리
 
     // 전시 어드민 알림
     ARTIST_JOIN_REQUESTED,      // 작가 참여 신청

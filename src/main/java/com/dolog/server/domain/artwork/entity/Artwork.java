@@ -123,6 +123,14 @@ public class Artwork extends BaseEntity implements Orderable {
     @Column(name = "hidden_at")
     private LocalDateTime hiddenAt;
 
+    // 작가 설정(status), 관리자 숨김(hiddenAt)과는 별개로, 플랜의 작품 노출 한도를 넘어 자동으로 미노출된 상태
+    @Column(name = "plan_limit_exceeded_at")
+    private LocalDateTime planLimitExceededAt;
+
+    // 전시 필수 항목 설정 때문에 시스템이 자동으로 비공개 처리했는지. 작가가 직접 상태를 바꾸면 비워진다.
+    @Column(name = "auto_drafted_at")
+    private LocalDateTime autoDraftedAt;
+
     @Builder.Default
     @Column(name = "view_count", nullable = false)
     private long viewCount = 0L;
@@ -190,8 +198,26 @@ public class Artwork extends BaseEntity implements Orderable {
                 .anyMatch(map -> map.getArtist().getId().equals(artistId));
     }
 
+    // 작가·관리자가 직접 상태를 바꾸는 경우. 시스템이 걸어둔 자동 비공개 표시는 더 이상 유효하지 않으므로 지운다.
     public void changeStatus(ArtworkStatus status) {
         this.status = status;
+        this.autoDraftedAt = null;
+    }
+
+    // 전시 필수 항목을 못 채워 시스템이 자동으로 비공개 처리하는 경우
+    public void autoDraft(LocalDateTime at) {
+        this.status = ArtworkStatus.DRAFT;
+        this.autoDraftedAt = at;
+    }
+
+    // 항목 설정이 완화되어 시스템이 자동으로 다시 공개 처리하는 경우
+    public void autoPublish() {
+        this.status = ArtworkStatus.PUBLISHED;
+        this.autoDraftedAt = null;
+    }
+
+    public boolean isAutoDrafted() {
+        return autoDraftedAt != null;
     }
 
     public void hide(LocalDateTime hiddenAt) {
@@ -206,7 +232,19 @@ public class Artwork extends BaseEntity implements Orderable {
         return hiddenAt != null;
     }
 
-    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 작품이나 구역이 숨김이면 비노출.
+    public boolean exceedsPlanLimit() {
+        return planLimitExceededAt != null;
+    }
+
+    public void markPlanLimitExceeded(LocalDateTime at) {
+        this.planLimitExceededAt = at;
+    }
+
+    public void clearPlanLimitExceeded() {
+        this.planLimitExceededAt = null;
+    }
+
+    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 작품이나 구역이 숨김이거나 플랜 한도를 넘으면 비노출.
     // 출품된 작품은 전시가 게시된 뒤에만 보인다 (출품 안 한 개인 작품은 공개면 노출).
     public boolean isVisibleOnDolog() {
         return status == ArtworkStatus.PUBLISHED
@@ -214,7 +252,7 @@ public class Artwork extends BaseEntity implements Orderable {
     }
 
     public boolean isVisibleOnExhibition() {
-        return isVisibleOnDolog() && !isHidden()
+        return isVisibleOnDolog() && !isHidden() && !exceedsPlanLimit()
                 && (exhibitionZone == null || !exhibitionZone.isHidden());
     }
 
@@ -267,6 +305,7 @@ public class Artwork extends BaseEntity implements Orderable {
         this.orderIndex = null;
         this.locationMap = null;
         this.hiddenAt = null;
+        this.planLimitExceededAt = null;
         this.artworkArtistMaps.forEach(map -> map.linkProfile(null));
     }
     public void markDeleted(java.time.LocalDateTime at) {

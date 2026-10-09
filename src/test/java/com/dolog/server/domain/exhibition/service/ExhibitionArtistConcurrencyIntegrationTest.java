@@ -108,6 +108,9 @@ class ExhibitionArtistConcurrencyIntegrationTest {
     @MockitoBean
     private FileService fileService;
 
+    @MockitoBean
+    private com.dolog.server.domain.notification.service.NotificationService notificationService;
+
     @Autowired
     private EntityManager entityManager;
 

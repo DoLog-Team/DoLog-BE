@@ -1,5 +1,6 @@
 package com.dolog.server.domain.plan.service;
 
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -60,6 +61,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final PlanRepository planRepository;
+    private final ArtworkPlanLimitService artworkPlanLimitService;
 
     @Override
     @Transactional
@@ -132,8 +134,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             subscription.updatePaidAmount(targetPrice.resolveDiscountedPrice());
         }
 
-        // TODO: Artwork 도메인에 "플랜 한도 초과 미노출" 자동 전환 기능이 생기면 여기서 호출 연동 필요
-        // (다운그레이드 시 연결 순서 기준 초과분 자동 미노출 / 업그레이드 시 자동 재공개 — 피그마 "작품 수 초과에 따른 예외처리" 참고)
+        // 플랜이 바뀌면 작품 노출 한도도 바뀌므로 다시 계산한다 (다운그레이드 시 초과분 자동 미노출 / 업그레이드 시 자동 재공개)
+        artworkPlanLimitService.recompute(exhibitionId);
 
         return SubscriptionPlanChangeResponse.of(subscription, previousPlanId, previousPlanName, changeType);
     }
@@ -152,6 +154,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         // 결제 전 구독은 환불할 금액이 없고, 전시의 만료일도 건드리지 않는다
         if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
             subscription.cancelSubscription(now);
+            artworkPlanLimitService.recompute(subscription.getExhibition().getId());
             return SubscriptionCancelResponse.from(subscription, null);
         }
 
@@ -164,6 +167,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         subscription.cancelSubscription(usageEndAt);
         subscription.getExhibition().applySubscriptionEnd(usageEndAt);
+        artworkPlanLimitService.recompute(subscription.getExhibition().getId());
 
         return SubscriptionCancelResponse.from(subscription, refund.getRefundAmount());
     }
@@ -267,6 +271,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         if (subscription.getStatus() == SubscriptionStatus.ACTIVE && subscription.getExhibition().getPublishedAt() != null) {
             subscription.getExhibition().applySubscriptionEnd(subscription.getEndedAt());
         }
+
+        // 구독 상태가 바뀌면(활성화/만료 등) 작품 노출 한도도 바뀔 수 있어 다시 계산한다
+        artworkPlanLimitService.recompute(subscription.getExhibition().getId());
 
         return SubscriptionStatusUpdateResponse.from(subscription);
     }

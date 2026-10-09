@@ -83,6 +83,9 @@ class ExhibitionArtistServiceImplTest {
     @Mock
     private ArtworkRepository artworkRepository;
 
+    @Mock
+    private com.dolog.server.domain.notification.service.NotificationService notificationService;
+
     @Spy
     private ArtworkSubmissionCanceller artworkSubmissionCanceller =
             new ArtworkSubmissionCanceller(new ArtworkFileHandler(mock(FileService.class)));

@@ -150,4 +150,11 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             @Param("target") ExhibitionArtistStatus target,
             @Param("at") java.time.LocalDateTime at);
 
+    // 탈퇴 처리 전에, 알릴 전시(소속 중이던 전시)를 미리 조회해둔다
+    @EntityGraph(attributePaths = {"exhibition", "exhibition.account"})
+    List<ExhibitionArtistMap> findAllByArtistIdAndStatusIn(
+            UUID artistId,
+            Collection<ExhibitionArtistStatus> statuses
+    );
+
 }

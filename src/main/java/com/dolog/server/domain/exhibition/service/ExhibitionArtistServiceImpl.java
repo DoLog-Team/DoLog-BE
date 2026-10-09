@@ -26,6 +26,8 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 
 import lombok.RequiredArgsConstructor;
@@ -52,6 +54,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
     private final ArtworkSubmissionCanceller artworkSubmissionCanceller;
+    private final NotificationService notificationService;
 
     // 전시 작가 추가
     @Override
@@ -180,7 +183,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             UUID exhibitionId,
             UUID artistId
     ) {
-        findAuthorizedExhibitionForUpdate(accountId, exhibitionId);
+        Exhibition exhibition = findAuthorizedExhibitionForUpdate(accountId, exhibitionId);
 
         ExhibitionArtistMap map = exhibitionArtistMapRepository
                 .findByExhibitionIdAndArtistId(exhibitionId, artistId)
@@ -191,6 +194,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         requireStatusTransition(map, ExhibitionArtistStatus.REMOVED);
         map.updateStatus(ExhibitionArtistStatus.REMOVED);
         cancelArtworkSubmissions(exhibitionId, List.of(artistId));
+        notifyArtistRemoved(exhibition, map.getArtist());
     }
 
     // 작가 본인의 전시 나가기 (참여 이력과 프로필은 유지한다)
@@ -232,6 +236,13 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         map.updateStatus(ExhibitionArtistStatus.WITHDRAWN);
         cancelArtworkSubmissions(exhibitionId, List.of(artistId));
+
+        notificationService.send(
+                map.getExhibition().getAccount(),
+                NotificationType.ARTIST_WITHDRAWN,
+                Map.of("artistName", artist.getNameKo(), "exhibitionName", resolveExhibitionName(map.getExhibition())),
+                exhibitionId
+        );
     }
 
     @Override
@@ -286,6 +297,14 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             map.reapply(greeting);
         }
 
+        Exhibition exhibition = context.exhibition();
+        notificationService.send(
+                exhibition.getAccount(),
+                NotificationType.ARTIST_JOIN_REQUESTED,
+                Map.of("artistName", context.artist().getNameKo(), "exhibitionName", resolveExhibitionName(exhibition)),
+                exhibition.getId()
+        );
+
         return new ArtistJoinResponse(
                 context.exhibition().getId(),
                 map.getStatus()
@@ -335,8 +354,12 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
         if (targetStatus == ExhibitionArtistStatus.JOINED) {
             createMissingArtistProfiles(exhibition, maps);
+            maps.forEach(map -> notifyArtist(map.getArtist(), NotificationType.ARTIST_JOIN_APPROVED, exhibition));
+        } else if (targetStatus == ExhibitionArtistStatus.DENIED) {
+            maps.forEach(map -> notifyArtist(map.getArtist(), NotificationType.ARTIST_JOIN_REJECTED, exhibition));
         } else if (targetStatus == ExhibitionArtistStatus.REMOVED) {
             cancelArtworkSubmissions(exhibitionId, distinctArtistIds);
+            maps.forEach(map -> notifyArtistRemoved(exhibition, map.getArtist()));
         }
 
         return new ExhibitionArtistStatusUpdateResponse(maps.size());
@@ -535,6 +558,30 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         if (!profilesToCreate.isEmpty()) {
             artistProfileRepository.saveAll(profilesToCreate);
         }
+    }
+
+    // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibition.getExhibitionDetail() != null
+                ? exhibition.getExhibitionDetail().getTitle()
+                : exhibition.getSlug();
+    }
+
+    // 작가 계정이 있을 때만 알림을 보낸다 (계정 없이 등록된 작가는 수신자가 없음)
+    private void notifyArtist(Artist artist, NotificationType type, Exhibition exhibition) {
+        if (artist.getAccount() == null) {
+            return;
+        }
+        notificationService.send(
+                artist.getAccount(),
+                type,
+                Map.of("exhibitionName", resolveExhibitionName(exhibition)),
+                exhibition.getId()
+        );
+    }
+
+    private void notifyArtistRemoved(Exhibition exhibition, Artist artist) {
+        notifyArtist(artist, NotificationType.ARTIST_REMOVED, exhibition);
     }
 
     private String normalizeJoinCode(String rawCode) {
