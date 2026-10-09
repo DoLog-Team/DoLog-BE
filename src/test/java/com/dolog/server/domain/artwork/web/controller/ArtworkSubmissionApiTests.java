@@ -275,6 +275,26 @@ class ArtworkSubmissionApiTests {
     }
 
     @Test
+    @DisplayName("설명은 전시 설정과 무관하게 항상 필수라 없으면 공개할 수 없고, 채우면 공개된다")
+    void requiresDescriptionToPublish() throws Exception {
+        Artwork artwork = Artwork.builder().title("작품").build();
+        artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                .artwork(artwork).artist(me).artistRole("").build());
+        artworks.saveAndFlush(artwork);
+
+        mvc.perform(withToken(changeStatus(artwork.getId(), "PUBLISHED"), myToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ARTWORK_013"));
+
+        artwork.updateText("작품", null, "설명", null);
+        em.flush();
+
+        mvc.perform(withToken(changeStatus(artwork.getId(), "PUBLISHED"), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
+    }
+
+    @Test
     @DisplayName("필수 항목이 비어 있어도 비공개(DRAFT)로는 바꿀 수 있다")
     void draftIgnoresFieldSettings() throws Exception {
         Artwork artwork = submitted(artworkOf(me, "작품"));

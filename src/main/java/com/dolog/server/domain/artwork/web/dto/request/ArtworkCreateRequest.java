@@ -41,7 +41,7 @@ public class ArtworkCreateRequest {
     @Digits(integer = 8, fraction = 2)
     private BigDecimal depth;
 
-    @NotBlank
+    // 생성 시점엔 선택. 공개(PUBLISHED)할 때는 ArtworkFieldRequirement에서 필수로 체크한다.
     private String description;
 
     @Size(max = 255)
