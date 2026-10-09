@@ -25,6 +25,8 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalItemResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionMyItemResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionMyListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
@@ -493,6 +495,26 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                 Math.toIntExact(result.getTotalElements()),
                 result.getTotalPages()
         );
+    }
+
+    // 마이페이지 "내 전시 목록". status 생략 시 PENDING/JOINED(참여중/대기중)만 보여준다.
+    @Override
+    @Transactional(readOnly = true)
+    public ExhibitionMyListResponse getMyExhibitions(UUID accountId, ExhibitionArtistStatus status) {
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(ArtistNotFoundException::new);
+
+        List<ExhibitionArtistStatus> statuses = status != null
+                ? List.of(status)
+                : List.of(ExhibitionArtistStatus.PENDING, ExhibitionArtistStatus.JOINED);
+
+        List<ExhibitionMyItemResponse> exhibitions = exhibitionArtistMapRepository
+                .findAllByArtistIdAndStatusIn(artist.getId(), statuses).stream()
+                .sorted(Comparator.comparing(ExhibitionArtistMap::getCreatedAt).reversed())
+                .map(map -> ExhibitionMyItemResponse.from(map, resolveExhibitionName(map.getExhibition())))
+                .toList();
+
+        return new ExhibitionMyListResponse(exhibitions);
     }
 
     private String escapeLikePattern(String value) {

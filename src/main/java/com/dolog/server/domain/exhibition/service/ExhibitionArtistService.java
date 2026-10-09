@@ -5,6 +5,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionMyListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -55,4 +56,7 @@ public interface ExhibitionArtistService {
             int page,
             int size
     );
+
+    // 마이페이지 "내 전시 목록". status 생략 시 PENDING/JOINED만.
+    ExhibitionMyListResponse getMyExhibitions(UUID accountId, ExhibitionArtistStatus status);
 }

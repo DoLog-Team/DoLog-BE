@@ -13,6 +13,7 @@ import com.dolog.server.domain.artwork.support.ArtworkSubmissionCanceller;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.support.file.ArtworkFileHandler;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkSubmitRequest;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkExhibitionStatusResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkSubmitResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
@@ -81,6 +82,21 @@ public class ArtworkSubmissionProcessor {
         artworkPlanLimitService.recompute(exhibition.getId());
 
         return ArtworkSubmitResponse.from(artwork);
+    }
+
+    // 작가 본인의 "내 작품이 지금 어느 전시/구역에 출품돼 있고 숨김 상태인지" 조회
+    public ArtworkExhibitionStatusResponse getSubmissionStatus(
+            UUID accountId,
+            UUID artworkId
+    ) {
+        Artist artist = artworkValidator.getLoginArtist(accountId);
+        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
+
+        if (artwork.getExhibition() == null) {
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
+        }
+
+        return ArtworkExhibitionStatusResponse.of(artwork, resolveExhibitionName(artwork.getExhibition()));
     }
 
     public void cancel(

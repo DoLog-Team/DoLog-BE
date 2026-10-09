@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkAdminQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
+import com.dolog.server.domain.artwork.service.artwork.query.ArtworkMyQueryService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.service.view.ArtworkViewService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
@@ -40,6 +41,7 @@ public class ArtworkController {
     private final ArtworkViewService artworkViewService;
     private final ArtworkOrderService artworkOrderService;
     private final ArtworkAdminQueryService artworkAdminQueryService;
+    private final ArtworkMyQueryService artworkMyQueryService;
 
     // 1. 작품 전체 목록 조회
     @Operation(summary = "작품 전체 목록 조회")
@@ -70,6 +72,19 @@ public class ArtworkController {
         ArtworkAdminListResponse data = artworkAdminQueryService.getArtworks(
                 exhibitionId, status, hidden, search, page, size);
         return SuccessResponse.ok(data, "작품 전체 목록 조회 성공");
+    }
+
+    @Operation(summary = "내 작품 목록 조회", description = "로그인한 작가 본인(공동 작가 포함) 작품을 공개 여부와 무관하게 조회합니다.")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @GetMapping("/artworks/me")
+    public SuccessResponse<ArtworkMyListResponse> getMyArtworks(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam(required = false) ArtworkStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        ArtworkMyListResponse data = artworkMyQueryService.getMyArtworks(user.getId(), status, page, size);
+        return SuccessResponse.ok(data, "내 작품 목록 조회에 성공했습니다.");
     }
 
     // 2. 작품 기본 정보 등록
@@ -127,6 +142,16 @@ public class ArtworkController {
             @PathVariable UUID artworkId) {
         artworkService.cancelSubmission(user.getId(), artworkId);
         return SuccessResponse.ok(null, "작품 출품이 취소되었습니다.");
+    }
+
+    @Operation(summary = "작품 출품 상태 조회", description = "본인 작품만. 출품된 전시/구역과 노출 상태(숨김, 플랜 한도 초과)를 조회합니다.")
+    @GetMapping("/artworks/{artworkId}/exhibition")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtworkExhibitionStatusResponse> getSubmissionStatus(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId) {
+        ArtworkExhibitionStatusResponse data = artworkService.getSubmissionStatus(user.getId(), artworkId);
+        return SuccessResponse.ok(data, "작품 출품 상태 조회에 성공했습니다.");
     }
 
     @Operation(summary = "작품 공개/비공개 처리 (작가 어드민)", description = "DRAFT/PUBLISHED 전환. 출품된 작품은 전시의 필수 항목을 채워야 공개할 수 있습니다.")

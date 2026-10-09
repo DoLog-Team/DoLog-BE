@@ -79,6 +79,34 @@ public class ExhibitionFieldSettings extends BaseEntity {
         return true;
     }
 
+    // 작성률(%). 필수로 켜둔 항목 중 채운 비율. 필수 항목이 하나도 없으면 100.
+    public int completionRate(Artwork artwork) {
+        int required = 0;
+        int filled = 0;
+
+        if (requiredMainImg) {
+            required++;
+            if (!isBlank(artwork.getMainImg())) filled++;
+        }
+        if (requiredSize) {
+            required++;
+            if (artwork.getWidth() != null && artwork.getHeight() != null) filled++;
+        }
+        if (requiredMaterials) {
+            required++;
+            if (!artwork.getMaterials().isEmpty()) filled++;
+        }
+        if (requiredLocationMap) {
+            required++;
+            if (!isBlank(artwork.getLocationMap())) filled++;
+        }
+
+        if (required == 0) {
+            return 100;
+        }
+        return Math.round(filled * 100f / required);
+    }
+
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
