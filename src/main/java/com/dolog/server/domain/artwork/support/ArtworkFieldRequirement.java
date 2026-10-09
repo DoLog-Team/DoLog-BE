@@ -30,6 +30,18 @@ public class ArtworkFieldRequirement {
                 .orElse(true);
     }
 
+    // 마이페이지 작성률(%). 출품 전 개인 작품은 기준이 없어 null.
+    public Integer completionRate(Artwork artwork) {
+
+        if (artwork.getExhibition() == null) {
+            return null;
+        }
+
+        return fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId())
+                .map(settings -> settings.completionRate(artwork))
+                .orElse(100);
+    }
+
     // 작가가 직접 공개하거나 수정할 때: 규칙을 깨면 거절한다.
     public void requireIfPublished(Artwork artwork) {
 

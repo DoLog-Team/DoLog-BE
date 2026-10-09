@@ -81,4 +81,16 @@ public class ArtworkSpecification {
             return hidden ? cb.isNotNull(root.get("hiddenAt")) : cb.isNull(root.get("hiddenAt"));
         };
     }
+
+    // 마이페이지 "내 작품"용. 공동 작가로 연결된 것도 포함한다.
+    public static Specification<Artwork> withArtistId(UUID artistId) {
+        return (root, query, cb) -> {
+            Subquery<UUID> artworkIdSubquery = query.subquery(UUID.class);
+            Root<ArtworkArtistMap> aamRoot = artworkIdSubquery.from(ArtworkArtistMap.class);
+            artworkIdSubquery.select(aamRoot.<Artwork>get("artwork").<UUID>get("id"))
+                    .where(cb.equal(aamRoot.get("artist").get("id"), artistId));
+
+            return root.get("id").in(artworkIdSubquery);
+        };
+    }
 }
