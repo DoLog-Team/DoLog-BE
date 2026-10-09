@@ -17,7 +17,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173", "https://dolog.kr", "https://www.dolog.kr")
+                .allowedOrigins("http://localhost:5173", "https://dolog.kr", "https://www.dolog.kr",
+                        "https://dolog-admin.netlify.app", "https://dolog-test.netlify.app")
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowCredentials(true);
     }
