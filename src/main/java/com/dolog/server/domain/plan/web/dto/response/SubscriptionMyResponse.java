@@ -6,6 +6,7 @@ import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,6 +20,7 @@ public class SubscriptionMyResponse {
     private UUID planId;
     private String planName;
     private BillingCycle billingCycle;
+    private BigDecimal paidAmount;
     private SubscriptionStatus status;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
@@ -31,6 +33,7 @@ public class SubscriptionMyResponse {
                 .planId(subscription.getPlan().getId())
                 .planName(subscription.getPlan().getName())
                 .billingCycle(subscription.getBillingCycle())
+                .paidAmount(subscription.getPaidAmount())
                 .status(subscription.getStatus())
                 .startedAt(subscription.getStartedAt())
                 .endedAt(subscription.getEndedAt())
