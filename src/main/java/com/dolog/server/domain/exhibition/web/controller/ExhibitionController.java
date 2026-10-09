@@ -130,6 +130,13 @@ public class ExhibitionController {
                 .body(SuccessResponse.created(exhibitionService.reissueEntryCode(exhibitionId, request.getExpiresAt())));
     }
 
+    @Operation(summary = "전시 로그인 코드 · 작가 참여 코드 조회", description = "두록 어드민 전용. 발급 후 다시 조회할 수 없는 두 코드를 한 번에 돌려줍니다.")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @GetMapping("/{exhibitionId}/codes")
+    public SuccessResponse<ExhibitionCodesResponse> getCodes(@PathVariable UUID exhibitionId) {
+        return SuccessResponse.ok(exhibitionService.getCodes(exhibitionId), "전시 코드 조회 성공");
+    }
+
     // 전시회 기본정보 수정
     @Operation(summary = "전시회 기본정보 수정")
     @PreAuthorize("hasRole('DOLOG_ADMIN')")

@@ -38,6 +38,9 @@ public interface ExhibitionService {
     // 작가 전시 참여 코드
     ArtistJoinCodeResponse reissueArtistJoinCode(UUID exhibitionId, LocalDateTime expiresAt);
 
+    // 두록 어드민용 코드 재조회 (entryCode, artistJoinCode 둘 다)
+    ExhibitionCodesResponse getCodes(UUID exhibitionId);
+
     // 전시 게시 / 게시기간 연장
     ExhibitionPublishResponse publishExhibition(UUID exhibitionId, UUID accountId);
     ExhibitionPublishResponse extendExpiresAt(UUID exhibitionId, LocalDateTime expiresAt);
