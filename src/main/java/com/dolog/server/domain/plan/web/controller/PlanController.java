@@ -5,6 +5,7 @@ import com.dolog.server.domain.plan.web.dto.request.PlanActiveStatusRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanUpdateRequest;
 import com.dolog.server.domain.plan.web.dto.response.PlanActiveStatusResponse;
+import com.dolog.server.domain.plan.web.dto.response.PlanAdminListResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanListResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanUpdateResponse;
@@ -44,6 +45,14 @@ public class PlanController {
     @GetMapping
     public SuccessResponse<PlanListResponse> getPlans() {
         return SuccessResponse.ok(planService.getPlans(), "요금제 목록 조회에 성공했습니다.");
+    }
+
+    @Operation(summary = "요금제 전체 목록 조회 (어드민)",
+            description = "두록 어드민 전용. 비활성 요금제까지 포함하며 각 요금제의 isActive 를 함께 반환합니다.")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @GetMapping("/admin")
+    public SuccessResponse<PlanAdminListResponse> getPlansForAdmin() {
+        return SuccessResponse.ok(planService.getPlansForAdmin(), "요금제 전체 목록 조회에 성공했습니다.");
     }
 
     @Operation(summary = "요금제 수정")

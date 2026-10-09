@@ -63,4 +63,22 @@ public class ArtworkSpecification {
         return (root, query, cb) ->
                 cb.isNotNull(root.get("exhibition"));
     }
+
+    // 두록 어드민 전체 조회용. 공개 여부/노출 상태와 무관하게 조건만 건다.
+    public static Specification<Artwork> withExhibitionId(UUID exhibitionId) {
+        return (root, query, cb) ->
+                exhibitionId == null ? cb.conjunction() : cb.equal(root.get("exhibition").get("id"), exhibitionId);
+    }
+
+    public static Specification<Artwork> withStatus(ArtworkStatus status) {
+        return (root, query, cb) ->
+                status == null ? cb.conjunction() : cb.equal(root.get("status"), status);
+    }
+
+    public static Specification<Artwork> withHidden(Boolean hidden) {
+        return (root, query, cb) -> {
+            if (hidden == null) return cb.conjunction();
+            return hidden ? cb.isNotNull(root.get("hiddenAt")) : cb.isNull(root.get("hiddenAt"));
+        };
+    }
 }

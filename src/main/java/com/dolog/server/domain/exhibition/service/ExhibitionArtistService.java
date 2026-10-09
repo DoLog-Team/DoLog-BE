@@ -4,6 +4,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -39,6 +40,15 @@ public interface ExhibitionArtistService {
 
     ExhibitionArtistManageListResponse getArtistsForManagement(
             UUID accountId,
+            UUID exhibitionId,
+            ExhibitionArtistStatus status,
+            String search,
+            int page,
+            int size
+    );
+
+    // 두록 어드민 전용. exhibitionId를 생략하면 전시를 가로질러 조회한다.
+    ExhibitionArtistGlobalListResponse getArtistsForManagementAcrossExhibitions(
             UUID exhibitionId,
             ExhibitionArtistStatus status,
             String search,

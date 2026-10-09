@@ -8,6 +8,7 @@ import com.dolog.server.domain.plan.web.dto.request.PlanActiveStatusRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanCreateRequest;
 import com.dolog.server.domain.plan.web.dto.request.PlanUpdateRequest;
 import com.dolog.server.domain.plan.web.dto.response.PlanActiveStatusResponse;
+import com.dolog.server.domain.plan.web.dto.response.PlanAdminListResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanCreateResponse;
 import com.dolog.server.domain.plan.web.dto.response.PlanListResponse;
 import com.dolog.server.domain.plan.web.dto.request.PlanPriceCreateRequest;
@@ -49,6 +50,11 @@ public class PlanServiceImpl implements PlanService {
     @Override
     public PlanListResponse getPlans() {
         return PlanListResponse.from(planRepository.findByIsActiveTrueOrderByDisplayOrderAsc());
+    }
+
+    @Override
+    public PlanAdminListResponse getPlansForAdmin() {
+        return PlanAdminListResponse.from(planRepository.findAllByOrderByDisplayOrderAsc());
     }
 
     @Override
