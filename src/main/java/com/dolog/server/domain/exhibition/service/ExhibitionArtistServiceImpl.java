@@ -23,6 +23,8 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalItemResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistStatusUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinCodeValidateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
@@ -455,6 +457,38 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         .toList();
 
         return new ExhibitionArtistManageListResponse(
+                artists,
+                Math.toIntExact(result.getTotalElements()),
+                result.getTotalPages()
+        );
+    }
+
+    // 두록 어드민 전용. exhibitionId를 생략하면 전시를 가로질러 조회한다 (권한 체크는 컨트롤러의 DOLOG_ADMIN 제한으로 충분).
+    @Override
+    @Transactional(readOnly = true)
+    public ExhibitionArtistGlobalListResponse getArtistsForManagementAcrossExhibitions(
+            UUID exhibitionId,
+            ExhibitionArtistStatus status,
+            String search,
+            int page,
+            int size
+    ) {
+        if (status == null || page < 0 || size < 1 || size > 100) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_ARTIST_QUERY_INVALID);
+        }
+
+        String normalizedSearch = search == null || search.isBlank()
+                ? null
+                : escapeLikePattern(search.trim());
+
+        Page<ExhibitionArtistMap> result = exhibitionArtistMapRepository.findAllForManagement(
+                exhibitionId, status, normalizedSearch, PageRequest.of(page, size));
+
+        List<ExhibitionArtistGlobalItemResponse> artists = result.getContent().stream()
+                .map(map -> ExhibitionArtistGlobalItemResponse.from(map, resolveExhibitionName(map.getExhibition())))
+                .toList();
+
+        return new ExhibitionArtistGlobalListResponse(
                 artists,
                 Math.toIntExact(result.getTotalElements()),
                 result.getTotalPages()

@@ -5,6 +5,7 @@ import com.dolog.server.domain.artwork.service.order.ArtworkOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.dolog.server.domain.artwork.service.artwork.query.ArtworkAdminQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.service.view.ArtworkViewService;
@@ -38,6 +39,7 @@ public class ArtworkController {
     private final VisitorIdResolver visitorIdResolver;
     private final ArtworkViewService artworkViewService;
     private final ArtworkOrderService artworkOrderService;
+    private final ArtworkAdminQueryService artworkAdminQueryService;
 
     // 1. 작품 전체 목록 조회
     @Operation(summary = "작품 전체 목록 조회")
@@ -50,6 +52,24 @@ public class ArtworkController {
     ) {
         Object data = artworkService.getArtworks(main, category, search, sort);
         return SuccessResponse.ok(data);
+    }
+
+    // 두록 어드민 전용. 공개/비공개/숨김/플랜 한도 초과와 무관하게 전부 조회한다.
+    @Operation(summary = "작품 전체 목록 조회 (어드민)",
+            description = "두록 어드민 전용. 숨김/비공개/플랜 한도 초과 작품까지 전부 조회합니다.")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @GetMapping("/artworks/admin")
+    public SuccessResponse<ArtworkAdminListResponse> getArtworksForAdmin(
+            @RequestParam(required = false) UUID exhibitionId,
+            @RequestParam(required = false) ArtworkStatus status,
+            @RequestParam(required = false) Boolean hidden,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        ArtworkAdminListResponse data = artworkAdminQueryService.getArtworks(
+                exhibitionId, status, hidden, search, page, size);
+        return SuccessResponse.ok(data, "작품 전체 목록 조회 성공");
     }
 
     // 2. 작품 기본 정보 등록

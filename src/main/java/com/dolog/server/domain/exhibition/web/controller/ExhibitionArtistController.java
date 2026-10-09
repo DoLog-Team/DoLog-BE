@@ -25,6 +25,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.dolog.server.domain.artist.web.dto.request.ArtistJoinRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalListResponse;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -207,5 +209,28 @@ public class ExhibitionArtistController {
                 response,
                 "전시 작가 관리 목록 조회 성공"
         );
+    }
+
+    @Operation(summary = "전시 참여 작가 전체 조회 (어드민)",
+            description = "두록 어드민 전용. exhibitionId를 생략하면 전시를 가로질러 조회합니다.")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    @GetMapping("/artists/manage")
+    public SuccessResponse<ExhibitionArtistGlobalListResponse> getArtistsForManagementAcrossExhibitions(
+            @RequestParam(required = false) UUID exhibitionId,
+            @RequestParam ExhibitionArtistStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0")
+            @Min(value = 0, message = "page는 0 이상이어야 합니다.")
+            int page,
+            @RequestParam(defaultValue = "10")
+            @Min(value = 1, message = "size는 1 이상이어야 합니다.")
+            @Max(value = 100, message = "size는 100 이하여야 합니다.")
+            int size
+    ) {
+        ExhibitionArtistGlobalListResponse response =
+                exhibitionArtistService.getArtistsForManagementAcrossExhibitions(
+                        exhibitionId, status, search, page, size);
+
+        return SuccessResponse.ok(response, "전시 참여 작가 전체 조회 성공");
     }
 }

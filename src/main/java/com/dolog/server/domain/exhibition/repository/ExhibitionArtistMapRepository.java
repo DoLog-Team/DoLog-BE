@@ -157,4 +157,44 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             Collection<ExhibitionArtistStatus> statuses
     );
 
+    // 두록 어드민 전용. 전시를 가로질러 참여 신청/참여 작가를 한 번에 조회한다. exhibitionId는 선택.
+    @EntityGraph(attributePaths = {"artist", "artist.account", "exhibition", "exhibition.exhibitionDetail"})
+    @Query(
+            value = """
+            SELECT m
+            FROM ExhibitionArtistMap m
+            JOIN m.artist a
+            LEFT JOIN a.account acc
+            WHERE m.status = :status
+              AND (:exhibitionId IS NULL OR m.exhibition.id = :exhibitionId)
+              AND (
+                  :search IS NULL
+                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+              )
+            ORDER BY m.createdAt DESC, m.id DESC
+            """,
+            countQuery = """
+            SELECT COUNT(m)
+            FROM ExhibitionArtistMap m
+            JOIN m.artist a
+            LEFT JOIN a.account acc
+            WHERE m.status = :status
+              AND (:exhibitionId IS NULL OR m.exhibition.id = :exhibitionId)
+              AND (
+                  :search IS NULL
+                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+              )
+            """
+    )
+    Page<ExhibitionArtistMap> findAllForManagement(
+            @Param("exhibitionId") UUID exhibitionId,
+            @Param("status") ExhibitionArtistStatus status,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
 }
