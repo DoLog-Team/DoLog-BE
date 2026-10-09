@@ -144,6 +144,16 @@ public class ArtworkController {
         return SuccessResponse.ok(null, "작품 출품이 취소되었습니다.");
     }
 
+    @Operation(summary = "작품 출품 상태 조회", description = "본인 작품만. 출품된 전시/구역과 노출 상태(숨김, 플랜 한도 초과)를 조회합니다.")
+    @GetMapping("/artworks/{artworkId}/exhibition")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtworkExhibitionStatusResponse> getSubmissionStatus(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId) {
+        ArtworkExhibitionStatusResponse data = artworkService.getSubmissionStatus(user.getId(), artworkId);
+        return SuccessResponse.ok(data, "작품 출품 상태 조회에 성공했습니다.");
+    }
+
     @Operation(summary = "작품 공개/비공개 처리 (작가 어드민)", description = "DRAFT/PUBLISHED 전환. 출품된 작품은 전시의 필수 항목을 채워야 공개할 수 있습니다.")
     @PatchMapping("/artworks/{artworkId}/exhibition")
     @PreAuthorize("hasRole('ARTIST_ADMIN')")

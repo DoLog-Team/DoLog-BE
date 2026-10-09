@@ -22,6 +22,8 @@ public interface ArtworkService {
 
     void cancelSubmission(UUID accountId, UUID artworkId);
 
+    ArtworkExhibitionStatusResponse getSubmissionStatus(UUID accountId, UUID artworkId);
+
     ArtworkStatusResponse changeArtworkStatus(UUID accountId, UUID artworkId, ArtworkStatusUpdateRequest request);
 
     ArtworkHiddenResponse changeArtworkHidden(UUID accountId, UUID artworkId, ArtworkHiddenUpdateRequest request);

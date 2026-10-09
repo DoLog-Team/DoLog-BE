@@ -28,6 +28,7 @@ import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullRespons
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkSubmitResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkExhibitionStatusResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -135,6 +136,12 @@ public class ArtworkServiceImpl implements ArtworkService {
     public void cancelSubmission(UUID accountId, UUID artworkId) {
 
         artworkSubmissionProcessor.cancel(accountId, artworkId);
+    }
+
+    @Override
+    public ArtworkExhibitionStatusResponse getSubmissionStatus(UUID accountId, UUID artworkId) {
+
+        return artworkSubmissionProcessor.getSubmissionStatus(accountId, artworkId);
     }
 
     @Override
