@@ -21,6 +21,11 @@ public class ArtworkFieldRequirement {
 
     public boolean isSatisfied(Artwork artwork) {
 
+        // description은 전시 설정과 무관하게 항상 필수 (생성 시점엔 선택, 공개 시점엔 필수)
+        if (isBlank(artwork.getDescription())) {
+            return false;
+        }
+
         if (artwork.getExhibition() == null) {
             return true;
         }
@@ -28,6 +33,10 @@ public class ArtworkFieldRequirement {
         return fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId())
                 .map(settings -> settings.isSatisfiedBy(artwork))
                 .orElse(true);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     // 마이페이지 작성률(%). 출품 전 개인 작품은 기준이 없어 null.
