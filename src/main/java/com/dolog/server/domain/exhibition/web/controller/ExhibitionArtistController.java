@@ -26,6 +26,7 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistJoinRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistJoinResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageListResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistGlobalListResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionMyListResponse;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -232,5 +233,16 @@ public class ExhibitionArtistController {
                         exhibitionId, status, search, page, size);
 
         return SuccessResponse.ok(response, "전시 참여 작가 전체 조회 성공");
+    }
+
+    @Operation(summary = "내 전시 목록 조회", description = "로그인한 작가가 참여 신청했거나 참여 중인 전시를 조회합니다. status 생략 시 PENDING/JOINED만.")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @GetMapping("/me")
+    public SuccessResponse<ExhibitionMyListResponse> getMyExhibitions(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestParam(required = false) ExhibitionArtistStatus status
+    ) {
+        ExhibitionMyListResponse response = exhibitionArtistService.getMyExhibitions(user.getId(), status);
+        return SuccessResponse.ok(response, "내 전시 목록 조회에 성공했습니다.");
     }
 }
