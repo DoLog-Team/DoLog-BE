@@ -8,6 +8,7 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.service.AccountService;
 import com.dolog.server.domain.account.service.TermsAgreementService;
 import com.dolog.server.domain.account.web.dto.request.TermsAgreementRequest;
+import com.dolog.server.domain.account.web.dto.request.OptionalTermsAgreementRequest;
 import com.dolog.server.domain.account.web.dto.response.TermsAgreementResponse;
 import com.dolog.server.domain.account.web.dto.response.TermsAgreementDetailResponse;
 import com.dolog.server.domain.account.web.dto.request.AdminCreateRequest;
@@ -75,6 +76,15 @@ public class AccountController {
     public SuccessResponse<TermsAgreementDetailResponse> getTermsAgreement(
             @AuthenticationPrincipal CustomUserDetails user) {
         return SuccessResponse.ok(termsAgreementService.getLatestAgreement(user.getId()), "약관 동의 내역 조회 성공");
+    }
+
+    @Operation(summary = "내 선택 약관 동의 변경 및 철회")
+    @PatchMapping("/me/terms")
+    @PreAuthorize("hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN')")
+    public SuccessResponse<TermsAgreementDetailResponse> updateOptionalTerms(
+            @AuthenticationPrincipal CustomUserDetails user, @Valid @RequestBody OptionalTermsAgreementRequest request) {
+        return SuccessResponse.ok(termsAgreementService.updateOptionalConsents(user.getId(), request),
+                "선택 약관 동의 변경 성공");
     }
 
     @Operation(summary = "내 약관 동의 저장")

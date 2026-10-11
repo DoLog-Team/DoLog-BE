@@ -4,6 +4,7 @@ import com.dolog.server.domain.account.entity.TermsAgreement;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.TermsAgreementRepository;
 import com.dolog.server.domain.account.web.dto.request.TermsAgreementRequest;
+import com.dolog.server.domain.account.web.dto.request.OptionalTermsAgreementRequest;
 import com.dolog.server.domain.account.web.dto.response.TermsAgreementDetailResponse;
 import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
@@ -70,6 +71,22 @@ public class TermsAgreementService {
                 .adEmailAgreed(request.adReceiveAgreed()).adKakaoAgreed(request.adReceiveAgreed())
                 .adSmsAgreed(request.adReceiveAgreed()).agreedAt(agreedAt).build());
         return agreedAt;
+    }
+
+    @Transactional
+    public TermsAgreementDetailResponse updateOptionalConsents(UUID accountId, OptionalTermsAgreementRequest request) {
+        String version = requiredVersion();
+        if (!version.equals(request.termsVersion())) {
+            throw new BaseException(AccountErrorCode.TERMS_VERSION_MISMATCH);
+        }
+        var agreement = agreements.findByAccountIdAndTermsVersion(accountId, version)
+                .orElseThrow(() -> new BaseException(AccountErrorCode.TERMS_NOT_FOUND));
+        if (!agreement.isAge14OrOverConfirmed() || !agreement.isServiceTermsAgreed() || !agreement.isPrivacyAgreed()
+                || (request.adReceiveAgreed() && !request.marketingAgreed())) {
+            throw new BaseException(AccountErrorCode.TERMS_REQUIRED_MISSING);
+        }
+        agreement.updateOptionalConsents(request.promotionAgreed(), request.marketingAgreed(), request.adReceiveAgreed());
+        return TermsAgreementDetailResponse.from(agreement);
     }
 
     private String requiredVersion() {

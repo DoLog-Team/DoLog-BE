@@ -58,4 +58,12 @@ public class TermsAgreement {
 
     @Column(name = "agreed_at", nullable = false)
     private LocalDateTime agreedAt;
+
+    public void updateOptionalConsents(boolean promotionAgreed, boolean marketingAgreed, boolean adReceiveAgreed) {
+        this.promotionAgreed = promotionAgreed;
+        this.marketingAgreed = marketingAgreed;
+        this.adEmailAgreed = adReceiveAgreed;
+        this.adKakaoAgreed = adReceiveAgreed;
+        this.adSmsAgreed = adReceiveAgreed;
+    }
 }
