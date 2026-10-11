@@ -1,6 +1,8 @@
 package com.dolog.server.domain.account.service;
 
 import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.account.entity.RefreshToken;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
@@ -34,6 +36,7 @@ import java.util.Locale;
 public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
+    private final ArtistRepository artistRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -108,6 +111,11 @@ public class AuthServiceImpl implements AuthService {
         }
         boolean needsTermsAgreement = termsAgreementService.needsAgreement(account.getId());
         var tokens = issueTokens(account);
+        Account lockedAccount = accountRepository.findByIdForUpdate(account.getId())
+                .orElseThrow(JwtInvalidException::new);
+        if (artistRepository.findByAccountIdIncludingDeleted(account.getId()).isEmpty()) {
+            artistRepository.save(Artist.builder().account(lockedAccount).build());
+        }
         return new SocialLoginResponse(isFirstLogin, needsTermsAgreement,
                 new SocialLoginResponse.Profile(profile.name(), account.getEmail()), account.getRole(),
                 tokens.getAccessToken(), tokens.getRefreshToken());

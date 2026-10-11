@@ -340,7 +340,8 @@ public class ArtworkDetailQueryService {
 
                             return aam.getArtist().getNameKo();
                         })
-                        .collect(Collectors.joining(", "));
+                        .filter(java.util.Objects::nonNull)
+                .collect(Collectors.joining(", "));
 
         return ArtworkDetailResponse.RelatedArtworkInfo.builder()
                 .id(artwork.getId())

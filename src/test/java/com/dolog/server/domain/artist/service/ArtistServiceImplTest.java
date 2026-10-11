@@ -81,6 +81,34 @@ class ArtistServiceImplTest {
     private ArtistServiceImpl artistService;
 
     @Test
+    void ownArtistNameCanBeFilledAfterAutomaticCreation() {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        Account owner = account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE);
+        Artist artist = Artist.builder().id(artistId).account(owner).build();
+        when(accountRepository.findByIdForUpdate(accountId)).thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId)).thenReturn(Optional.of(artist));
+        ArtistUpdateRequest request = new ArtistUpdateRequest();
+        ReflectionTestUtils.setField(request, "nameKo", " 직접 입력 ");
+        assertEquals(artistId, artistService.updateMyArtist(accountId, request).artistId());
+        assertEquals("직접 입력", artist.getNameKo());
+        verify(artistRepository, never()).findById(any());
+    }
+
+    @Test
+    void ownArtistUpdateRejectsNonArtistAndMissingArtist() {
+        UUID accountId = UUID.randomUUID();
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(account(accountId, Role.DOLOG_ADMIN, AccountStatus.ACTIVE)));
+        assertThrows(ArtistAccountNotEligibleException.class,
+                () -> artistService.updateMyArtist(accountId, new ArtistUpdateRequest()));
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE)));
+        assertThrows(ArtistNotFoundException.class,
+                () -> artistService.updateMyArtist(accountId, new ArtistUpdateRequest()));
+    }
+
+    @Test
     @DisplayName("두록 관리자는 기존 작가 계정에 새 Artist를 연결한다")
     void createsArtistForExistingArtistAccount() {
         UUID actorId = UUID.randomUUID();
