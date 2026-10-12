@@ -87,6 +87,17 @@ public class ArtworkController {
         return SuccessResponse.ok(data, "내 작품 목록 조회에 성공했습니다.");
     }
 
+    @Operation(summary = "내 작품 상세 조회 (편집용)", description = "본인 작품만. 공개 여부/숨김과 무관하게 전체 필드를 조회합니다.")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @GetMapping("/artworks/{artworkId}/me")
+    public SuccessResponse<ArtworkEditResponse> getMyArtwork(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId
+    ) {
+        ArtworkEditResponse data = artworkMyQueryService.getMyArtwork(user.getId(), artworkId);
+        return SuccessResponse.ok(data, "내 작품 상세 조회에 성공했습니다.");
+    }
+
     // 2. 작품 기본 정보 등록
     @Operation(summary = "작품 등록", description = "로그인한 작가 본인의 작품을 전시 미소속(DRAFT) 상태로 등록합니다.")
     @PostMapping(value = "/artworks", consumes = "multipart/form-data")
