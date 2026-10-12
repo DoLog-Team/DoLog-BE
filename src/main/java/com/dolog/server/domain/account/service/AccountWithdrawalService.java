@@ -105,6 +105,8 @@ public class AccountWithdrawalService {
             }
         }
         tokens.deleteAllByAccountId(accountId);
+        jdbc.update("DELETE FROM terms_agreements WHERE account_id = ?", id);
+        jdbc.update("DELETE FROM notifications WHERE account_id = ?", id);
         account.withdraw(now);
     }
 

@@ -294,6 +294,8 @@ class SocialLoginTests {
         var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
         UUID id = UUID.randomUUID();
         var account = Account.builder().id(id).role(Role.ARTIST_ADMIN)
+                .email("withdraw@test.com").password("encoded-password")
+                .socialProvider("GOOGLE").socialProviderId("withdraw-subject")
                 .accountStatus(AccountStatus.ACTIVE).build();
         when(accounts.findForWithdrawal(id)).thenReturn(Optional.of(account));
         byte[] artist = new byte[16];
@@ -308,6 +310,12 @@ class SocialLoginTests {
         service.withdraw(id);
         assertEquals(AccountStatus.WITHDRAWN, account.getAccountStatus());
         assertNotNull(account.getWithdrawnAt());
+        assertNull(account.getEmail());
+        assertNull(account.getPassword());
+        assertNull(account.getSocialProvider());
+        assertNull(account.getSocialProviderId());
+        verify(jdbc).update(eq("DELETE FROM terms_agreements WHERE account_id = ?"), any(byte[].class));
+        verify(jdbc).update(eq("DELETE FROM notifications WHERE account_id = ?"), any(byte[].class));
         verify(withdrawalArtworks, never()).hideByIds(any(), any());
         verify(withdrawalMaps).hideByArtistId(eq(new UUID(0, 0)), any(LocalDateTime.class));
         verify(withdrawalTokens).deleteAllByAccountId(id);

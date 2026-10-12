@@ -53,6 +53,10 @@ public class Account extends BaseEntity {
 
     public void withdraw(LocalDateTime at) {
         requireActive();
+        email = null;
+        password = null;
+        socialProvider = null;
+        socialProviderId = null;
         accountStatus = AccountStatus.WITHDRAWN;
         withdrawnAt = at;
     }
