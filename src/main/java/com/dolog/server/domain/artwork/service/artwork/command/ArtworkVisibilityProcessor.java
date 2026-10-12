@@ -9,6 +9,7 @@ import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkHiddenResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -70,20 +72,59 @@ public class ArtworkVisibilityProcessor {
             throw new ArtworkException(ArtworkErrorCode.NOT_EXHIBITION_OWNER);
         }
 
-        boolean wasHidden = artwork.isHidden();
-
-        if (!hidden) {
-            artwork.unhide();
-            if (wasHidden) {
-                artworkPlanLimitService.recompute(artwork.getExhibition().getId());
-                notifyArtists(artwork, NotificationType.ARTWORK_SHOWN);
-            }
-        } else if (!wasHidden) {
-            artwork.hide(LocalDateTime.now());
+        if (applyHidden(artwork, hidden)) {
             artworkPlanLimitService.recompute(artwork.getExhibition().getId());
-            notifyArtists(artwork, NotificationType.ARTWORK_HIDDEN);
+            notifyArtists(artwork, hiddenNotificationType(hidden));
         }
 
+        return toHiddenResponse(artwork);
+    }
+
+    // 하나라도 이 전시 출품작이 아니면 아무것도 바꾸지 않는다
+    public ArtworkBulkHiddenResponse changeHiddenBulk(
+            UUID accountId,
+            UUID exhibitionId,
+            List<UUID> artworkIds,
+            boolean hidden
+    ) {
+
+        artworkValidator.getOwnedExhibition(accountId, exhibitionId);
+        List<Artwork> artworks = artworkValidator.getArtworksInExhibition(exhibitionId, artworkIds);
+
+        List<Artwork> changed = artworks.stream()
+                .filter(artwork -> applyHidden(artwork, hidden))
+                .toList();
+
+        if (!changed.isEmpty()) {
+            artworkPlanLimitService.recompute(exhibitionId);
+            changed.forEach(artwork -> notifyArtists(artwork, hiddenNotificationType(hidden)));
+        }
+
+        return new ArtworkBulkHiddenResponse(
+                hidden,
+                changed.size(),
+                artworks.stream().map(this::toHiddenResponse).toList()
+        );
+    }
+
+    // 바뀌었으면 true. 이미 숨긴 작품은 처음 숨긴 시각을 유지한다
+    private boolean applyHidden(Artwork artwork, boolean hidden) {
+        if (artwork.isHidden() == hidden) {
+            return false;
+        }
+        if (hidden) {
+            artwork.hide(LocalDateTime.now());
+        } else {
+            artwork.unhide();
+        }
+        return true;
+    }
+
+    private NotificationType hiddenNotificationType(boolean hidden) {
+        return hidden ? NotificationType.ARTWORK_HIDDEN : NotificationType.ARTWORK_SHOWN;
+    }
+
+    private ArtworkHiddenResponse toHiddenResponse(Artwork artwork) {
         return new ArtworkHiddenResponse(artwork.getId(), artwork.isHidden(), artwork.getHiddenAt());
     }
 
