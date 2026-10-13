@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -43,6 +44,8 @@ public class SecurityConfig {
         http
                 // CSRF 보안 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
+                // CORS preflight(OPTIONS)가 인증 검사 전에 WebConfig의 CORS 설정으로 처리되도록 활성화
+                .cors(Customizer.withDefaults())
                 // HTTP 요청에 대한 접근 권한 설정
                 .authorizeHttpRequests(authorize -> authorize
                         // 헬스체크(관리 포트 9090)는 인증 없이 허용 — CD 폴링·외부 모니터링용
