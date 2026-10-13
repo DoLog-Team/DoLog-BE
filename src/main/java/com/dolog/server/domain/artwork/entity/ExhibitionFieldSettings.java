@@ -79,32 +79,24 @@ public class ExhibitionFieldSettings extends BaseEntity {
         return true;
     }
 
-    // 작성률(%). 필수로 켜둔 항목 중 채운 비율. 필수 항목이 하나도 없으면 100.
-    public int completionRate(Artwork artwork) {
-        int required = 0;
+    // 출품 정보 쪽에서 필수로 켜둔 항목 수 (최대 4개). 작성률 계산에서 "출품 정보" 분모로 쓴다.
+    public int requiredFieldCount() {
+        int count = 0;
+        if (requiredMainImg) count++;
+        if (requiredSize) count++;
+        if (requiredMaterials) count++;
+        if (requiredLocationMap) count++;
+        return count;
+    }
+
+    // 필수로 켠 항목 중 실제로 채운 개수. 작성률 계산에서 "출품 정보" 분자로 쓴다.
+    public int filledRequiredFieldCount(Artwork artwork) {
         int filled = 0;
-
-        if (requiredMainImg) {
-            required++;
-            if (!isBlank(artwork.getMainImg())) filled++;
-        }
-        if (requiredSize) {
-            required++;
-            if (artwork.getWidth() != null && artwork.getHeight() != null) filled++;
-        }
-        if (requiredMaterials) {
-            required++;
-            if (!artwork.getMaterials().isEmpty()) filled++;
-        }
-        if (requiredLocationMap) {
-            required++;
-            if (!isBlank(artwork.getLocationMap())) filled++;
-        }
-
-        if (required == 0) {
-            return 100;
-        }
-        return Math.round(filled * 100f / required);
+        if (requiredMainImg && !isBlank(artwork.getMainImg())) filled++;
+        if (requiredSize && artwork.getWidth() != null && artwork.getHeight() != null) filled++;
+        if (requiredMaterials && !artwork.getMaterials().isEmpty()) filled++;
+        if (requiredLocationMap && !isBlank(artwork.getLocationMap())) filled++;
+        return filled;
     }
 
     private boolean isBlank(String value) {

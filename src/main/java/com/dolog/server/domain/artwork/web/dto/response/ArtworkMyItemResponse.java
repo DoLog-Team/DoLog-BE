@@ -23,12 +23,12 @@ public class ArtworkMyItemResponse {
     private long viewCount;
     private long likeCount;
 
-    // 전시 필수 항목 기준 작성률(%). 출품 전 개인 작품은 기준이 없어 null.
-    private Integer completionRate;
+    // 작품 작성 완료율(%). 작품 기본/상세 필수값 + 출품 정보 필수값(출품한 경우)을 합산한다.
+    private int completionRate;
 
     private LocalDateTime createdAt;
 
-    public static ArtworkMyItemResponse of(Artwork artwork, String exhibitionName, long likeCount, Integer completionRate) {
+    public static ArtworkMyItemResponse of(Artwork artwork, String exhibitionName, long likeCount, int completionRate) {
         return ArtworkMyItemResponse.builder()
                 .artworkId(artwork.getId())
                 .title(artwork.getTitle())

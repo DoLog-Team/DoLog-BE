@@ -21,6 +21,10 @@ public class ArtworkFieldRequirement {
 
     public boolean isSatisfied(Artwork artwork) {
 
+        if (isBlank(artwork.getCategory()) || artwork.getProductionEndYear() == null) {
+            return false;
+        }
+
         if (artwork.getExhibition() == null) {
             return true;
         }
@@ -30,16 +34,37 @@ public class ArtworkFieldRequirement {
                 .orElse(true);
     }
 
-    // 마이페이지 작성률(%). 출품 전 개인 작품은 기준이 없어 null.
-    public Integer completionRate(Artwork artwork) {
+    // 작품 기본/상세 쪽 고정 필수값 (전시 설정과 무관하게 항상 본다)
+    private static final int BASE_REQUIRED_COUNT = 2; // category, productionEndYear
 
-        if (artwork.getExhibition() == null) {
-            return null;
+    // 마이페이지 작성률(%). 작품 기본/상세 필수값 + 출품 정보 필수값(전시에 출품한 경우)을 합산한다.
+    public int completionRate(Artwork artwork) {
+
+        int required = BASE_REQUIRED_COUNT;
+        int filled = baseFilledCount(artwork);
+
+        if (artwork.getExhibition() != null) {
+            ExhibitionFieldSettings settings = fieldSettingsRepository
+                    .findByExhibitionId(artwork.getExhibition().getId())
+                    .orElse(null);
+            if (settings != null) {
+                required += settings.requiredFieldCount();
+                filled += settings.filledRequiredFieldCount(artwork);
+            }
         }
 
-        return fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId())
-                .map(settings -> settings.completionRate(artwork))
-                .orElse(100);
+        return Math.round(filled * 100f / required);
+    }
+
+    private int baseFilledCount(Artwork artwork) {
+        int filled = 0;
+        if (!isBlank(artwork.getCategory())) filled++;
+        if (artwork.getProductionEndYear() != null) filled++;
+        return filled;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     // 작가가 직접 공개하거나 수정할 때: 규칙을 깨면 거절한다.
