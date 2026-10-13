@@ -4,8 +4,10 @@ import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkContentImageResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,4 +17,5 @@ public interface ArtworkImageService {
     ArtworkImgUpdateResponse updateArtworkImage(UUID accountId, boolean isDologAdmin, UUID artworkId, UUID imageId, ArtworkImgUpdateRequest request);
     void deleteArtworkImage(UUID accountId, boolean isDologAdmin, UUID artworkId, UUID imageId);
     void updateArtworkImages(Artwork artwork, List<ArtworkUpdateFullRequest.ImageUpdateDto> imageDtos);
+    ArtworkContentImageResponse uploadContentImage(UUID accountId, UUID artworkId, MultipartFile image);
 }

@@ -90,6 +90,17 @@ public class ArtworkController {
         return SuccessResponse.ok(data, "내 작품 목록 조회에 성공했습니다.");
     }
 
+    @Operation(summary = "내 작품 상세 조회 (편집용)", description = "본인 작품만. 공개 여부/숨김과 무관하게 전체 필드를 조회합니다.")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    @GetMapping("/artworks/{artworkId}/me")
+    public SuccessResponse<ArtworkEditResponse> getMyArtwork(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId
+    ) {
+        ArtworkEditResponse data = artworkMyQueryService.getMyArtwork(user.getId(), artworkId);
+        return SuccessResponse.ok(data, "내 작품 상세 조회에 성공했습니다.");
+    }
+
     // 2. 작품 기본 정보 등록
     @Operation(summary = "작품 등록", description = "로그인한 작가 본인의 작품을 전시 미소속(DRAFT) 상태로 등록합니다.")
     @PostMapping(value = "/artworks", consumes = "multipart/form-data")
@@ -220,6 +231,17 @@ public class ArtworkController {
             @PathVariable UUID imageId) {
         artworkService.deleteArtworkImage(user.getId(), isDologAdmin(user), artworkId, imageId);
         return SuccessResponse.ok(null, "상세 이미지가 성공적으로 삭제되었습니다.");
+    }
+
+    @Operation(summary = "본문 인라인 이미지 업로드", description = "작가 본인. 작품 상세 본문(마크다운)에 끼워넣을 이미지를 업로드하고 URL만 돌려줍니다. 상세 이미지 갤러리(ArtworkImg)에는 남기지 않습니다.")
+    @PostMapping(value = "/artworks/{artworkId}/content-images", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public ResponseEntity<SuccessResponse<ArtworkContentImageResponse>> uploadContentImage(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId,
+            @Valid @ModelAttribute ArtworkContentImageRequest request) {
+        ArtworkContentImageResponse data = artworkService.uploadContentImage(user.getId(), artworkId, request.getImageFile());
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data, "본문 이미지 업로드에 성공했습니다."));
     }
 
     /* ---------------- [ 작가 매핑 관련 API ] ---------------- */
