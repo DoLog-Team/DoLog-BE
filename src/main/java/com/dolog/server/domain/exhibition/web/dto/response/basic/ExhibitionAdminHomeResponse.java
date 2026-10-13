@@ -46,7 +46,6 @@ public class ExhibitionAdminHomeResponse {
     private Integer joinedArtistCount;
     private Integer pendingArtistCount;
 
-    // TODO: 작품 공개/숨김 상태 필드가 생기면 실제 집계로 교체
     private Integer publishedArtworkCount;
     private Integer hiddenArtworkCount;
 
@@ -57,7 +56,9 @@ public class ExhibitionAdminHomeResponse {
             ExhibitionDetail detail,
             String planName,
             long joinedArtistCount,
-            long pendingArtistCount
+            long pendingArtistCount,
+            long publishedArtworkCount,
+            long hiddenArtworkCount
     ) {
         return ExhibitionAdminHomeResponse.builder()
                 .title(detail != null ? detail.getTitle() : null)
@@ -80,8 +81,8 @@ public class ExhibitionAdminHomeResponse {
                 .isPublished(exhibition.isPublic())
                 .joinedArtistCount((int) joinedArtistCount)
                 .pendingArtistCount((int) pendingArtistCount)
-                .publishedArtworkCount(0)
-                .hiddenArtworkCount(0)
+                .publishedArtworkCount((int) publishedArtworkCount)
+                .hiddenArtworkCount((int) hiddenArtworkCount)
                 .planName(planName)
                 .build();
     }
