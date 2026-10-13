@@ -232,6 +232,12 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     // 작품 관리 상단 배너용: 숨긴 작품은 한도 계산에서 빠지므로 세지 않는다
     long countByExhibitionIdAndHiddenAtIsNullAndPlanLimitExceededAtIsNotNull(UUID exhibitionId);
 
+    // 전시 어드민 홈 작품 수: 전시중(공개+숨기지 않음, 플랜 한도 초과도 포함)
+    long countByExhibitionIdAndStatusAndHiddenAtIsNull(UUID exhibitionId, ArtworkStatus status);
+
+    // 전시 어드민 홈 작품 수: 숨긴 작품
+    long countByExhibitionIdAndHiddenAtIsNotNull(UUID exhibitionId);
+
     // 일괄 처리 대상: 이 전시에 출품된 작품만
     List<Artwork> findByExhibitionIdAndIdIn(UUID exhibitionId, Collection<UUID> ids);
 

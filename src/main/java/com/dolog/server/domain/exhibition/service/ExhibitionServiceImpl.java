@@ -1,5 +1,7 @@
 package com.dolog.server.domain.exhibition.service;
 
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
@@ -56,6 +58,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionCustomThemeRepository exhibitionCustomThemeRepository;
     private final FileService fileService;
     private final AccountRepository accountRepository;
+    private final ArtworkRepository artworkRepository;
     private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final String CODE_CHARACTERS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -583,6 +586,10 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         long joinedCount = exhibitionArtistMapRepository.countByExhibitionIdAndStatus(exhibitionId, ExhibitionArtistStatus.JOINED);
         long pendingCount = exhibitionArtistMapRepository.countByExhibitionIdAndStatus(exhibitionId, ExhibitionArtistStatus.PENDING);
 
-        return ExhibitionAdminHomeResponse.of(exhibition, detail, planName, joinedCount, pendingCount);
+        long publishedArtworkCount = artworkRepository.countByExhibitionIdAndStatusAndHiddenAtIsNull(exhibitionId, ArtworkStatus.PUBLISHED);
+        long hiddenArtworkCount = artworkRepository.countByExhibitionIdAndHiddenAtIsNotNull(exhibitionId);
+
+        return ExhibitionAdminHomeResponse.of(exhibition, detail, planName, joinedCount, pendingCount,
+                publishedArtworkCount, hiddenArtworkCount);
     }
 }

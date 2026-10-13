@@ -1,14 +1,21 @@
 package com.dolog.server.domain.exhibition.service;
 
+import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.repository.AccountRepository;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionCustomThemeRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.ArtistJoinCodeResponse;
+import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionAdminHomeResponse;
+import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.global.util.FileService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,7 +31,9 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -49,6 +58,15 @@ class ExhibitionServiceImplTest {
 
     @Mock
     private AccountRepository accountRepository;
+
+    @Mock
+    private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+
+    @Mock
+    private ArtworkRepository artworkRepository;
 
     @InjectMocks
     private ExhibitionServiceImpl service;
@@ -100,5 +118,32 @@ class ExhibitionServiceImplTest {
                 exception.getErrorCode()
         );
         verifyNoInteractions(exhibitionRepository);
+    }
+
+    @Test
+    @DisplayName("전시 어드민 홈은 공개+안 숨긴 작품 수와 숨긴 작품 수를 실제로 집계한다")
+    void getAdminHomeCountsArtworks() {
+        UUID exhibitionId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+        Account owner = Account.builder().id(accountId).build();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).account(owner).build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+        when(exhibitionDetailRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(eq(exhibitionId), any()))
+                .thenReturn(Optional.empty());
+        when(exhibitionArtistMapRepository.countByExhibitionIdAndStatus(exhibitionId, ExhibitionArtistStatus.JOINED))
+                .thenReturn(3L);
+        when(exhibitionArtistMapRepository.countByExhibitionIdAndStatus(exhibitionId, ExhibitionArtistStatus.PENDING))
+                .thenReturn(1L);
+        when(artworkRepository.countByExhibitionIdAndStatusAndHiddenAtIsNull(exhibitionId, ArtworkStatus.PUBLISHED))
+                .thenReturn(7L);
+        when(artworkRepository.countByExhibitionIdAndHiddenAtIsNotNull(exhibitionId))
+                .thenReturn(2L);
+
+        ExhibitionAdminHomeResponse response = service.getAdminHome(exhibitionId, accountId);
+
+        assertEquals(7, response.getPublishedArtworkCount());
+        assertEquals(2, response.getHiddenArtworkCount());
     }
 }
