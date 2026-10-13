@@ -81,10 +81,11 @@ public class ArtworkFieldRequirement {
 
     // 전시의 필수 항목이 완화될 때: 시스템이 자동으로 비공개했던 작품 중 이제 조건을 채운 작품을 다시 공개하고 돌려준다.
     // 작가가 직접 비공개로 둔 작품(autoDraftedAt == null)은 건드리지 않는다.
+    // description은 전시 설정과 무관하게 항상 필수라, settings 완화와 별개로 여기서도 다시 확인한다.
     public List<Artwork> republishAutoDrafted(ExhibitionFieldSettings settings, List<Artwork> autoDraftedArtworks) {
 
         List<Artwork> republished = autoDraftedArtworks.stream()
-                .filter(artwork -> settings.isSatisfiedBy(artwork))
+                .filter(artwork -> !isBlank(artwork.getDescription()) && settings.isSatisfiedBy(artwork))
                 .toList();
 
         republished.forEach(Artwork::autoPublish);
