@@ -138,16 +138,22 @@ class ArtworkCommandApiTests {
     }
 
     @Test
-    @DisplayName("제목이나 설명이 없으면 400")
-    void rejectsMissingRequiredFields() throws Exception {
+    @DisplayName("제목이 없으면 400")
+    void rejectsMissingTitle() throws Exception {
         mvc.perform(withToken(multipart("/api/artworks"), myToken).param("description", "설명"))
-                .andExpect(status().isBadRequest());
-        mvc.perform(withToken(multipart("/api/artworks"), myToken).param("title", "작품"))
                 .andExpect(status().isBadRequest());
         mvc.perform(withToken(multipart("/api/artworks"), myToken)
                         .param("title", "작품").param("description", "설명").param("productionEndMonth", "13"))
                 .andExpect(status().isBadRequest());
         assertEquals(0, countArtworksOf(me));
+    }
+
+    @Test
+    @DisplayName("설명은 생성 시점엔 선택이라 없어도 등록된다")
+    void allowsMissingDescriptionOnCreate() throws Exception {
+        mvc.perform(withToken(multipart("/api/artworks"), myToken).param("title", "작품"))
+                .andExpect(status().isCreated());
+        assertEquals(1, countArtworksOf(me));
     }
 
     @Test
