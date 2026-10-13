@@ -551,7 +551,8 @@ class ArtworkSubmissionApiTests {
     }
 
     private Artwork artworkOf(Artist artist, String title) {
-        Artwork artwork = Artwork.builder().title(title).description("설명").build();
+        Artwork artwork = Artwork.builder().title(title).description("설명")
+                .category("카테고리").productionEndYear(2024).build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                 .artwork(artwork).artist(artist).artistRole("").build());
         return artworks.saveAndFlush(artwork);

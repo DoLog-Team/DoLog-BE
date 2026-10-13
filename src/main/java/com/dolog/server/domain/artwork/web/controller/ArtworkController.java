@@ -1,12 +1,14 @@
 package com.dolog.server.domain.artwork.web.controller;
 
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkVisibility;
 import com.dolog.server.domain.artwork.service.order.ArtworkOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkAdminQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
+import com.dolog.server.domain.artwork.service.artwork.query.ArtworkManageQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkMyQueryService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.service.view.ArtworkViewService;
@@ -42,6 +44,7 @@ public class ArtworkController {
     private final ArtworkOrderService artworkOrderService;
     private final ArtworkAdminQueryService artworkAdminQueryService;
     private final ArtworkMyQueryService artworkMyQueryService;
+    private final ArtworkManageQueryService artworkManageQueryService;
 
     // 1. 작품 전체 목록 조회
     @Operation(summary = "작품 전체 목록 조회")
@@ -279,6 +282,56 @@ public class ArtworkController {
     ) {
         ExhibitionArtworkListResponse data = artworkService.getExhibitionArtworkList(exhibitionId, zone, category, search);
         return SuccessResponse.ok(data, "작품 목록 및 관람 안내 조회에 성공하였습니다.");
+    }
+
+    @Operation(summary = "작품 관리 목록 조회 (전시 어드민)",
+            description = "본인 전시에 출품된 작품을 공개 여부, 플랜 한도 초과와 관계없이 조회합니다. "
+                    + "hidden=false 는 전체 작품 관리, hidden=true 는 숨긴 작품 관리입니다. "
+                    + "visibility 는 PUBLIC(공개) / PRIVATE(비공개, 진행도 100%) / DRAFT(임시저장, 진행도 100% 미만)입니다.")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @GetMapping("/exhibitions/{exhibitionId}/artworks/manage")
+    public SuccessResponse<ArtworkManageListResponse> getArtworksForManagement(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId,
+            @RequestParam boolean hidden,
+            @RequestParam(required = false) UUID zoneId,
+            @RequestParam(defaultValue = "false") boolean unassigned,
+            @RequestParam(required = false) ArtworkVisibility visibility,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        ArtworkManageListResponse data = artworkManageQueryService.getArtworks(
+                user.getId(), exhibitionId, hidden, zoneId, unassigned, visibility, search, page, size);
+        return SuccessResponse.ok(data, "작품 관리 목록 조회 성공");
+    }
+
+    @Operation(summary = "작품 숨김/재공개 일괄 처리 (전시 어드민)",
+            description = "선택한 작품을 한 번에 전시에서 숨기거나 다시 보이게 합니다. "
+                    + "하나라도 이 전시에 출품된 작품이 아니면 아무것도 바꾸지 않습니다. 상태가 바뀐 작품의 작가에게만 알립니다.")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @PatchMapping("/exhibitions/{exhibitionId}/artworks/hidden")
+    public SuccessResponse<ArtworkBulkHiddenResponse> changeArtworksHidden(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ArtworkBulkHiddenRequest request
+    ) {
+        ArtworkBulkHiddenResponse data = artworkService.changeArtworksHidden(user.getId(), exhibitionId, request);
+        return SuccessResponse.ok(data, request.hidden() ? "작품이 숨김 처리되었습니다." : "작품이 재공개되었습니다.");
+    }
+
+    @Operation(summary = "작품 그룹 일괄 지정 (전시 어드민)",
+            description = "선택한 작품의 그룹을 한 번에 바꿉니다. 그룹이 바뀐 작품은 새 그룹의 맨 뒤 순서가 되고 "
+                    + "작가에게 그룹 배치 알림을 보냅니다. 그룹 해제는 지원하지 않습니다.")
+    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @PatchMapping("/exhibitions/{exhibitionId}/artworks/zone")
+    public SuccessResponse<ArtworkBulkZoneResponse> assignArtworksZone(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID exhibitionId,
+            @Valid @RequestBody ArtworkBulkZoneRequest request
+    ) {
+        ArtworkBulkZoneResponse data = artworkService.assignArtworksZone(user.getId(), exhibitionId, request);
+        return SuccessResponse.ok(data, "작품 그룹이 지정되었습니다.");
     }
 
     // 11. 작품 전체 정보 수정 (PUT)

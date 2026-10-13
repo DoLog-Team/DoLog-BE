@@ -61,7 +61,7 @@ public class ArtworkMyQueryService {
 
     private ArtworkMyItemResponse toResponse(Artwork artwork) {
         long likeCount = artworkLikeRepository.countByArtworkId(artwork.getId());
-        Integer completionRate = artworkFieldRequirement.completionRate(artwork);
+        int completionRate = artworkFieldRequirement.completionRate(artwork);
         return ArtworkMyItemResponse.of(artwork, resolveExhibitionName(artwork), likeCount, completionRate);
     }
 

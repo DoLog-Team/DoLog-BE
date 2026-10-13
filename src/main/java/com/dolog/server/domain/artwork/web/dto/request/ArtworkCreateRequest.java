@@ -41,7 +41,7 @@ public class ArtworkCreateRequest {
     @Digits(integer = 8, fraction = 2)
     private BigDecimal depth;
 
-    @NotBlank
+    // 선택값
     private String description;
 
     @Size(max = 255)
