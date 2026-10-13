@@ -142,26 +142,6 @@ class FieldSettingsApiTests {
     }
 
     @Test
-    @DisplayName("필수 항목을 완화해도 설명이 비어 있으면 다시 공개되지 않는다")
-    void relaxingDoesNotRepublishWithoutDescription() throws Exception {
-        Artwork missing = artwork(exhibition, ArtworkStatus.PUBLISHED, null);
-        mvc.perform(withToken(put(exhibition.getId()), ownerToken)
-                        .content(settingsJson(true, false, false, false, false, false, false, false, false)))
-                .andExpect(status().isOk());
-        endRequest();
-        assertEquals(ArtworkStatus.DRAFT, statusOf(missing));
-
-        artworks.findById(missing.getId()).orElseThrow().updateText(null, null, "", null);
-        em.flush();
-
-        mvc.perform(withToken(put(exhibition.getId()), ownerToken).content(ALL_FALSE))
-                .andExpect(status().isOk());
-
-        endRequest();
-        assertEquals(ArtworkStatus.DRAFT, statusOf(missing));
-    }
-
-    @Test
     @DisplayName("필수 항목을 완화해도 작가가 직접 비공개로 둔 작품은 다시 공개되지 않는다")
     void relaxingDoesNotRepublishManualDraft() throws Exception {
         Artwork manualDraft = artwork(exhibition, ArtworkStatus.DRAFT, null);

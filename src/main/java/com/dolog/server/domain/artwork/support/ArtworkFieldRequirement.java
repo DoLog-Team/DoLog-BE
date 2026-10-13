@@ -21,11 +21,6 @@ public class ArtworkFieldRequirement {
 
     public boolean isSatisfied(Artwork artwork) {
 
-        // description은 전시 설정과 무관하게 항상 필수 (생성 시점엔 선택, 공개 시점엔 필수)
-        if (isBlank(artwork.getDescription())) {
-            return false;
-        }
-
         if (artwork.getExhibition() == null) {
             return true;
         }
@@ -33,10 +28,6 @@ public class ArtworkFieldRequirement {
         return fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId())
                 .map(settings -> settings.isSatisfiedBy(artwork))
                 .orElse(true);
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 
     // 마이페이지 작성률(%). 출품 전 개인 작품은 기준이 없어 null.
@@ -81,11 +72,10 @@ public class ArtworkFieldRequirement {
 
     // 전시의 필수 항목이 완화될 때: 시스템이 자동으로 비공개했던 작품 중 이제 조건을 채운 작품을 다시 공개하고 돌려준다.
     // 작가가 직접 비공개로 둔 작품(autoDraftedAt == null)은 건드리지 않는다.
-    // description은 전시 설정과 무관하게 항상 필수라, settings 완화와 별개로 여기서도 다시 확인한다.
     public List<Artwork> republishAutoDrafted(ExhibitionFieldSettings settings, List<Artwork> autoDraftedArtworks) {
 
         List<Artwork> republished = autoDraftedArtworks.stream()
-                .filter(artwork -> !isBlank(artwork.getDescription()) && settings.isSatisfiedBy(artwork))
+                .filter(artwork -> settings.isSatisfiedBy(artwork))
                 .toList();
 
         republished.forEach(Artwork::autoPublish);
