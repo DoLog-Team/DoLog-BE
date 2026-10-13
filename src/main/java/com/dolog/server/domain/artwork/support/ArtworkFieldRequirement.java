@@ -37,20 +37,25 @@ public class ArtworkFieldRequirement {
     // 작품 기본/상세 쪽 고정 필수값 (전시 설정과 무관하게 항상 본다)
     private static final int BASE_REQUIRED_COUNT = 2; // category, productionEndYear
 
-    // 마이페이지 작성률(%). 작품 기본/상세 필수값 + 출품 정보 필수값(전시에 출품한 경우)을 합산한다.
+    // 작품 작성 완료율(%). 작품 기본/상세 필수값 + 출품 정보 필수값(전시에 출품한 경우)을 합산한다.
     public int completionRate(Artwork artwork) {
+
+        ExhibitionFieldSettings settings = artwork.getExhibition() != null
+                ? fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId()).orElse(null)
+                : null;
+
+        return completionRate(artwork, settings);
+    }
+
+    // 목록 조회처럼 전시별 설정을 미리 한 번만 조회해둔 경우, 매 작품마다 다시 조회하지 않도록 settings 를 직접 받는다.
+    public int completionRate(Artwork artwork, ExhibitionFieldSettings settings) {
 
         int required = BASE_REQUIRED_COUNT;
         int filled = baseFilledCount(artwork);
 
-        if (artwork.getExhibition() != null) {
-            ExhibitionFieldSettings settings = fieldSettingsRepository
-                    .findByExhibitionId(artwork.getExhibition().getId())
-                    .orElse(null);
-            if (settings != null) {
-                required += settings.requiredFieldCount();
-                filled += settings.filledRequiredFieldCount(artwork);
-            }
+        if (settings != null) {
+            required += settings.requiredFieldCount();
+            filled += settings.filledRequiredFieldCount(artwork);
         }
 
         return Math.round(filled * 100f / required);

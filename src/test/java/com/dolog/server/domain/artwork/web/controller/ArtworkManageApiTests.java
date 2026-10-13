@@ -155,7 +155,8 @@ class ArtworkManageApiTests {
         mvc.perform(withToken(list(), ownerToken).param("hidden", "false").param("visibility", "DRAFT"))
                 .andExpect(jsonPath("$.data.artworks[*].artworkId").value(contains(draftArtwork.getId().toString())))
                 .andExpect(jsonPath("$.data.artworks[0].visibility").value("DRAFT"))
-                .andExpect(jsonPath("$.data.artworks[0].completionRate").value(0));
+                // 기본/상세(카테고리, 제작종료년도)는 채워져 있고 대표 이미지만 없어서 2/3
+                .andExpect(jsonPath("$.data.artworks[0].completionRate").value(67));
     }
 
     @Test
@@ -488,7 +489,8 @@ class ArtworkManageApiTests {
     }
 
     private Artwork artworkOf(Artist artist, String title) {
-        Artwork artwork = Artwork.builder().title(title).description("설명").build();
+        Artwork artwork = Artwork.builder().title(title).description("설명")
+                .category("카테고리").productionEndYear(2024).build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                 .artwork(artwork).artist(artist).artistRole("").build());
         return artworks.saveAndFlush(artwork);

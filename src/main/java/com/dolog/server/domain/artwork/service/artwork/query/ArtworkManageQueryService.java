@@ -8,6 +8,7 @@ import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkManageItemResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkManageListResponse;
@@ -30,6 +31,7 @@ public class ArtworkManageQueryService {
     private final ArtworkRepository artworkRepository;
     private final ExhibitionFieldSettingsRepository fieldSettingsRepository;
     private final ArtworkValidator artworkValidator;
+    private final ArtworkFieldRequirement artworkFieldRequirement;
 
     public ArtworkManageListResponse getArtworks(
             UUID accountId,
@@ -69,7 +71,7 @@ public class ArtworkManageQueryService {
 
         return new ArtworkManageListResponse(
                 result.getContent().stream()
-                        .map(artwork -> ArtworkManageItemResponse.of(artwork, settings.completionRate(artwork)))
+                        .map(artwork -> ArtworkManageItemResponse.of(artwork, artworkFieldRequirement.completionRate(artwork, settings)))
                         .toList(),
                 (int) result.getTotalElements(),
                 result.getTotalPages(),
