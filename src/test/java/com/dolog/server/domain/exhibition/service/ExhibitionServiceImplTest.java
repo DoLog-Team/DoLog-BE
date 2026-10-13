@@ -13,6 +13,8 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionCustomThemeReposi
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.repository.host.HostRepository;
+import com.dolog.server.domain.exhibition.support.ExhibitionPublishRequirement;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.ArtistJoinCodeResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionAdminHomeResponse;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
@@ -67,6 +69,12 @@ class ExhibitionServiceImplTest {
 
     @Mock
     private ArtworkRepository artworkRepository;
+
+    @Mock
+    private ExhibitionPublishRequirement exhibitionPublishRequirement;
+
+    @Mock
+    private HostRepository hostRepository;
 
     @InjectMocks
     private ExhibitionServiceImpl service;
@@ -140,10 +148,60 @@ class ExhibitionServiceImplTest {
                 .thenReturn(7L);
         when(artworkRepository.countByExhibitionIdAndHiddenAtIsNotNull(exhibitionId))
                 .thenReturn(2L);
+        when(exhibitionMapRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(hostRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(exhibitionPublishRequirement.missingFields(exhibition, null, null, null))
+                .thenReturn(java.util.List.of("address", "hostName"));
 
         ExhibitionAdminHomeResponse response = service.getAdminHome(exhibitionId, accountId);
 
         assertEquals(7, response.getPublishedArtworkCount());
         assertEquals(2, response.getHiddenArtworkCount());
+        assertEquals(java.util.List.of("address", "hostName"), response.getMissingPublishFields());
+    }
+
+    @Test
+    @DisplayName("게시 필수값이 비어있으면 게시를 거절하고 구독은 조회하지 않는다")
+    void rejectsPublishWhenFieldsMissing() {
+        UUID exhibitionId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+        Account owner = Account.builder().id(accountId).build();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).account(owner).build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+        when(exhibitionDetailRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(exhibitionMapRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(hostRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(exhibitionPublishRequirement.isSatisfied(exhibition, null, null, null)).thenReturn(false);
+
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.publishExhibition(exhibitionId, accountId)
+        );
+
+        assertEquals(ExhibitionErrorCode.EXHIBITION_PUBLISH_FIELDS_MISSING, exception.getErrorCode());
+        verifyNoInteractions(subscriptionRepository);
+    }
+
+    @Test
+    @DisplayName("게시 필수값을 다 채우면 활성 구독이 없어도 만료일 없이 게시된다")
+    void publishesWithoutActiveSubscription() {
+        UUID exhibitionId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+        Account owner = Account.builder().id(accountId).build();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).account(owner).build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+        when(exhibitionDetailRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(exhibitionMapRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(hostRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(exhibitionPublishRequirement.isSatisfied(exhibition, null, null, null)).thenReturn(true);
+        when(subscriptionRepository.findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(eq(exhibitionId), any()))
+                .thenReturn(Optional.empty());
+
+        service.publishExhibition(exhibitionId, accountId);
+
+        assertTrue(exhibition.isPublic());
+        assertEquals(null, exhibition.getExpiresAt());
     }
 }

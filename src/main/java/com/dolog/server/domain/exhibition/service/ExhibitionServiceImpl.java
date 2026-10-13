@@ -16,10 +16,13 @@ import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionCustomThemeRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
+import com.dolog.server.domain.exhibition.entity.Host;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.repository.host.HostRepository;
+import com.dolog.server.domain.exhibition.support.ExhibitionPublishRequirement;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
@@ -59,6 +62,8 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final FileService fileService;
     private final AccountRepository accountRepository;
     private final ArtworkRepository artworkRepository;
+    private final ExhibitionPublishRequirement exhibitionPublishRequirement;
+    private final HostRepository hostRepository;
     private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final String CODE_CHARACTERS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -544,6 +549,14 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_OWNER);
         }
 
+        ExhibitionDetail detailForPublish = exhibitionDetailRepository.findByExhibitionId(exhibitionId).orElse(null);
+        ExhibitionMap mapForPublish = exhibitionMapRepository.findByExhibitionId(exhibitionId).orElse(null);
+        Host hostForPublish = hostRepository.findByExhibitionId(exhibitionId).orElse(null);
+
+        if (!exhibitionPublishRequirement.isSatisfied(exhibition, detailForPublish, mapForPublish, hostForPublish)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_PUBLISH_FIELDS_MISSING);
+        }
+
         // 활성 구독이 있으면 그 구독의 종료 시각을 전시 만료일로 사용한다 (없으면 만료 없음)
         LocalDateTime expiresAt = subscriptionRepository
                 .findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(exhibitionId, List.of(SubscriptionStatus.ACTIVE))
@@ -589,7 +602,11 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         long publishedArtworkCount = artworkRepository.countByExhibitionIdAndStatusAndHiddenAtIsNull(exhibitionId, ArtworkStatus.PUBLISHED);
         long hiddenArtworkCount = artworkRepository.countByExhibitionIdAndHiddenAtIsNotNull(exhibitionId);
 
+        ExhibitionMap map = exhibitionMapRepository.findByExhibitionId(exhibitionId).orElse(null);
+        Host host = hostRepository.findByExhibitionId(exhibitionId).orElse(null);
+        List<String> missingPublishFields = exhibitionPublishRequirement.missingFields(exhibition, detail, map, host);
+
         return ExhibitionAdminHomeResponse.of(exhibition, detail, planName, joinedCount, pendingCount,
-                publishedArtworkCount, hiddenArtworkCount);
+                publishedArtworkCount, hiddenArtworkCount, missingPublishFields, map, host);
     }
 }
