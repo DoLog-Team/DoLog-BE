@@ -233,6 +233,17 @@ public class ArtworkController {
         return SuccessResponse.ok(null, "상세 이미지가 성공적으로 삭제되었습니다.");
     }
 
+    @Operation(summary = "본문 인라인 이미지 업로드", description = "작가 본인. 작품 상세 본문(마크다운)에 끼워넣을 이미지를 업로드하고 URL만 돌려줍니다. 상세 이미지 갤러리(ArtworkImg)에는 남기지 않습니다.")
+    @PostMapping(value = "/artworks/{artworkId}/content-images", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public ResponseEntity<SuccessResponse<ArtworkContentImageResponse>> uploadContentImage(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId,
+            @Valid @ModelAttribute ArtworkContentImageRequest request) {
+        ArtworkContentImageResponse data = artworkService.uploadContentImage(user.getId(), artworkId, request.getImageFile());
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.created(data, "본문 이미지 업로드에 성공했습니다."));
+    }
+
     /* ---------------- [ 작가 매핑 관련 API ] ---------------- */
 
     // 8. 작품 공동 작가 등록 (POST)

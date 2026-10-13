@@ -24,10 +24,12 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkHiddenUpdateReques
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkHiddenRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkZoneRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkContentImageResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullResponse;
+import org.springframework.web.multipart.MultipartFile;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkSubmitResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
@@ -307,6 +309,16 @@ public class ArtworkServiceImpl implements ArtworkService {
                 artworkId,
                 imageId
         );
+    }
+
+    @Override
+    public ArtworkContentImageResponse uploadContentImage(
+            UUID accountId,
+            UUID artworkId,
+            MultipartFile image
+    ) {
+
+        return artworkImageService.uploadContentImage(accountId, artworkId, image);
     }
 
     //============================================================
