@@ -37,7 +37,7 @@ public class ArtworkUpdateRequest implements ArtworkInfoFields {
     @Digits(integer = 8, fraction = 2)
     private BigDecimal depth;
 
-    @Pattern(regexp = "(?s).*\\S.*")
+    // 필수값이 아니라서 빈 값으로 지우는 것도 허용한다
     private String description;
 
     @Size(max = 255)
