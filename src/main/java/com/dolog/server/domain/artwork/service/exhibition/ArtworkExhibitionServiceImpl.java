@@ -36,7 +36,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
         }
 
         // 2. 안내 지도 리스트 조회
-        List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionId(exhibitionId);
+        List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionIdOrderByCreatedAtAsc(exhibitionId);
 
         // 3. 작품 조회 로직 분기 (검색어 여부에 따라 다른 Repository 메서드 호출)
         List<Artwork> artworks;
