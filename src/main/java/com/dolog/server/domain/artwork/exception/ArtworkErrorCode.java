@@ -25,7 +25,10 @@ public enum ArtworkErrorCode implements BaseResponseCode { // 인터페이스 �
     CO_ARTIST_NOT_IN_EXHIBITION(400, "ARTWORK_016", "같은 전시에 참여 중인 작가만 공동 작가로 등록할 수 있습니다."),
     CO_ARTIST_ALREADY_LINKED(409, "ARTWORK_017", "이미 이 작품에 연결된 작가입니다."),
     LAST_ARTIST_CANNOT_BE_REMOVED(400, "ARTWORK_018", "작품에는 작가가 한 명 이상 있어야 합니다."),
-    IMAGE_FILE_REQUIRED(400, "ARTWORK_019", "등록할 이미지 파일을 하나 이상 보내야 합니다.");
+    IMAGE_FILE_REQUIRED(400, "ARTWORK_019", "등록할 이미지 파일을 하나 이상 보내야 합니다."),
+    NOT_IN_EXHIBITION(400, "ARTWORK_020", "이 전시에 출품된 작품이 아닙니다."),
+    INVALID_ZONE_FILTER(400, "ARTWORK_021", "그룹과 그룹 미지정 필터는 함께 쓸 수 없습니다."),
+    INVALID_PAGE_REQUEST(400, "ARTWORK_022", "page는 0 이상, size는 1 이상 100 이하여야 합니다.");
 
     private final int httpStatus;
     private final String code;

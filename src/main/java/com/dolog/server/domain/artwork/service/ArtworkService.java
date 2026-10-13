@@ -28,6 +28,10 @@ public interface ArtworkService {
 
     ArtworkHiddenResponse changeArtworkHidden(UUID accountId, UUID artworkId, ArtworkHiddenUpdateRequest request);
 
+    ArtworkBulkHiddenResponse changeArtworksHidden(UUID accountId, UUID exhibitionId, ArtworkBulkHiddenRequest request);
+
+    ArtworkBulkZoneResponse assignArtworksZone(UUID accountId, UUID exhibitionId, ArtworkBulkZoneRequest request);
+
     void reorderArtwork(UUID artworkId, Integer prev, Integer next);
     void moveArtworkZone(UUID artworkId, UUID zoneId, Integer prev, Integer next);
 

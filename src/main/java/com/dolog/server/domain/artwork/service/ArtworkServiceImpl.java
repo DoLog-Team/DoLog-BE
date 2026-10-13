@@ -6,6 +6,7 @@ import com.dolog.server.domain.artwork.service.artwork.command.ArtworkDeleteProc
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkOrderProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkSubmissionProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkVisibilityProcessor;
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkZoneProcessor;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkUpdateProcessor;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkQueryService;
 import com.dolog.server.domain.artwork.service.exhibition.ArtworkExhibitionService;
@@ -20,6 +21,8 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkSubmitRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkStatusUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkHiddenUpdateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkHiddenRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkZoneRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
@@ -28,6 +31,8 @@ import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullRespons
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkSubmitResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkHiddenResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkZoneResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkExhibitionStatusResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +55,7 @@ public class ArtworkServiceImpl implements ArtworkService {
     private final ArtworkOrderProcessor artworkOrderProcessor;
     private final ArtworkSubmissionProcessor artworkSubmissionProcessor;
     private final ArtworkVisibilityProcessor artworkVisibilityProcessor;
+    private final ArtworkZoneProcessor artworkZoneProcessor;
 
     private final ArtworkArtistService artworkArtistService;
     private final ArtworkImageService artworkImageService;
@@ -162,6 +168,26 @@ public class ArtworkServiceImpl implements ArtworkService {
     ) {
 
         return artworkVisibilityProcessor.changeHidden(accountId, artworkId, request.hidden());
+    }
+
+    @Override
+    public ArtworkBulkHiddenResponse changeArtworksHidden(
+            UUID accountId,
+            UUID exhibitionId,
+            ArtworkBulkHiddenRequest request
+    ) {
+
+        return artworkVisibilityProcessor.changeHiddenBulk(accountId, exhibitionId, request.artworkIds(), request.hidden());
+    }
+
+    @Override
+    public ArtworkBulkZoneResponse assignArtworksZone(
+            UUID accountId,
+            UUID exhibitionId,
+            ArtworkBulkZoneRequest request
+    ) {
+
+        return artworkZoneProcessor.assignZone(accountId, exhibitionId, request.artworkIds(), request.zoneId());
     }
 
     @Override
