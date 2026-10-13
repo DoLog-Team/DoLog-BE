@@ -10,6 +10,8 @@ server {
 
     # 앱 API — /api 프리픽스 그대로 전달 (컨테이너 네트워크로 app 서비스에 직접)
     location /api {
+        # 업로드 한도 — Spring multipart(max-file/request-size 8MB)와 동일. 미설정 시 nginx 기본 1MB에서 413
+        client_max_body_size 8m;
         proxy_pass http://app:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
