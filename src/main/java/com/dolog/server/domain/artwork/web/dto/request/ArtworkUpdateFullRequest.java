@@ -23,7 +23,7 @@ public class ArtworkUpdateFullRequest implements ArtworkInfoFields {
     @Size(max = 255)
     private String title;
 
-    @NotBlank
+    // 선택값. 안 보내면 기존 값 유지, 빈 값으로 보내면 지워짐
     private String description;
 
     @NotBlank

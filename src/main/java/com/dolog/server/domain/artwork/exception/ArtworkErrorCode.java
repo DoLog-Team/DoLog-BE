@@ -19,7 +19,7 @@ public enum ArtworkErrorCode implements BaseResponseCode { // 인터페이스 �
     ARTWORK_NOT_SUBMITTED(400, "ARTWORK_010", "전시에 출품되지 않은 작품입니다."),
     ARTIST_NOT_JOINED_EXHIBITION(400, "ARTWORK_011", "참여 중인 전시에만 출품할 수 있습니다."),
     INVALID_EXHIBITION_ZONE(400, "ARTWORK_012", "해당 전시에 속한 구역이 아닙니다."),
-    REQUIRED_FIELDS_MISSING(400, "ARTWORK_013", "전시에서 정한 필수 항목을 채워야 공개할 수 있습니다."),
+    REQUIRED_FIELDS_MISSING(400, "ARTWORK_013", "작품을 공개하려면 필수 항목을 모두 채워야 합니다."),
     NOT_EXHIBITION_OWNER(403, "ARTWORK_014", "해당 전시의 관리자만 처리할 수 있습니다."),
     REQUIRED_FIELD_HIDDEN(400, "ARTWORK_015", "필수 항목은 숨길 수 없습니다."),
     CO_ARTIST_NOT_IN_EXHIBITION(400, "ARTWORK_016", "같은 전시에 참여 중인 작가만 공동 작가로 등록할 수 있습니다."),

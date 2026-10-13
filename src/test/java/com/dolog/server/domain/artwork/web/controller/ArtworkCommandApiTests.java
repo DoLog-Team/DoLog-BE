@@ -430,7 +430,7 @@ class ArtworkCommandApiTests {
 
     private Artwork artworkOf(Artist artist, String title) {
         return artworks.saveAndFlush(linked(Artwork.builder().title(title)
-                .description("원래 설명").category("원래 카테고리").build(), artist));
+                .description("원래 설명").category("원래 카테고리").productionEndYear(2024).build(), artist));
     }
 
     private Artwork linked(Artwork artwork, Artist artist) {

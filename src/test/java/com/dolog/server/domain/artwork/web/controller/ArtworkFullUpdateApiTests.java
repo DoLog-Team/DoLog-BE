@@ -382,7 +382,8 @@ class ArtworkFullUpdateApiTests {
     }
 
     private Artwork submittedArtwork(Artist artist, ArtistProfile profile, ExhibitionZone zone, int orderIndex) {
-        Artwork artwork = Artwork.builder().title("작품").description("설명").category("회화").build();
+        Artwork artwork = Artwork.builder().title("작품").description("설명").category("회화")
+                .productionEndYear(2024).build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                 .artwork(artwork).artist(artist).artistProfile(profile).artistRole("원래 역할").build());
         artwork.submitTo(zone.getExhibition(), zone);

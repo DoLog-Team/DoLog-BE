@@ -112,7 +112,7 @@ public class ArtworkSpecification {
         };
     }
 
-    // 진행도 판정은 ExhibitionFieldSettings.isSatisfiedBy 와 같아야 한다 (ArtworkManageApiTests 일치 테스트)
+    // 진행도 판정은 ArtworkFieldRequirement.isSatisfied 와 같아야 한다 (ArtworkManageApiTests 일치 테스트)
     public static Specification<Artwork> withVisibility(ArtworkVisibility visibility, ExhibitionFieldSettings settings) {
         return (root, query, cb) -> {
             if (visibility == null) return cb.conjunction();
@@ -121,13 +121,7 @@ public class ArtworkSpecification {
             }
 
             Predicate draft = cb.equal(root.get("status"), ArtworkStatus.DRAFT);
-            List<Predicate> filled = requiredFieldsFilled(root, cb, settings);
-            if (filled.isEmpty()) {
-                // 필수 항목이 없으면 진행도는 늘 100% 라 임시저장이 없다
-                return visibility == ArtworkVisibility.PRIVATE ? draft : cb.disjunction();
-            }
-
-            Predicate complete = cb.and(filled.toArray(new Predicate[0]));
+            Predicate complete = cb.and(requiredFieldsFilled(root, cb, settings).toArray(new Predicate[0]));
             return visibility == ArtworkVisibility.PRIVATE
                     ? cb.and(draft, complete)
                     : cb.and(draft, cb.not(complete));
@@ -137,6 +131,9 @@ public class ArtworkSpecification {
     private static List<Predicate> requiredFieldsFilled(
             Root<Artwork> root, CriteriaBuilder cb, ExhibitionFieldSettings settings) {
         List<Predicate> filled = new ArrayList<>();
+        // 작품 기본/상세 고정 필수값 (전시 설정과 무관하게 항상 본다)
+        filled.add(notBlank(cb, root.get("category")));
+        filled.add(cb.isNotNull(root.get("productionEndYear")));
         if (settings.isRequiredMainImg()) {
             filled.add(notBlank(cb, root.get("mainImg")));
         }
