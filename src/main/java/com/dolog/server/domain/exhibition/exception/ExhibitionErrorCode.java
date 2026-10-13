@@ -55,7 +55,6 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     EXHIBITION_ALREADY_PUBLISHED("EXHIBITION_409_1", CONFLICT, "이미 게시된 전시입니다."),
     EXHIBITION_NOT_PUBLISHED("EXHIBITION_409_2", CONFLICT, "게시되지 않은 전시입니다."),
-    EXHIBITION_EXPIRES_AT_INVALID("EXHIBITION_400_2", BAD_REQUEST, "게시 종료 시각은 현재보다 이후여야 합니다."),
     EXHIBITION_PUBLISH_FIELDS_MISSING("EXHIBITION_400_3", BAD_REQUEST, "게시에 필요한 필수 정보를 모두 입력해야 합니다.");
 
     private final String code;

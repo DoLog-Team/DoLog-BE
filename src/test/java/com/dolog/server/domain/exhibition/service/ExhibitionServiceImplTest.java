@@ -204,4 +204,34 @@ class ExhibitionServiceImplTest {
         assertTrue(exhibition.isPublic());
         assertEquals(null, exhibition.getExpiresAt());
     }
+
+    @Test
+    @DisplayName("게시 기간 연장은 과거 시각도 허용한다 (전시 종료 후 기록 정리, 즉시 만료 처리 등)")
+    void extendsExpiresAtWithPastTime() {
+        UUID exhibitionId = UUID.randomUUID();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).publishedAt(LocalDateTime.now().minusDays(1)).build();
+        LocalDateTime pastExpiresAt = LocalDateTime.now().minusHours(1);
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+
+        service.extendExpiresAt(exhibitionId, pastExpiresAt);
+
+        assertEquals(pastExpiresAt, exhibition.getExpiresAt());
+    }
+
+    @Test
+    @DisplayName("게시되지 않은 전시는 게시 기간을 연장할 수 없다")
+    void rejectsExtendExpiresAtWhenNotPublished() {
+        UUID exhibitionId = UUID.randomUUID();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+
+        ExhibitionException exception = assertThrows(
+                ExhibitionException.class,
+                () -> service.extendExpiresAt(exhibitionId, LocalDateTime.now().plusDays(1))
+        );
+
+        assertEquals(ExhibitionErrorCode.EXHIBITION_NOT_PUBLISHED, exception.getErrorCode());
+    }
 }
