@@ -87,7 +87,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
                             if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null) {
                                 return aam.getArtistProfile().getNameKo();
                             }
-                            return aam.getArtist().getNameKo();
+                            return java.util.Objects.toString(aam.getArtist().getNameKo(), "이름 미등록");
                         }, Collectors.joining(", "))
                 ));
     }

@@ -70,6 +70,32 @@ class AccountSchemaTests {
     @Autowired com.dolog.server.domain.bts.service.BtsService btsService;
 
     @Test
+    @DisplayName("이름과 이메일 없는 소셜 가입도 Artist를 만들고 재로그인 시 같은 Artist를 유지한다")
+    void socialSignupCreatesUnnamedArtist() {
+        String subject = "auto-artist-" + UUID.randomUUID();
+        var profile = new com.dolog.server.domain.account.service.SocialProfile(subject, null, null);
+        auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.KAKAO, profile);
+        artists.flush();
+        Account account = accounts.findBySocialProviderAndSocialProviderId("KAKAO", subject).orElseThrow();
+        var artist = artists.findByAccountId(account.getId()).orElseThrow();
+        assertNotNull(artist.getId());
+        assertNull(artist.getNameKo());
+        assertTrue(com.dolog.server.domain.bts.web.dto.response.BtsListResponse.from(
+                com.dolog.server.domain.bts.entity.Bts.builder().artistProfile(
+                        com.dolog.server.domain.artist.entity.ArtistProfile.builder().artist(artist).build()
+                ).build()).getArtistNames().isEmpty());
+        artist.updateArtistInfo("직접 입력", null, null);
+        artists.flush();
+        var response = auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.KAKAO,
+                new com.dolog.server.domain.account.service.SocialProfile(subject, "소셜 이름 변경", null));
+        artists.flush();
+        assertFalse(response.isFirstLogin());
+        var reloaded = artists.findByAccountId(account.getId()).orElseThrow();
+        assertEquals(artist.getId(), reloaded.getId());
+        assertEquals("직접 입력", reloaded.getNameKo());
+    }
+
+    @Test
     @DisplayName("선택 동의 PATCH는 실제 DB에 저장하고 본인·역할·입력을 검증한다")
     void optionalTermsPatchPersistsAndEnforcesAccess() throws Exception {
         TestTransaction.flagForRollback();

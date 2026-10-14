@@ -108,6 +108,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
                     }
                     return aam.getArtist().getNameKo();
                 })
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.joining(", "));
 
         // 2. 전시회 제목 가져오기 (ExhibitionDetail이 @OneToOne이므로 바로 접근)

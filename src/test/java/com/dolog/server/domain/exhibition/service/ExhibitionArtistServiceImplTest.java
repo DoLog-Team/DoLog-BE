@@ -1128,7 +1128,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("신규 작가는 PENDING 상태로 전시 참여를 신청한다")
     void appliesToExhibitionAsPending() {
         UUID accountId = UUID.randomUUID();
-        Artist artist = artist("신청 작가", "join-new@test.com");
+        Artist artist = artist(null, "join-new@test.com");
         Exhibition exhibition = joinableExhibition(
                 "2345ABCD",
                 null

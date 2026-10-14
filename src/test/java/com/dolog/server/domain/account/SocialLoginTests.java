@@ -1,6 +1,8 @@
 package com.dolog.server.domain.account;
 
 import com.dolog.server.domain.account.entity.Account;
+import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.account.entity.RefreshToken;
 import com.dolog.server.domain.account.entity.TermsAgreement;
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
@@ -153,7 +155,9 @@ class SocialLoginTests {
             return session;
         });
         when(jwtProvider.createAccessToken(accountId, 1L)).thenReturn("access");
-        var auth = new AuthServiceImpl(accountRepo, tokenRepo, mock(PasswordEncoder.class),
+        var artists = mock(ArtistRepository.class);
+        when(accountRepo.findByIdForUpdate(accountId)).thenReturn(Optional.of(account));
+        var auth = new AuthServiceImpl(accountRepo, artists, tokenRepo, mock(PasswordEncoder.class),
                 jwtProvider, mock(ExhibitionRepository.class), mock(JwtUserDetailsService.class), terms);
 
         var result = auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", null, "verified@example.com"));
@@ -167,6 +171,24 @@ class SocialLoginTests {
         assertTrue(new ObjectMapper().valueToTree(result).path("isFirstLogin").asBoolean());
         verify(accountRepo).saveAndFlush(argThat(created -> created.getPassword() == null
                 && created.getRole() == Role.ARTIST_ADMIN && created.getAccountStatus() == AccountStatus.ACTIVE));
+
+        verify(artists).save(argThat(created -> created.getAccount() == account
+                && created.getNameKo() == null && created.getNameEn() == null));
+        when(accountRepo.findBySocialProviderAndSocialProviderId("KAKAO", "12345"))
+                .thenReturn(Optional.of(account));
+        Artist existingArtist = Artist.builder().account(account).nameKo("직접 입력한 이름").build();
+        when(artists.findByAccountIdIncludingDeleted(accountId)).thenReturn(Optional.of(existingArtist));
+        assertFalse(auth.socialLogin(SocialProvider.KAKAO,
+                new SocialProfile("12345", "소셜 이름 변경", null)).isFirstLogin());
+        assertEquals("직접 입력한 이름", existingArtist.getNameKo());
+        existingArtist.softDelete(LocalDateTime.now());
+        auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", null, null));
+        assertNotNull(existingArtist.getDeletedAt());
+        verify(artists, times(1)).save(any());
+        // 기존 가입자 중 Artist가 없는 계정도 재로그인 시 생성한다.
+        when(artists.findByAccountIdIncludingDeleted(accountId)).thenReturn(Optional.empty());
+        auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", null, null));
+        verify(artists, times(2)).save(any());
 
         when(accountRepo.findBySocialProviderAndSocialProviderId("GOOGLE", "999")).thenReturn(Optional.empty());
         when(accountRepo.existsByEmail("verified@example.com")).thenReturn(true);

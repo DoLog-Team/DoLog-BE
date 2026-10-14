@@ -25,7 +25,7 @@ public class BtsListResponse {
                 .thumbnail(bts.getMainImg())
                 .title(bts.getTitle())
                 // 작가 이름 리스트화
-                .artistNames(bts.getArtistProfile() != null ?
+                .artistNames(bts.getArtistProfile() != null && bts.getArtistProfile().getNameKo() != null ?
                         List.of(bts.getArtistProfile().getNameKo()) : List.of())
                 // 작품 제목 리스트 추출
                 .artworkTitles(bts.getArtworkMaps().stream()
