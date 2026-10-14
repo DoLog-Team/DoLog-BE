@@ -35,12 +35,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AdminArtistController.class)
+@WebMvcTest({AdminArtistController.class, ArtistController.class})
 @Import({SecurityConfig.class, JwtAuthenticationEntryPoint.class})
 class AdminArtistControllerSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private com.dolog.server.domain.like.support.VisitorIdResolver visitorIdResolver;
 
     @MockitoBean
     private ArtistService artistService;
@@ -53,6 +56,42 @@ class AdminArtistControllerSecurityTest {
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMappingContext;
+
+    @Test
+    void artistUpdatesOwnNameUsingTokenAccount() throws Exception {
+        UUID actorId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        when(artistService.updateMyArtist(eq(actorId), any()))
+                .thenReturn(new ArtistUpdateResponse(artistId));
+        mockMvc.perform(patch("/api/artists/me").contextPath("/api")
+                        .with(user(userDetails(actorId, Role.ARTIST_ADMIN)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nameKo\":\"직접 입력\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.artistId").value(artistId.toString()));
+        verify(artistService).updateMyArtist(eq(actorId), any());
+    }
+
+    @Test
+    void ownArtistUpdateRequiresAuthenticationRoleAndValidName() throws Exception {
+        mockMvc.perform(patch("/api/artists/me").contextPath("/api")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+        for (Role role : List.of(Role.DOLOG_ADMIN, Role.EXHIBITION_ADMIN)) {
+            mockMvc.perform(patch("/api/artists/me").contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), role)))
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isForbidden());
+        }
+        for (String name : List.of("   ", "가".repeat(101))) {
+            mockMvc.perform(patch("/api/artists/me").contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), Role.ARTIST_ADMIN)))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"nameKo\":\"" + name + "\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(artistService);
+    }
 
     @Test
     @DisplayName("비로그인 사용자는 관리자 작가 등록 API를 호출할 수 없다")

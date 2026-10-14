@@ -244,7 +244,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         notificationService.send(
                 map.getExhibition().getAccount(),
                 NotificationType.ARTIST_WITHDRAWN,
-                Map.of("artistName", artist.getNameKo(), "exhibitionName", resolveExhibitionName(map.getExhibition())),
+                Map.of("artistName", java.util.Objects.toString(artist.getNameKo(), "이름 미등록"), "exhibitionName", resolveExhibitionName(map.getExhibition())),
                 exhibitionId
         );
     }
@@ -305,7 +305,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         notificationService.send(
                 exhibition.getAccount(),
                 NotificationType.ARTIST_JOIN_REQUESTED,
-                Map.of("artistName", context.artist().getNameKo(), "exhibitionName", resolveExhibitionName(exhibition)),
+                Map.of("artistName", java.util.Objects.toString(context.artist().getNameKo(), "이름 미등록"), "exhibitionName", resolveExhibitionName(exhibition)),
                 exhibition.getId()
         );
 

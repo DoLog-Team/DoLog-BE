@@ -167,6 +167,20 @@ public class ArtistServiceImpl implements ArtistService {
         Artist artist = artistRepository.findById(artistId)
                 .orElseThrow(ArtistNotFoundException::new);
 
+        return updateArtistInfo(artist, request);
+    }
+
+    @Override
+    public ArtistUpdateResponse updateMyArtist(UUID accountId, ArtistUpdateRequest request) {
+        Account account = accountRepository.findByIdForUpdate(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        requireEligibleArtistAccount(account);
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(ArtistNotFoundException::new);
+        return updateArtistInfo(artist, request);
+    }
+
+    private ArtistUpdateResponse updateArtistInfo(Artist artist, ArtistUpdateRequest request) {
         String nameKo = normalizeOptionalNameKo(request.getNameKo());
         String phone = request.getPhone();
 
@@ -176,7 +190,7 @@ public class ArtistServiceImpl implements ArtistService {
             if (phone != null
                     && artistRepository.countByPhoneIncludingDeletedAndIdNot(
                     phone,
-                    artistId
+                    artist.getId()
             ) > 0) {
                 throw new DuplicateArtistPhoneException();
             }

@@ -229,6 +229,18 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     // 플랜 한도 재계산 대상: 출품됐고(exhibition 연결) 관리자 숨김이 아닌 작품을 연결 순서대로
     List<Artwork> findByExhibitionIdAndHiddenAtIsNullOrderByOrderIndexAsc(UUID exhibitionId);
 
+    // 작품 관리 상단 배너용: 숨긴 작품은 한도 계산에서 빠지므로 세지 않는다
+    long countByExhibitionIdAndHiddenAtIsNullAndPlanLimitExceededAtIsNotNull(UUID exhibitionId);
+
+    // 전시 어드민 홈 작품 수: 전시중(공개+숨기지 않음, 플랜 한도 초과도 포함)
+    long countByExhibitionIdAndStatusAndHiddenAtIsNull(UUID exhibitionId, ArtworkStatus status);
+
+    // 전시 어드민 홈 작품 수: 숨긴 작품
+    long countByExhibitionIdAndHiddenAtIsNotNull(UUID exhibitionId);
+
+    // 일괄 처리 대상: 이 전시에 출품된 작품만
+    List<Artwork> findByExhibitionIdAndIdIn(UUID exhibitionId, Collection<UUID> ids);
+
     @Modifying(flushAutomatically = true)
     @Query("UPDATE Artwork a SET a.planLimitExceededAt = null " +
             "WHERE a.exhibition.id = :exhibitionId AND a.planLimitExceededAt IS NOT NULL")

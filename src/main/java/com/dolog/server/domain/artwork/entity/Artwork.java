@@ -161,7 +161,7 @@ public class Artwork extends BaseEntity implements Orderable {
     public void updateText(String title, String category, String description, String shortIntro) {
         if (title != null) this.title = title;
         if (category != null) this.category = TextUtils.blankToNull(category);
-        if (description != null) this.description = description;
+        if (description != null) this.description = TextUtils.blankToNull(description);
         if (shortIntro != null) this.shortIntro = TextUtils.blankToNull(shortIntro);
     }
 

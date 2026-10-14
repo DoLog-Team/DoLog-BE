@@ -100,6 +100,109 @@ class AccountSchemaTests {
     }
 
     @Test
+    @DisplayName("이름과 이메일 없는 소셜 가입도 Artist를 만들고 재로그인 시 같은 Artist를 유지한다")
+    void socialSignupCreatesUnnamedArtist() {
+        String subject = "auto-artist-" + UUID.randomUUID();
+        var profile = new com.dolog.server.domain.account.service.SocialProfile(subject, null, null);
+        auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.KAKAO, profile);
+        artists.flush();
+        Account account = accounts.findBySocialProviderAndSocialProviderId("KAKAO", subject).orElseThrow();
+        var artist = artists.findByAccountId(account.getId()).orElseThrow();
+        assertNotNull(artist.getId());
+        assertNull(artist.getNameKo());
+        assertTrue(com.dolog.server.domain.bts.web.dto.response.BtsListResponse.from(
+                com.dolog.server.domain.bts.entity.Bts.builder().artistProfile(
+                        com.dolog.server.domain.artist.entity.ArtistProfile.builder().artist(artist).build()
+                ).build()).getArtistNames().isEmpty());
+        artist.updateArtistInfo("직접 입력", null, null);
+        artists.flush();
+        var response = auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.KAKAO,
+                new com.dolog.server.domain.account.service.SocialProfile(subject, "소셜 이름 변경", null));
+        artists.flush();
+        assertFalse(response.isFirstLogin());
+        var reloaded = artists.findByAccountId(account.getId()).orElseThrow();
+        assertEquals(artist.getId(), reloaded.getId());
+        assertEquals("직접 입력", reloaded.getNameKo());
+    }
+
+    @Test
+    @DisplayName("선택 동의 PATCH는 실제 DB에 저장하고 본인·역할·입력을 검증한다")
+    void optionalTermsPatchPersistsAndEnforcesAccess() throws Exception {
+        TestTransaction.flagForRollback();
+        TestTransaction.end();
+        var created = new java.util.ArrayList<UUID>();
+        String path = "/api/accounts/me/terms";
+        String enabled = "{\"termsVersion\":\"v1.0\",\"promotionAgreed\":true,\"marketingAgreed\":true,\"adReceiveAgreed\":true}";
+        String withdrawn = enabled.replace("true", "false");
+        try {
+            mvc.perform(patch(path).contextPath("/api").contentType("application/json").content(enabled))
+                    .andExpect(status().isUnauthorized());
+            for (Role role : java.util.List.of(Role.ARTIST_ADMIN, Role.EXHIBITION_ADMIN, Role.DOLOG_ADMIN)) {
+                var account = accounts.saveAndFlush(Account.builder().role(role).accountStatus(AccountStatus.ACTIVE).build());
+                created.add(account.getId());
+                if (role == Role.EXHIBITION_ADMIN) {
+                    exhibitions.saveAndFlush(Exhibition.builder().account(account).univName("약관 테스트 대학")
+                            .deptName("약관 테스트 학과").slug("terms-" + account.getId()).build());
+                }
+                String authorization = "Bearer " + jwt.createAccessToken(account.getId(), session(account).getId());
+                if (role == Role.DOLOG_ADMIN) {
+                    mvc.perform(patch(path).contextPath("/api").header("Authorization", authorization)
+                                    .contentType("application/json").content(enabled))
+                            .andExpect(status().isForbidden());
+                    continue;
+                }
+                mvc.perform(patch(path).contextPath("/api").header("Authorization", authorization)
+                                .contentType("application/json").content(enabled))
+                        .andExpect(status().isNotFound());
+                String initial = "{\"termsVersion\":\"v1.0\",\"age14OrOverConfirmed\":true,\"serviceTermsAgreed\":true,\"privacyAgreed\":true,\"promotionAgreed\":false,\"marketingAgreed\":false,\"adReceiveAgreed\":false}";
+                mvc.perform(post(path).contextPath("/api").header("Authorization", authorization)
+                                .contentType("application/json").content(initial)).andExpect(status().isCreated());
+                String originalTime = jdbc.queryForObject("SELECT agreed_at FROM terms_agreements WHERE account_id = ?",
+                        String.class, java.util.HexFormat.of().parseHex(account.getId().toString().replace("-", "")));
+                for (String payload : java.util.List.of(enabled, withdrawn, withdrawn)) {
+                    mvc.perform(patch(path).contextPath("/api").header("Authorization", authorization)
+                                    .contentType("application/json").content(payload))
+                            .andExpect(status().isOk()).andExpect(jsonPath("$.code").value("SUCCESS_200"));
+                    boolean expected = payload.equals(enabled);
+                    mvc.perform(get(path).contextPath("/api").header("Authorization", authorization))
+                            .andExpect(status().isOk())
+                            .andExpect(jsonPath("$.data.terms.promotionAgreed").value(expected))
+                            .andExpect(jsonPath("$.data.terms.marketingAgreed").value(expected))
+                            .andExpect(jsonPath("$.data.terms.adEmailAgreed").value(expected))
+                            .andExpect(jsonPath("$.data.terms.adKakaoAgreed").value(expected))
+                            .andExpect(jsonPath("$.data.terms.adSmsAgreed").value(expected))
+                            .andExpect(jsonPath("$.data.terms.age14OrOverConfirmed").value(true))
+                            .andExpect(jsonPath("$.data.terms.serviceTermsAgreed").value(true))
+                            .andExpect(jsonPath("$.data.terms.privacyAgreed").value(true));
+                }
+                for (String invalid : java.util.List.of("{}", enabled.replace("v1.0", "old"),
+                        enabled.replace("\"marketingAgreed\":true", "\"marketingAgreed\":false"),
+                        enabled.replace("\"promotionAgreed\":true", "\"promotionAgreed\":null"))) {
+                    mvc.perform(patch(path).contextPath("/api").header("Authorization", authorization)
+                                    .contentType("application/json").content(invalid)).andExpect(status().isBadRequest());
+                }
+                var stored = jdbc.queryForMap("SELECT * FROM terms_agreements WHERE account_id = ?",
+                        java.util.HexFormat.of().parseHex(account.getId().toString().replace("-", "")));
+                assertEquals(originalTime, jdbc.queryForObject("SELECT agreed_at FROM terms_agreements WHERE account_id = ?",
+                        String.class, java.util.HexFormat.of().parseHex(account.getId().toString().replace("-", ""))));
+                assertEquals(Boolean.FALSE, stored.get("promotion_agreed"));
+                assertEquals(Boolean.FALSE, stored.get("marketing_agreed"));
+                assertEquals(Boolean.FALSE, stored.get("ad_email_agreed"));
+                assertEquals(Boolean.FALSE, stored.get("ad_kakao_agreed"));
+                assertEquals(Boolean.FALSE, stored.get("ad_sms_agreed"));
+            }
+        } finally {
+            for (UUID id : created) {
+                byte[] binaryId = java.util.HexFormat.of().parseHex(id.toString().replace("-", ""));
+                jdbc.update("DELETE FROM terms_agreements WHERE account_id = ?", binaryId);
+                jdbc.update("DELETE FROM refresh_token WHERE account_id = ?", binaryId);
+                jdbc.update("DELETE FROM exhibitions WHERE account_id = ?", binaryId);
+                accounts.deleteById(id);
+            }
+        }
+    }
+
+    @Test
     @DisplayName("탈퇴 후 남은 작가의 공동 작품과 BTS도 연결을 보관하며 삭제한다")
     void deleteContentWithRetainedWithdrawalMappings() throws Exception {
         verifyWithdrawalRetention(true);

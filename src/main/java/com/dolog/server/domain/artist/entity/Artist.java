@@ -31,7 +31,7 @@ public class Artist extends BaseEntity {
     @JoinColumn(name = "account_id", unique = true)
     private Account account; // v2 에서 nullable false (추후 account 연동)
 
-    @Column(name = "name_ko", nullable = false, length = 100)
+    @Column(name = "name_ko", length = 100)
     private String nameKo;
 
     @Column(name = "name_en", length = 100)

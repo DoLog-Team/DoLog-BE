@@ -120,7 +120,7 @@ public class ArtworkSubmissionProcessor {
                 exhibition.getAccount(),
                 NotificationType.ARTWORK_CANCELLED,
                 Map.of(
-                        "artistName", artist.getNameKo(),
+                        "artistName", java.util.Objects.toString(artist.getNameKo(), "이름 미등록"),
                         "artworkTitle", artworkTitle,
                         "exhibitionName", resolveExhibitionName(exhibition)
                 ),
