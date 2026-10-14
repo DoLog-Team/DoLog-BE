@@ -35,6 +35,8 @@ public enum ExhibitionErrorCode implements BaseResponseCode {
 
     ZONE_NOT_FOUND("EXHIBITION_ZONE_404", NOT_FOUND, "해당 ID의 구역을 찾을 수 없습니다."),
 
+    GUIDE_MAP_REORDER_INVALID("EXHIBITION_GUIDE_MAP_400", BAD_REQUEST, "해당 전시에 속하지 않는 관람 안내 이미지가 포함되어 있거나 순서 값이 올바르지 않습니다."),
+
     EXHIBITION_NOT_PUBLIC("EXHIBITION_403_1", FORBIDDEN, "비공개 전시회입니다."),
     EXHIBITION_NOT_OWNER("EXHIBITION_403_2", FORBIDDEN, "본인 전시회만 관리할 수 있습니다."),
     SPLASH_PLAN_NOT_SUPPORTED("EXHIBITION_SPLASH_403", FORBIDDEN, "현재 플랜에서 스플래시 기능을 사용할 수 없습니다."),
