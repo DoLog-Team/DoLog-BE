@@ -231,6 +231,34 @@ class ArtworkImageApiTests {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    @DisplayName("본문 인라인 이미지는 업로드 후 URL만 돌려주고 갤러리(ArtworkImg)에는 남기지 않는다")
+    void uploadsContentImageWithoutPersisting() throws Exception {
+        mvc.perform(withToken(multipart("/api/artworks/{id}/content-images", artwork.getId())
+                        .file(image("imageFile")), myToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.imageUrl").value("https://s3/detail-1.webp"));
+
+        verify(fileService).uploadFile(any(), eq("artworks/detail"));
+        assertTrue(images.findAll().stream().noneMatch(img -> img.getArtwork().getId().equals(artwork.getId())));
+    }
+
+    @Test
+    @DisplayName("본문 인라인 이미지는 남의 작품이면 404, 두록 어드민은 403, 파일 없으면 400")
+    void rejectsContentImageUpload() throws Exception {
+        mvc.perform(withToken(multipart("/api/artworks/{id}/content-images", artwork.getId())
+                        .file(image("imageFile")), token(artist("남작가").getAccount())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ARTWORK_001"));
+        mvc.perform(withToken(multipart("/api/artworks/{id}/content-images", artwork.getId())
+                        .file(image("imageFile")), token(account(Role.DOLOG_ADMIN))))
+                .andExpect(status().isForbidden());
+        mvc.perform(withToken(multipart("/api/artworks/{id}/content-images", artwork.getId()), myToken))
+                .andExpect(status().isBadRequest());
+
+        verify(fileService, never()).uploadFile(any(), any());
+    }
+
     // 테스트는 한 트랜잭션이라 커밋이 없다. 등록된 커밋 후 작업을 직접 실행해 확인한다.
     private void runAfterCommit() {
         TransactionSynchronizationManager.getSynchronizations().forEach(sync -> sync.afterCommit());

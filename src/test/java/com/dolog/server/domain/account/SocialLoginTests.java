@@ -18,6 +18,7 @@ import com.dolog.server.domain.account.service.KakaoClient;
 import com.dolog.server.domain.account.service.SocialProfile;
 import com.dolog.server.domain.account.service.TermsAgreementService;
 import com.dolog.server.domain.account.web.dto.request.TermsAgreementRequest;
+import com.dolog.server.domain.account.web.dto.request.OptionalTermsAgreementRequest;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.global.exception.BaseException;
 import com.dolog.server.global.jwt.JwtTokenProvider;
@@ -289,6 +290,63 @@ class SocialLoginTests {
                 error.getErrorCode());
         assertEquals(404, error.getErrorCode().getHttpStatus());
         verify(agreements, never()).save(any());
+    }
+
+    @Test
+    void optionalConsentRequestRequiresVersionAndAllThreeValues() {
+        try (var factory = jakarta.validation.Validation.buildDefaultValidatorFactory()) {
+            var validator = factory.getValidator();
+            assertTrue(validator.validate(new OptionalTermsAgreementRequest("v1.0", false, false, false)).isEmpty());
+            assertEquals(4, validator.validate(new OptionalTermsAgreementRequest(" ", null, null, null)).size());
+        }
+    }
+
+    @Test
+    void optionalConsentsCanBeChangedAndWithdrawnWithoutChangingRequiredAgreement() {
+        var agreements = mock(TermsAgreementRepository.class);
+        var service = new TermsAgreementService(agreements, mock(AccountRepository.class), "v1.0");
+        UUID accountId = UUID.randomUUID();
+        var agreedAt = LocalDateTime.of(2026, 10, 1, 10, 0);
+        var agreement = TermsAgreement.builder().termsVersion("v1.0").agreedAt(agreedAt)
+                .age14OrOverConfirmed(true).serviceTermsAgreed(true).privacyAgreed(true).build();
+        when(agreements.findByAccountIdAndTermsVersion(accountId, "v1.0")).thenReturn(Optional.of(agreement));
+        when(agreements.findFirstByAccountIdOrderByAgreedAtDescIdDesc(accountId)).thenReturn(Optional.of(agreement));
+
+        var enabled = service.updateOptionalConsents(accountId,
+                new OptionalTermsAgreementRequest("v1.0", true, true, true));
+        assertEquals(Boolean.TRUE, enabled.terms().promotionAgreed());
+        assertEquals(Boolean.TRUE, enabled.terms().marketingAgreed());
+        assertEquals(Boolean.TRUE, enabled.terms().adEmailAgreed());
+        assertEquals(Boolean.TRUE, enabled.terms().adKakaoAgreed());
+        assertEquals(Boolean.TRUE, enabled.terms().adSmsAgreed());
+        var request = new OptionalTermsAgreementRequest("v1.0", false, false, false);
+        var withdrawn = service.updateOptionalConsents(accountId, request);
+        assertEquals(withdrawn, service.updateOptionalConsents(accountId, request));
+        assertEquals(withdrawn, service.getLatestAgreement(accountId));
+        assertEquals(Boolean.FALSE, withdrawn.terms().promotionAgreed());
+        assertEquals(Boolean.FALSE, withdrawn.terms().marketingAgreed());
+        assertEquals(Boolean.FALSE, withdrawn.terms().adEmailAgreed());
+        assertEquals(Boolean.FALSE, withdrawn.terms().adKakaoAgreed());
+        assertEquals(Boolean.FALSE, withdrawn.terms().adSmsAgreed());
+        assertEquals(agreedAt, withdrawn.agreedAt());
+        assertTrue(withdrawn.terms().age14OrOverConfirmed());
+        assertTrue(withdrawn.terms().serviceTermsAgreed());
+        assertTrue(withdrawn.terms().privacyAgreed());
+
+        var invalid = assertThrows(BaseException.class, () -> service.updateOptionalConsents(accountId,
+                new OptionalTermsAgreementRequest("v1.0", true, false, true)));
+        assertEquals(com.dolog.server.domain.account.exception.AccountErrorCode.TERMS_REQUIRED_MISSING, invalid.getErrorCode());
+        assertEquals(withdrawn, service.getLatestAgreement(accountId));
+        var mismatch = assertThrows(BaseException.class, () -> service.updateOptionalConsents(accountId,
+                new OptionalTermsAgreementRequest("old", false, false, false)));
+        assertEquals(com.dolog.server.domain.account.exception.AccountErrorCode.TERMS_VERSION_MISMATCH, mismatch.getErrorCode());
+        var missing = assertThrows(BaseException.class, () -> service.updateOptionalConsents(UUID.randomUUID(), request));
+        assertEquals(com.dolog.server.domain.account.exception.AccountErrorCode.TERMS_NOT_FOUND, missing.getErrorCode());
+        when(agreements.findByAccountIdAndTermsVersion(accountId, "v1.0"))
+                .thenReturn(Optional.of(TermsAgreement.builder().build()));
+        assertThrows(BaseException.class, () -> service.updateOptionalConsents(accountId, request));
+        assertThrows(BaseException.class, () -> new TermsAgreementService(agreements, mock(AccountRepository.class), "")
+                .updateOptionalConsents(accountId, request));
     }
 
     private final com.dolog.server.domain.artist.repository.ArtistRepository withdrawalArtists = mock(com.dolog.server.domain.artist.repository.ArtistRepository.class);

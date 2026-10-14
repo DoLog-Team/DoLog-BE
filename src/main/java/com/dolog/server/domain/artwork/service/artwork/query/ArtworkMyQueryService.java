@@ -7,6 +7,7 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkEditResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkMyItemResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkMyListResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -50,9 +51,17 @@ public class ArtworkMyQueryService {
                 .build();
     }
 
+    // 편집 화면용 상세 조회. 공개 여부/숨김과 무관, 본인 작품만.
+    public ArtworkEditResponse getMyArtwork(UUID accountId, UUID artworkId) {
+        Artist artist = artworkValidator.getLoginArtist(accountId);
+        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
+
+        return ArtworkEditResponse.of(artwork, resolveExhibitionName(artwork));
+    }
+
     private ArtworkMyItemResponse toResponse(Artwork artwork) {
         long likeCount = artworkLikeRepository.countByArtworkId(artwork.getId());
-        Integer completionRate = artworkFieldRequirement.completionRate(artwork);
+        int completionRate = artworkFieldRequirement.completionRate(artwork);
         return ArtworkMyItemResponse.of(artwork, resolveExhibitionName(artwork), likeCount, completionRate);
     }
 

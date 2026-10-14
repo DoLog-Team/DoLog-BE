@@ -3,6 +3,7 @@ package com.dolog.server.domain.artwork.service;
 import com.dolog.server.domain.artwork.web.dto.request.*;
 import com.dolog.server.domain.artwork.web.dto.response.*;
 import com.dolog.server.domain.exhibition.web.dto.response.artwork.ExhibitionArtworkListResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +29,10 @@ public interface ArtworkService {
 
     ArtworkHiddenResponse changeArtworkHidden(UUID accountId, UUID artworkId, ArtworkHiddenUpdateRequest request);
 
+    ArtworkBulkHiddenResponse changeArtworksHidden(UUID accountId, UUID exhibitionId, ArtworkBulkHiddenRequest request);
+
+    ArtworkBulkZoneResponse assignArtworksZone(UUID accountId, UUID exhibitionId, ArtworkBulkZoneRequest request);
+
     void reorderArtwork(UUID artworkId, Integer prev, Integer next);
     void moveArtworkZone(UUID artworkId, UUID zoneId, Integer prev, Integer next);
 
@@ -48,4 +53,7 @@ public interface ArtworkService {
      * 작품 기본 정보, 작가 매핑, 상세 이미지 리스트를 한꺼번에 동기화합니다.
      */
     ArtworkUpdateFullResponse updateArtworkFull(UUID exhibitionId, UUID artworkId, ArtworkUpdateFullRequest request);
+
+    // 본문(마크다운)에 인라인으로 끼워넣을 이미지 업로드. 갤러리에는 남지 않는다.
+    ArtworkContentImageResponse uploadContentImage(UUID accountId, UUID artworkId, MultipartFile image);
 }

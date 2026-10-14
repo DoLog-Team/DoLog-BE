@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.service.image;
 
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.global.util.TextUtils;
 import com.dolog.server.domain.artwork.entity.ArtworkImg;
@@ -11,11 +12,13 @@ import com.dolog.server.domain.artwork.support.file.ArtworkFileHandler;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgCreateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkContentImageResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -150,6 +153,20 @@ public class ArtworkImageServiceImpl implements ArtworkImageService {
                     .orderIndex(dto.getOrderIndex() != null ? dto.getOrderIndex() : nextOrder++)
                     .build());
         }
+    }
+
+    // 본문(마크다운)에 인라인으로 끼워넣을 이미지. 갤러리(ArtworkImg)에는 남기지 않고 URL만 돌려준다.
+    @Override
+    public ArtworkContentImageResponse uploadContentImage(UUID accountId, UUID artworkId, MultipartFile image) {
+
+        Artist artist = artworkValidator.getLoginArtist(accountId);
+        artworkValidator.getOwnedArtwork(artworkId, artist);
+
+        if (image == null || image.isEmpty()) {
+            throw new ArtworkException(ArtworkErrorCode.IMAGE_FILE_REQUIRED);
+        }
+
+        return new ArtworkContentImageResponse(artworkFileHandler.uploadDetailImage(image));
     }
 
     private int nextOrderOf(Artwork artwork) {

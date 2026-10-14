@@ -94,12 +94,10 @@ public class Exhibition extends BaseEntity {
         this.expiresAt = expiresAt;
     }
 
+    // 과거 시각도 허용한다 (전시 종료 후 기록 정리, 즉시 만료 처리 등). null이면 만료 없음으로 설정된다.
     public void extendExpiresAt(LocalDateTime newExpiresAt) {
         if (this.publishedAt == null) {
             throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_PUBLISHED);
-        }
-        if (!newExpiresAt.isAfter(LocalDateTime.now())) {
-            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_EXPIRES_AT_INVALID);
         }
         this.expiresAt = newExpiresAt;
     }

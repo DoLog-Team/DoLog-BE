@@ -54,4 +54,35 @@ class ExhibitionFieldSettingsTest {
         assertFalse(settings.isSatisfiedBy(Artwork.builder().build()));
         assertTrue(settings.isSatisfiedBy(Artwork.builder().locationMap("https://s3/map.webp").build()));
     }
+
+    @Test
+    @DisplayName("필수로 켠 출품 항목 수를 센다")
+    void requiredFieldCount() {
+        assertEquals(0, ExhibitionFieldSettings.builder().build().requiredFieldCount());
+        assertEquals(2, ExhibitionFieldSettings.builder()
+                .requiredMainImg(true).requiredLocationMap(true).build().requiredFieldCount());
+        assertEquals(4, ExhibitionFieldSettings.builder()
+                .requiredMainImg(true).requiredSize(true).requiredMaterials(true).requiredLocationMap(true)
+                .build().requiredFieldCount());
+    }
+
+    @Test
+    @DisplayName("필수로 켠 항목 중 실제로 채운 개수를 센다")
+    void filledRequiredFieldCount() {
+        ExhibitionFieldSettings settings = ExhibitionFieldSettings.builder()
+                .requiredMainImg(true).requiredSize(true).requiredMaterials(true).requiredLocationMap(true)
+                .build();
+
+        assertEquals(0, settings.filledRequiredFieldCount(Artwork.builder().build()));
+
+        Artwork artwork = Artwork.builder()
+                .mainImg("https://s3/main.webp")
+                .width(BigDecimal.TEN).height(BigDecimal.ONE)
+                .build();
+        assertEquals(2, settings.filledRequiredFieldCount(artwork));
+
+        artwork.replaceMaterials(List.of("백자토"));
+        artwork.updateLocationMap("https://s3/map.webp");
+        assertEquals(4, settings.filledRequiredFieldCount(artwork));
+    }
 }
