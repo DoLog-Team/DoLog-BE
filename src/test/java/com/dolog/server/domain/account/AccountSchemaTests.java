@@ -70,6 +70,36 @@ class AccountSchemaTests {
     @Autowired com.dolog.server.domain.bts.service.BtsService btsService;
 
     @Test
+    @DisplayName("탈퇴는 계정 개인정보와 동의·세션을 파기하고 같은 소셜 계정의 신규 가입을 허용한다")
+    void withdrawalErasesIdentityAndAllowsSignup() throws Exception {
+        var account = accounts.saveAndFlush(social("GOOGLE", "erased-subject", "erased@test.com"));
+        var oldSession = session(account);
+        String authorization = "Bearer " + jwt.createAccessToken(account.getId(), oldSession.getId());
+        String initial = "{\"termsVersion\":\"v1.0\",\"age14OrOverConfirmed\":true,\"serviceTermsAgreed\":true,\"privacyAgreed\":true,\"promotionAgreed\":false,\"marketingAgreed\":false,\"adReceiveAgreed\":false}";
+        mvc.perform(post("/api/accounts/me/terms").contextPath("/api").header("Authorization", authorization)
+                .contentType("application/json").content(initial)).andExpect(status().isCreated());
+        mvc.perform(delete("/api/accounts/me").contextPath("/api").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+        var withdrawn = accounts.findById(account.getId()).orElseThrow();
+        assertNull(withdrawn.getEmail());
+        assertNull(withdrawn.getPassword());
+        assertNull(withdrawn.getSocialProvider());
+        assertNull(withdrawn.getSocialProviderId());
+        assertFalse(tokens.existsById(oldSession.getId()));
+        for (String table : java.util.List.of("terms_agreements", "notifications")) {
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE account_id = ?",
+                    Integer.class, bytes(account.getId())));
+        }
+        var signup = auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.GOOGLE,
+                new com.dolog.server.domain.account.service.SocialProfile("erased-subject", "New", "erased@test.com"));
+        assertTrue(signup.isFirstLogin());
+        assertTrue(signup.needsTermsAgreement());
+        assertNotEquals(account.getId(), accounts.findByEmail("erased@test.com").orElseThrow().getId());
+    }
+
+    @Test
     @DisplayName("이름과 이메일 없는 소셜 가입도 Artist를 만들고 재로그인 시 같은 Artist를 유지한다")
     void socialSignupCreatesUnnamedArtist() {
         String subject = "auto-artist-" + UUID.randomUUID();
