@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistProfileService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
-import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
@@ -13,7 +12,6 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailRespon
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
@@ -114,40 +112,6 @@ public class ArtistProfileController {
                         "프로필 등록 성공"
                 ));
     }
-
-    // 프로필 수정
-    @Operation(summary = "작가 공통 프로필 수정")
-    @PatchMapping(
-            value = "/{profileId}",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    )
-    @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
-    )
-    public SuccessResponse<ArtistProfileUpdateResponse> updateArtistProfile(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @PathVariable UUID profileId,
-            @Valid
-            @RequestPart("request")
-            ArtistProfileUpdateRequest request,
-
-            @RequestPart(
-                    value = "profileImg",
-                    required = false
-            )
-            MultipartFile profileImg
-    ) throws IOException {
-        ArtistProfileUpdateResponse response =
-                artistProfileService.updateArtistProfile(
-                        user.getId(),
-                        profileId,
-                        request,
-                        profileImg
-                );
-
-        return SuccessResponse.ok(response, "프로필 수정 성공");
-    }
-
 
 //    -------------------------[ SNS ]-----------------------------------
 

@@ -12,16 +12,21 @@ import com.dolog.server.domain.artist.exception.artistError.ArtistAlreadyExistsE
 import com.dolog.server.domain.artist.exception.artistError.ArtistBadRequestException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.DuplicateArtistPhoneException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.*;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
+import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
+import com.dolog.server.global.util.FileService;
+import com.dolog.server.global.util.TextUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -30,7 +35,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.List;
@@ -47,6 +54,8 @@ public class ArtistServiceImpl implements ArtistService {
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
     private final ArtistProfileLikeRepository artistProfileLikeRepository;
+    private final FileService fileService;
+    private final ArtistProfileImageValidator profileImageValidator;
 
     private String normalizeEmail(String email) {
         if (email == null || email.isBlank()) {
@@ -171,18 +180,73 @@ public class ArtistServiceImpl implements ArtistService {
     }
 
     @Override
-    public ArtistUpdateResponse updateMyArtist(UUID accountId, ArtistUpdateRequest request) {
+    public ArtistUpdateResponse updateMyArtist(
+            UUID accountId,
+            ArtistProfileUpdateRequest request,
+            MultipartFile profileImg
+    ) throws IOException {
         Account account = accountRepository.findByIdForUpdate(accountId)
                 .orElseThrow(JwtInvalidException::new);
         requireEligibleArtistAccount(account);
         Artist artist = artistRepository.findByAccountId(accountId)
                 .orElseThrow(ArtistNotFoundException::new);
-        return updateArtistInfo(artist, request);
+        ArtistProfile profile = artistProfileRepository
+                .findByArtistId(artist.getId())
+                .orElseThrow(ArtistProfileNotFoundException::new);
+
+        ArtistUpdateResponse response = updateArtistInfo(
+                artist,
+                request.getNameKo(),
+                request.getNameEn(),
+                request.getPhone()
+        );
+
+        profileImageValidator.validate(profileImg);
+        String oldImageUrl = profile.getProfileImg();
+        String newImageUrl = null;
+
+        if (profileImg != null && profileImg.isEmpty()) {
+            profile.clearProfileImg();
+            fileService.deleteFile(oldImageUrl);
+        } else if (profileImg != null) {
+            newImageUrl = fileService.uploadFile(
+                    profileImg,
+                    "artist-profiles"
+            );
+            fileService.deleteFile(oldImageUrl);
+        }
+
+        profile.updateProfile(
+                request.getNameKo(),
+                request.getNameEn(),
+                request.getBio() == null
+                        ? null
+                        : TextUtils.normalizeNewlines(request.getBio()),
+                request.getEmail(),
+                request.getPurchaseContactUrl(),
+                newImageUrl
+        );
+
+        return response;
     }
 
     private ArtistUpdateResponse updateArtistInfo(Artist artist, ArtistUpdateRequest request) {
-        String nameKo = normalizeOptionalNameKo(request.getNameKo());
-        String phone = request.getPhone();
+        return updateArtistInfo(
+                artist,
+                request.getNameKo(),
+                request.getNameEn(),
+                request.getPhone()
+        );
+    }
+
+    private ArtistUpdateResponse updateArtistInfo(
+            Artist artist,
+            String requestedNameKo,
+            String requestedNameEn,
+            String requestedPhone
+    ) {
+        String nameKo = normalizeOptionalNameKo(requestedNameKo);
+        String phone = requestedPhone;
 
         if (phone != null) {
             phone = normalizePhone(phone);
@@ -198,7 +262,7 @@ public class ArtistServiceImpl implements ArtistService {
 
         artist.updateArtistInfo(
                 nameKo,
-                request.getNameEn(),
+                requestedNameEn,
                 phone
         );
 

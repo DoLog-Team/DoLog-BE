@@ -10,7 +10,6 @@ import com.dolog.server.domain.artist.exception.artistProfileError.ArtistNotRegi
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAlreadyExistsException;
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
-import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
@@ -20,7 +19,6 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
@@ -127,60 +125,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         return new ArtistProfileCreateResponse(savedProfile.getId());
     }
 
-
-    // 프로필 수정
-    @Transactional
-    @Override
-    public ArtistProfileUpdateResponse updateArtistProfile(
-            UUID accountId,
-            UUID profileId,
-            ArtistProfileUpdateRequest request,
-            MultipartFile profileImg
-    ) throws IOException {
-
-        Account actor = accountRepository.findById(accountId)
-                .orElseThrow(JwtInvalidException::new);
-
-        // 1. 기존 프로필 조회
-        ArtistProfile profile = profileRepository.findById(profileId)
-                .orElseThrow(ArtistProfileNotFoundException::new);
-        requireCanUpdateProfile(actor, profile);
-
-        // 2. 이미지 처리 로직
-        profileImageValidator.validate(profileImg);
-        String oldImageUrl = profile.getProfileImg();
-        String newImageUrl = null;
-
-        // 빈 파일 part는 기존 이미지 삭제로 처리한다.
-        if (profileImg != null && profileImg.isEmpty()) {
-            profile.clearProfileImg();
-            fileService.deleteFile(oldImageUrl);
-        }
-        // 새 파일 (교체)
-        else if (profileImg != null && !profileImg.isEmpty()) {
-            newImageUrl = fileService.uploadFile(
-                    profileImg,
-                    "artist-profiles"
-            );
-            fileService.deleteFile(oldImageUrl);
-        }
-        // 둘 다 아니면 -> 유지
-
-        // 3. 엔티티 업데이트 (선택적 필드 업데이트 방어 코드 적용)
-        profile.updateProfile(
-                request.getNameKo(),
-                request.getNameEn(),
-                request.getBio() != null
-                        ? TextUtils.normalizeNewlines(request.getBio())
-                        : null,
-                request.getEmail(),
-                request.getPurchaseContactUrl(),
-                newImageUrl
-        );
-
-        // 3. 응답 반환
-        return new ArtistProfileUpdateResponse(profile.getId());
-    }
 
     private void requireCanUpdateProfile(
             Account actor,

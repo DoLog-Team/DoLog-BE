@@ -15,8 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -30,6 +32,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -61,36 +64,80 @@ class AdminArtistControllerSecurityTest {
     void artistUpdatesOwnNameUsingTokenAccount() throws Exception {
         UUID actorId = UUID.randomUUID();
         UUID artistId = UUID.randomUUID();
-        when(artistService.updateMyArtist(eq(actorId), any()))
+        MockMultipartFile profileImg = new MockMultipartFile(
+                "profileImg",
+                "profile.png",
+                MediaType.IMAGE_PNG_VALUE,
+                new byte[]{1}
+        );
+        when(artistService.updateMyArtist(
+                eq(actorId),
+                any(),
+                eq(profileImg)
+        ))
                 .thenReturn(new ArtistUpdateResponse(artistId));
-        mockMvc.perform(patch("/api/artists/me").contextPath("/api")
-                        .with(user(userDetails(actorId, Role.ARTIST_ADMIN)))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nameKo\":\"직접 입력\"}"))
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artists/me"
+                )
+                        .file(jsonPart("{\"nameKo\":\"직접 입력\",\"bio\":\"소개\"}"))
+                        .file(profileImg)
+                        .contextPath("/api")
+                        .with(user(userDetails(actorId, Role.ARTIST_ADMIN))))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("프로필 수정 성공"))
                 .andExpect(jsonPath("$.data.artistId").value(artistId.toString()));
-        verify(artistService).updateMyArtist(eq(actorId), any());
+        verify(artistService).updateMyArtist(
+                eq(actorId),
+                any(),
+                eq(profileImg)
+        );
     }
 
     @Test
     void ownArtistUpdateRequiresAuthenticationRoleAndValidName() throws Exception {
-        mockMvc.perform(patch("/api/artists/me").contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artists/me"
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api"))
                 .andExpect(status().isUnauthorized());
         for (Role role : List.of(Role.DOLOG_ADMIN, Role.EXHIBITION_ADMIN)) {
-            mockMvc.perform(patch("/api/artists/me").contextPath("/api")
-                            .with(user(userDetails(UUID.randomUUID(), role)))
-                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+            mockMvc.perform(multipart(
+                            HttpMethod.PATCH,
+                            "/api/artists/me"
+                    )
+                            .file(jsonPart("{}"))
+                            .contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), role))))
                     .andExpect(status().isForbidden());
         }
-        for (String name : List.of("   ", "가".repeat(101))) {
-            mockMvc.perform(patch("/api/artists/me").contextPath("/api")
-                            .with(user(userDetails(UUID.randomUUID(), Role.ARTIST_ADMIN)))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"nameKo\":\"" + name + "\"}"))
+        for (String name : List.of("   ", "가".repeat(11))) {
+            mockMvc.perform(multipart(
+                            HttpMethod.PATCH,
+                            "/api/artists/me"
+                    )
+                            .file(jsonPart(
+                                    "{\"nameKo\":\"" + name + "\"}"
+                            ))
+                            .contextPath("/api")
+                            .with(user(userDetails(
+                                    UUID.randomUUID(),
+                                    Role.ARTIST_ADMIN
+                            ))))
                     .andExpect(status().isBadRequest());
         }
         verifyNoInteractions(artistService);
+    }
+
+    private MockMultipartFile jsonPart(String json) {
+        return new MockMultipartFile(
+                "request",
+                "",
+                MediaType.APPLICATION_JSON_VALUE,
+                json.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
     }
 
     @Test

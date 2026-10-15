@@ -14,7 +14,6 @@ import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.repository.projection.ArtistProfileListItemProjection;
 import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
-import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artwork.entity.Artwork;
@@ -145,131 +144,6 @@ class ArtistProfileServiceImplTest {
         assertEquals("https://cdn.test/profile.webp",
                 savedProfile.getProfileImg());
         verify(profileImageValidator).validate(profileImg);
-    }
-
-    @Test
-    @DisplayName("작가 어드민은 자신의 전시별 프로필을 수정할 수 있다")
-    void artistAdminUpdatesOwnProfile() throws Exception {
-        Account artistAccount = account(Role.ARTIST_ADMIN);
-        ArtistProfile profile = profile(
-                artist(artistAccount),
-                exhibition(account(Role.EXHIBITION_ADMIN))
-        );
-        ArtistProfileUpdateRequest request = updateRequest();
-        prepareUpdate(artistAccount, profile);
-
-        var response = service.updateArtistProfile(
-                artistAccount.getId(),
-                profile.getId(),
-                request,
-                null
-        );
-
-        assertEquals("수정 이름", profile.getNameKo());
-        assertEquals("https://open.kakao.com/o/updated",
-                profile.getPurchaseContactUrl());
-        assertEquals("https://cdn.test/original.webp",
-                profile.getProfileImg());
-        assertEquals(profile.getId(), response.profileId());
-    }
-
-    @Test
-    @DisplayName("빈 profileImg part를 보내면 기존 프로필 이미지를 삭제한다")
-    void emptyProfileImagePartDeletesExistingImage() throws Exception {
-        Account artistAccount = account(Role.ARTIST_ADMIN);
-        ArtistProfile profile = profile(
-                artist(artistAccount),
-                exhibition(account(Role.EXHIBITION_ADMIN))
-        );
-        MockMultipartFile emptyImage = new MockMultipartFile(
-                "profileImg",
-                "",
-                "application/octet-stream",
-                new byte[0]
-        );
-        prepareUpdate(artistAccount, profile);
-
-        service.updateArtistProfile(
-                artistAccount.getId(),
-                profile.getId(),
-                new ArtistProfileUpdateRequest(),
-                emptyImage
-        );
-
-        assertNull(profile.getProfileImg());
-        verify(fileService).deleteFile(
-                "https://cdn.test/original.webp"
-        );
-    }
-
-    @Test
-    @DisplayName("전시 어드민은 작가의 공통 프로필을 수정할 수 없다")
-    void exhibitionAdminCannotUpdateGlobalProfile() {
-        Account exhibitionAdmin = account(Role.EXHIBITION_ADMIN);
-        ArtistProfile profile = profile(
-                artist(account(Role.ARTIST_ADMIN)),
-                exhibition(exhibitionAdmin)
-        );
-        prepareUpdate(exhibitionAdmin, profile);
-
-        assertThrows(
-                ArtistProfileAccessDeniedException.class,
-                () -> service.updateArtistProfile(
-                        exhibitionAdmin.getId(),
-                        profile.getId(),
-                        updateRequest(),
-                        null
-                )
-        );
-    }
-
-    @Test
-    @DisplayName("두록 어드민은 모든 전시별 프로필을 수정할 수 있다")
-    void dologAdminUpdatesAnyProfile() throws Exception {
-        Account dologAdmin = account(Role.DOLOG_ADMIN);
-        ArtistProfile profile = profile(
-                artist(account(Role.ARTIST_ADMIN)),
-                exhibition(account(Role.EXHIBITION_ADMIN))
-        );
-        prepareUpdate(dologAdmin, profile);
-
-        service.updateArtistProfile(
-                dologAdmin.getId(),
-                profile.getId(),
-                updateRequest(),
-                null
-        );
-
-        assertEquals("수정 이름", profile.getNameKo());
-    }
-
-    @ParameterizedTest
-    @EnumSource(
-            value = Role.class,
-            names = {"ARTIST_ADMIN", "EXHIBITION_ADMIN"}
-    )
-    @DisplayName("작가와 전시 어드민은 관리 범위 밖의 프로필을 수정할 수 없다")
-    void scopedAdminsCannotUpdateOtherProfiles(Role role) {
-        Account actor = account(role);
-        ArtistProfile profile = profile(
-                artist(account(Role.ARTIST_ADMIN)),
-                exhibition(account(Role.EXHIBITION_ADMIN))
-        );
-
-        when(accountRepository.findById(actor.getId()))
-                .thenReturn(Optional.of(actor));
-        when(profileRepository.findById(profile.getId()))
-                .thenReturn(Optional.of(profile));
-
-        assertThrows(
-                ArtistProfileAccessDeniedException.class,
-                () -> service.updateArtistProfile(
-                        actor.getId(),
-                        profile.getId(),
-                        updateRequest(),
-                        null
-                )
-        );
     }
 
     @Test
@@ -819,16 +693,6 @@ class ArtistProfileServiceImplTest {
         verify(artistSnsRepository, never()).delete(any());
     }
 
-    private void prepareUpdate(
-            Account actor,
-            ArtistProfile profile
-    ) {
-        when(accountRepository.findById(actor.getId()))
-                .thenReturn(Optional.of(actor));
-        when(profileRepository.findById(profile.getId()))
-                .thenReturn(Optional.of(profile));
-    }
-
     private void prepareDetail(
             ArtistProfile profile,
             Exhibition exhibition,
@@ -891,16 +755,6 @@ class ArtistProfileServiceImplTest {
         request.setEmail("artist@test.com");
         request.setPurchaseContactUrl(
                 "https://open.kakao.com/o/test"
-        );
-        return request;
-    }
-
-    private ArtistProfileUpdateRequest updateRequest() {
-        ArtistProfileUpdateRequest request =
-                new ArtistProfileUpdateRequest();
-        request.setNameKo("수정 이름");
-        request.setPurchaseContactUrl(
-                "https://open.kakao.com/o/updated"
         );
         return request;
     }

@@ -1,23 +1,32 @@
 package com.dolog.server.domain.artist.web.controller;
 
+import com.dolog.server.domain.artist.service.ArtistService;
+import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistPublicResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
+import com.dolog.server.global.response.SuccessResponse;
+import com.dolog.server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.dolog.server.domain.artist.service.ArtistService;
-import com.dolog.server.global.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-
-import java.util.UUID;
-import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
-import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
-import com.dolog.server.global.security.CustomUserDetails;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.UUID;
 
 @Tag(name = "artist-기본 정보")
 @RestController
@@ -28,15 +37,25 @@ public class ArtistController {
     private final ArtistService artistService;
     private final VisitorIdResolver visitorIdResolver;
 
-    @Operation(summary = "내 작가 기본정보 수정")
-    @PatchMapping("/me")
+    @Operation(summary = "내 작가 공통 프로필 수정")
+    @PatchMapping(
+            value = "/me",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtistUpdateResponse> updateMyArtist(
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestBody @Valid ArtistUpdateRequest request
-    ) {
+            @RequestPart("request") @Valid ArtistProfileUpdateRequest request,
+            @RequestPart(value = "profileImg", required = false)
+            MultipartFile profileImg
+    ) throws IOException {
         return SuccessResponse.ok(
-                artistService.updateMyArtist(user.getId(), request), "작가 수정 성공"
+                artistService.updateMyArtist(
+                        user.getId(),
+                        request,
+                        profileImg
+                ),
+                "프로필 수정 성공"
         );
     }
 
