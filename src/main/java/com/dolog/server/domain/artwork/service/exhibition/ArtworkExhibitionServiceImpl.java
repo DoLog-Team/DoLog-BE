@@ -50,10 +50,12 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
 
         // 4. 데이터 가공: Zone별 그룹화 -> 그 안에서 다시 Category별 그룹화
         // Optional.ofNullable을 사용하여 null 키 문제를 우회합니다.
-        Map<java.util.Optional<com.dolog.server.domain.exhibition.entity.ExhibitionZone>, Map<String, List<Artwork>>> groupedData = artworks.stream()
+        // 카테고리가 미지정(null/공백)이면 "기타"로 바꾸지 않고 null 그룹으로 내려준다(표기는 프론트에서 처리).
+        Map<java.util.Optional<com.dolog.server.domain.exhibition.entity.ExhibitionZone>, Map<java.util.Optional<String>, List<Artwork>>> groupedData = artworks.stream()
                 .collect(Collectors.groupingBy(
                         a -> java.util.Optional.ofNullable(a.getExhibitionZone()), // null을 Optional.empty()로 변환
-                        Collectors.groupingBy(a -> a.getCategory() != null ? a.getCategory() : "기타")
+                        Collectors.groupingBy(a -> java.util.Optional.ofNullable(a.getCategory())
+                                .filter(c -> !c.isBlank()))
                 ));
 
         // 5. DTO 조립 및 정렬
@@ -64,7 +66,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
                     // 카테고리별 응답 리스트 생성
                     List<CategoryArtworkResponse> categoryResponses = zoneEntry.getValue().entrySet().stream()
                             .map(catEntry -> CategoryArtworkResponse.builder()
-                                    .categoryName(catEntry.getKey())
+                                    .categoryName(catEntry.getKey().orElse(null))
                                     .artworks(catEntry.getValue().stream()
                                             .map(this::mapToSimpleArtwork) // 작품 변환 로직 분리
                                             .toList())
