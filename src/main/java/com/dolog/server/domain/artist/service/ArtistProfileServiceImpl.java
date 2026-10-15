@@ -109,9 +109,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 profileImg,
                 "artist-profiles"
         );
-        boolean isPublic = request.getIsPublic() == null
-                || request.getIsPublic();
-
         ArtistProfile profile = ArtistProfile.builder()
                 .artist(artist)
                 .exhibition(exhibition)
@@ -121,7 +118,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .email(request.getEmail())
                 .purchaseContactUrl(request.getPurchaseContactUrl())
                 .profileImg(dbImageUrl)
-                .isPublic(isPublic)
                 .viewCount(0L)
                 .build();
 
@@ -180,7 +176,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         : null,
                 request.getEmail(),
                 request.getPurchaseContactUrl(),
-                request.getIsPublic(),
                 newImageUrl
         );
 
@@ -244,17 +239,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
             return;
         }
 
-        if (profile.isPublic()) {
-            return;
-        }
-
-        if (accountId == null) {
-            throw new ArtistProfileAccessDeniedException();
-        }
-
-        Account actor = accountRepository.findById(accountId)
-                .orElseThrow(JwtInvalidException::new);
-        requireCanUpdateProfile(actor, profile);
+        // 프로필에는 별도 공개/비공개 상태가 없으므로,
+        // 전시에 참여 중인 작가의 프로필은 누구나 조회할 수 있다.
     }
 
     // 관리자용 프로필 목록 조회

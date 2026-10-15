@@ -34,7 +34,6 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
                    p.name_ko AS nameKo,
                    p.name_en AS nameEn,
                    p.profile_img AS profileImg,
-                   p.is_public AS isPublic,
                    p.view_count AS viewCount,
                    COUNT(l.id) AS likeCount
             FROM artist_profiles p
@@ -50,7 +49,6 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
                      p.name_ko,
                      p.name_en,
                      p.profile_img,
-                     p.is_public,
                      p.view_count
             ORDER BY p.name_ko ASC, p.id ASC
             """, nativeQuery = true)
@@ -67,13 +65,12 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
           ON m.artist = p.artist
          AND m.exhibition = p.exhibition
         WHERE p.artist.id = :artistId
-          AND p.isPublic = true
           AND p.exhibition.isPublic = true
           AND m.status =
               com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
         ORDER BY p.createdAt DESC, p.id DESC
         """)
-    List<ArtistProfile> findLatestPublicJoinedProfile(
+    List<ArtistProfile> findLatestJoinedProfileInPublicExhibition(
             @Param("artistId") UUID artistId,
             Pageable pageable
     );

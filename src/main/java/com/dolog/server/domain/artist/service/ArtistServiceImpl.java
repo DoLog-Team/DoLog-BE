@@ -280,7 +280,7 @@ public class ArtistServiceImpl implements ArtistService {
                 .orElseThrow(ArtistNotFoundException::new);
 
         ArtistProfile representativeProfile = artistProfileRepository
-                .findLatestPublicJoinedProfile(
+                .findLatestJoinedProfileInPublicExhibition(
                         artistId,
                         PageRequest.of(0, 1)
                 )

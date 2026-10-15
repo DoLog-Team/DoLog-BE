@@ -317,7 +317,7 @@ class ArtistServiceImplTest {
     }
 
     @Test
-    @DisplayName("작가 상세는 최신 공개 프로필과 전시, 공개 작품, 집계값을 반환한다")
+    @DisplayName("작가 상세는 최신 참여 프로필과 공개 전시·작품, 집계값을 반환한다")
     void returnsArtistDetailInV2Format() {
         UUID artistId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
@@ -337,7 +337,6 @@ class ArtistServiceImplTest {
                 .bio("대표 프로필 소개")
                 .profileImg("https://cdn.test/profile.webp")
                 .email("artist@test.com")
-                .isPublic(true)
                 .build();
         ArtistSns sns = ArtistSns.builder()
                 .id(UUID.randomUUID())
@@ -379,7 +378,7 @@ class ArtistServiceImplTest {
 
         when(artistRepository.findById(artistId))
                 .thenReturn(Optional.of(artist));
-        when(artistProfileRepository.findLatestPublicJoinedProfile(
+        when(artistProfileRepository.findLatestJoinedProfileInPublicExhibition(
                 org.mockito.ArgumentMatchers.eq(artistId),
                 any(Pageable.class)
         )).thenReturn(List.of(profile));
@@ -420,7 +419,7 @@ class ArtistServiceImplTest {
     }
 
     @Test
-    @DisplayName("대표 공개 프로필과 방문자 식별자가 없으면 nullable 필드와 liked 기본값을 반환한다")
+    @DisplayName("대표 참여 프로필과 방문자 식별자가 없으면 nullable 필드와 liked 기본값을 반환한다")
     void returnsDefaultsWithoutRepresentativeProfileOrVisitor() {
         UUID artistId = UUID.randomUUID();
         Artist artist = Artist.builder()
@@ -430,7 +429,7 @@ class ArtistServiceImplTest {
 
         when(artistRepository.findById(artistId))
                 .thenReturn(Optional.of(artist));
-        when(artistProfileRepository.findLatestPublicJoinedProfile(
+        when(artistProfileRepository.findLatestJoinedProfileInPublicExhibition(
                 org.mockito.ArgumentMatchers.eq(artistId),
                 any(Pageable.class)
         )).thenReturn(List.of());

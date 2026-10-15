@@ -50,9 +50,6 @@ public class ArtistProfile extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column(name = "is_public", nullable = false)
-    private boolean isPublic;
-
     private String email;
 
     @Column(name = "profile_img")
@@ -80,7 +77,6 @@ public class ArtistProfile extends BaseEntity {
             String bio,
             String email,
             String purchaseContactUrl,
-            Boolean isPublic,
             String profileImg
     ) {
         // 값이 존재할 때만 업데이트 (기존 값 유지)
@@ -100,9 +96,6 @@ public class ArtistProfile extends BaseEntity {
             this.purchaseContactUrl = normalizeNullableText(
                     purchaseContactUrl
             );
-        }
-        if (isPublic != null) {
-            this.isPublic = isPublic;
         }
         if (profileImg != null) {
             this.profileImg = profileImg;
@@ -132,10 +125,6 @@ public class ArtistProfile extends BaseEntity {
                 this.email = this.artist.getAccount().getEmail();
             }
         }
-    }
-
-    public void togglePublicStatus(boolean isPublic) {
-        this.isPublic = isPublic;
     }
 
 }

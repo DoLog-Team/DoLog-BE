@@ -12,8 +12,6 @@ public interface ArtistProfileListItemProjection {
 
     String getProfileImg();
 
-    Boolean getIsPublic();
-
     long getViewCount();
 
     long getLikeCount();

@@ -127,7 +127,6 @@ class ArtistProfileControllerSecurityTest {
                                         .nameKo("김두록")
                                         .nameEn("Dolog Kim")
                                         .profileImg("https://cdn.test/profile.webp")
-                                        .isPublic(true)
                                         .viewCount(120L)
                                         .likeCount(8)
                                         .build()
@@ -152,7 +151,7 @@ class ArtistProfileControllerSecurityTest {
                 .andExpect(jsonPath("$.data.profiles[0].artistId")
                         .value(artistId.toString()))
                 .andExpect(jsonPath("$.data.profiles[0].isPublic")
-                        .value(true))
+                        .doesNotExist())
                 .andExpect(jsonPath("$.data.profiles[0].viewCount")
                         .value(120))
                 .andExpect(jsonPath("$.data.profiles[0].likeCount")
@@ -345,7 +344,7 @@ class ArtistProfileControllerSecurityTest {
     }
 
     @Test
-    @DisplayName("공개 프로필의 SNS 목록은 명세의 snsList 구조로 반환한다")
+    @DisplayName("프로필의 SNS 목록은 명세의 snsList 구조로 반환한다")
     void anonymousGetsSnsListResponse() throws Exception {
         UUID profileId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();

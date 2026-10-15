@@ -388,7 +388,6 @@ class ExhibitionArtistServiceImplTest {
                 .artist(artist)
                 .exhibition(exhibition)
                 .nameKo("유지할 프로필")
-                .isPublic(true)
                 .build();
         Artwork artwork = artwork(exhibition, artist);
         artwork.getArtworkArtistMaps().get(0).linkProfile(profile);
@@ -837,7 +836,6 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(secondArtist.getId(), createdProfiles.get(0).getArtist().getId());
         assertEquals("두 번째", createdProfiles.get(0).getNameKo());
         assertEquals("second@test.com", createdProfiles.get(0).getEmail());
-        assertTrue(createdProfiles.get(0).isPublic());
     }
 
     @Test

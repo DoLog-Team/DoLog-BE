@@ -604,7 +604,6 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                     ArtistProfile profile = ArtistProfile.builder()
                             .artist(artist)
                             .exhibition(exhibition)
-                            .isPublic(true)
                             .build();
                     profile.fillDefaultInfoFromArtist();
                     return profile;

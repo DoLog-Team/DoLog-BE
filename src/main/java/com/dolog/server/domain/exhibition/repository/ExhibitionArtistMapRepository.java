@@ -52,7 +52,6 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             ON p.artist = a AND p.exhibition.id = :exhibitionId
         WHERE m.exhibition.id = :exhibitionId
                 AND m.status = com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
-                AND p.isPublic = true
         """)
     List<ExhibitionArtistItemResponse> findArtists(UUID exhibitionId);
 
@@ -82,7 +81,6 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
               AND m.status =
                   com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
               AND e.isPublic = true
-              AND p.isPublic = true
             ORDER BY d.startDate DESC, e.id DESC
             """)
     List<ExhibitionArtistMap> findPublicJoinedExhibitionsByArtistId(
