@@ -118,17 +118,14 @@ class ArtistProfileServiceImplTest {
                         artist.getId(),
                         ExhibitionArtistStatus.JOINED
                 )).thenReturn(true);
-        when(profileRepository.existsByArtistAndExhibition(
-                artist,
-                exhibition
-        )).thenReturn(false);
+        when(profileRepository.existsByArtistId(artist.getId()))
+                .thenReturn(false);
         when(fileService.uploadFile(profileImg, "artist-profiles"))
                 .thenReturn("https://cdn.test/profile.webp");
         when(profileRepository.save(any(ArtistProfile.class)))
                 .thenReturn(ArtistProfile.builder()
                         .id(profileId)
                         .artist(artist)
-                        .exhibition(exhibition)
                         .build());
 
         var response = service.createArtistProfile(
@@ -206,8 +203,8 @@ class ArtistProfileServiceImplTest {
     }
 
     @Test
-    @DisplayName("전시 어드민은 자신이 관리하는 전시의 프로필을 수정할 수 있다")
-    void exhibitionAdminUpdatesProfileInOwnExhibition() throws Exception {
+    @DisplayName("전시 어드민은 작가의 공통 프로필을 수정할 수 없다")
+    void exhibitionAdminCannotUpdateGlobalProfile() {
         Account exhibitionAdmin = account(Role.EXHIBITION_ADMIN);
         ArtistProfile profile = profile(
                 artist(account(Role.ARTIST_ADMIN)),
@@ -215,14 +212,15 @@ class ArtistProfileServiceImplTest {
         );
         prepareUpdate(exhibitionAdmin, profile);
 
-        service.updateArtistProfile(
-                exhibitionAdmin.getId(),
-                profile.getId(),
-                updateRequest(),
-                null
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> service.updateArtistProfile(
+                        exhibitionAdmin.getId(),
+                        profile.getId(),
+                        updateRequest(),
+                        null
+                )
         );
-
-        assertEquals("수정 이름", profile.getNameKo());
     }
 
     @Test
@@ -388,7 +386,7 @@ class ArtistProfileServiceImplTest {
 
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
-        mockJoined(profile);
+        mockJoined(profile, exhibition);
         when(profileRepository.incrementViewCount(profile.getId()))
                 .thenReturn(1);
         when(profileRepository.findViewCountById(profile.getId()))
@@ -435,6 +433,7 @@ class ArtistProfileServiceImplTest {
         var response = service.getArtistProfileDetail(
                 null,
                 profile.getId(),
+                exhibition.getId(),
                 "vis_test"
         );
 
@@ -469,15 +468,18 @@ class ArtistProfileServiceImplTest {
     @Test
     @DisplayName("참여 상태가 아닌 프로필은 일반 요청에 존재하지 않는 것으로 응답한다")
     void anonymousGetsNotFoundForNonJoinedProfile() {
+        Exhibition exhibition = exhibition(account(Role.EXHIBITION_ADMIN));
         ArtistProfile profile = profile(
                 artist(account(Role.ARTIST_ADMIN)),
-                exhibition(account(Role.EXHIBITION_ADMIN))
+                exhibition
         );
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
         when(exhibitionArtistMapRepository
                 .existsByExhibitionIdAndArtistIdAndStatus(
-                        profile.getExhibition().getId(),
+                        exhibition.getId(),
                         profile.getArtist().getId(),
                         ExhibitionArtistStatus.JOINED
                 )).thenReturn(false);
@@ -487,6 +489,7 @@ class ArtistProfileServiceImplTest {
                 () -> service.getArtistProfileDetail(
                         null,
                         profile.getId(),
+                        exhibition.getId(),
                         null
                 )
         );
@@ -499,15 +502,18 @@ class ArtistProfileServiceImplTest {
     @DisplayName("관리 범위 밖의 로그인 요청에도 비참여 프로필은 404로 숨긴다")
     void unrelatedAdminGetsNotFoundForNonJoinedProfile() {
         Account actor = account(Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(account(Role.EXHIBITION_ADMIN));
         ArtistProfile profile = profile(
                 artist(account(Role.ARTIST_ADMIN)),
-                exhibition(account(Role.EXHIBITION_ADMIN))
+                exhibition
         );
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
         when(exhibitionArtistMapRepository
                 .existsByExhibitionIdAndArtistIdAndStatus(
-                        profile.getExhibition().getId(),
+                        exhibition.getId(),
                         profile.getArtist().getId(),
                         ExhibitionArtistStatus.JOINED
                 )).thenReturn(false);
@@ -519,6 +525,7 @@ class ArtistProfileServiceImplTest {
                 () -> service.getArtistProfileDetail(
                         actor.getId(),
                         profile.getId(),
+                        exhibition.getId(),
                         null
                 )
         );
@@ -531,6 +538,7 @@ class ArtistProfileServiceImplTest {
     @DisplayName("존재하지 않는 프로필 상세 조회는 404를 반환한다")
     void missingProfileDetailReturnsNotFound() {
         UUID profileId = UUID.randomUUID();
+        UUID exhibitionId = UUID.randomUUID();
         when(profileRepository.findById(profileId))
                 .thenReturn(Optional.empty());
 
@@ -539,6 +547,7 @@ class ArtistProfileServiceImplTest {
                 () -> service.getArtistProfileDetail(
                         null,
                         profileId,
+                        exhibitionId,
                         null
                 )
         );
@@ -550,25 +559,29 @@ class ArtistProfileServiceImplTest {
     @DisplayName("관리 범위의 어드민은 참여 상태가 아닌 기존 프로필을 조회할 수 있다")
     void ownerAdminGetsNonJoinedProfileDetail() {
         Account artistAccount = account(Role.ARTIST_ADMIN);
+        Exhibition exhibition = exhibition(account(Role.EXHIBITION_ADMIN));
         ArtistProfile profile = profile(
                 artist(artistAccount),
-                exhibition(account(Role.EXHIBITION_ADMIN))
+                exhibition
         );
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
         when(exhibitionArtistMapRepository
                 .existsByExhibitionIdAndArtistIdAndStatus(
-                        profile.getExhibition().getId(),
+                        exhibition.getId(),
                         profile.getArtist().getId(),
                         ExhibitionArtistStatus.JOINED
                 )).thenReturn(false);
         when(accountRepository.findById(artistAccount.getId()))
                 .thenReturn(Optional.of(artistAccount));
-        prepareDetailResponseData(profile, 1L);
+        prepareDetailResponseData(profile, exhibition, 1L);
 
         var response = service.getArtistProfileDetail(
                 artistAccount.getId(),
                 profile.getId(),
+                exhibition.getId(),
                 null
         );
 
@@ -669,14 +682,10 @@ class ArtistProfileServiceImplTest {
 
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
-        mockJoined(profile);
         when(artistSnsRepository.findByArtistProfileId(profile.getId()))
                 .thenReturn(List.of(sns));
 
-        var response = service.getArtistSnsList(
-                null,
-                profile.getId()
-        );
+        var response = service.getArtistSnsList(profile.getId());
 
         assertEquals(1, response.snsList().size());
         assertEquals(snsId, response.snsList().get(0).getSnsId());
@@ -822,16 +831,18 @@ class ArtistProfileServiceImplTest {
 
     private void prepareDetail(
             ArtistProfile profile,
+            Exhibition exhibition,
             long viewCount
     ) {
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
-        mockJoined(profile);
-        prepareDetailResponseData(profile, viewCount);
+        mockJoined(profile, exhibition);
+        prepareDetailResponseData(profile, exhibition, viewCount);
     }
 
     private void prepareDetailResponseData(
             ArtistProfile profile,
+            Exhibition exhibition,
             long viewCount
     ) {
         when(profileRepository.incrementViewCount(profile.getId()))
@@ -841,21 +852,26 @@ class ArtistProfileServiceImplTest {
         when(artistSnsRepository.findByArtistProfileId(profile.getId()))
                 .thenReturn(List.of());
         when(artworkRepository.findVisibleInExhibitionByArtistId(
-                profile.getExhibition().getId(),
+                exhibition.getId(),
                 profile.getArtist().getId()
         )).thenReturn(List.of());
         when(exhibitionArtistMapRepository.findArtists(
-                profile.getExhibition().getId()
+                exhibition.getId()
         )).thenReturn(List.of());
         when(artistProfileLikeRepository.countByArtistProfileId(
                 profile.getId()
         )).thenReturn(0L);
     }
 
-    private void mockJoined(ArtistProfile profile) {
+    private void mockJoined(
+            ArtistProfile profile,
+            Exhibition exhibition
+    ) {
+        when(exhibitionRepository.findById(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
         when(exhibitionArtistMapRepository
                 .existsByExhibitionIdAndArtistIdAndStatus(
-                        profile.getExhibition().getId(),
+                        exhibition.getId(),
                         profile.getArtist().getId(),
                         ExhibitionArtistStatus.JOINED
                 )).thenReturn(true);
@@ -925,7 +941,6 @@ class ArtistProfileServiceImplTest {
         return ArtistProfile.builder()
                 .id(UUID.randomUUID())
                 .artist(artist)
-                .exhibition(exhibition)
                 .nameKo("기존 이름")
                 .nameEn("Existing Name")
                 .bio("작가 소개")

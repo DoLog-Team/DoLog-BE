@@ -66,7 +66,8 @@ public class ArtistProfileController {
     public SuccessResponse<ArtistProfileDetailResponse> getArtistProfileDetail(
             @AuthenticationPrincipal CustomUserDetails user,
             HttpServletRequest request,
-            @PathVariable UUID profileId
+            @PathVariable UUID profileId,
+            @RequestParam UUID exhibitionId
     ) {
         UUID accountId = user == null ? null : user.getId();
         String visitorId = visitorIdResolver.resolve(request, null)
@@ -75,6 +76,7 @@ public class ArtistProfileController {
                 artistProfileService.getArtistProfileDetail(
                         accountId,
                         profileId,
+                        exhibitionId,
                         visitorId
                 );
         return SuccessResponse.ok(response, "프로필 상세 조회 성공");
@@ -82,7 +84,7 @@ public class ArtistProfileController {
 
 
     // 프로필 생성
-    @Operation(summary = "전시 작가 프로필 생성")
+    @Operation(summary = "작가 공통 프로필 생성")
     @PostMapping(
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
@@ -114,13 +116,13 @@ public class ArtistProfileController {
     }
 
     // 프로필 수정
-    @Operation(summary = "전시 작가 프로필 수정")
+    @Operation(summary = "작가 공통 프로필 수정")
     @PatchMapping(
             value = "/{profileId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
     )
     public SuccessResponse<ArtistProfileUpdateResponse> updateArtistProfile(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -155,7 +157,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 추가")
     @PostMapping("/{profileId}/sns")
     @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
     )
     public ResponseEntity<SuccessResponse<ArtistSnsCreateResponse>> addArtistSns(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -182,7 +184,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 삭제")
     @DeleteMapping("/sns/{snsId}")
     @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
     )
     public SuccessResponse<Void> deleteArtistSns(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -198,16 +200,11 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 목록 조회")
     @GetMapping("/{profileId}/sns")
     public SuccessResponse<ArtistSnsListResponse> getArtistSnsList(
-            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID profileId
     ) {
 
-        UUID accountId = user == null ? null : user.getId();
         ArtistSnsListResponse response =
-                artistProfileService.getArtistSnsList(
-                        accountId,
-                        profileId
-                );
+                artistProfileService.getArtistSnsList(profileId);
 
         return SuccessResponse.ok(response, "SNS 목록 조회 성공");
     }
@@ -217,7 +214,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 수정")
     @PatchMapping("/sns/{snsId}")
     @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
     )
     public SuccessResponse<ArtistSnsUpdateResponse> updateArtistSns(
             @AuthenticationPrincipal CustomUserDetails user,

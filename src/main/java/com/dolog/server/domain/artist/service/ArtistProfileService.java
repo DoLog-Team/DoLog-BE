@@ -40,6 +40,7 @@ public interface ArtistProfileService {
     ArtistProfileDetailResponse getArtistProfileDetail(
             UUID accountId,
             UUID profileId,
+            UUID exhibitionId,
             String visitorId
     );
 
@@ -52,10 +53,7 @@ public interface ArtistProfileService {
 
     void deleteArtistSns(UUID accountId, UUID snsId);
 
-    ArtistSnsListResponse getArtistSnsList(
-            UUID accountId,
-            UUID profileId
-    );
+    ArtistSnsListResponse getArtistSnsList(UUID profileId);
 
     ArtistSnsUpdateResponse updateArtistSns(
             UUID accountId,

@@ -223,9 +223,9 @@ class AccountSchemaTests {
                 .account(b).nameKo("B").build());
         var exhibition = exhibitions.findByEntryCode("DEME2222").orElseThrow();
         var profileA = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
-                .artist(artistA).exhibition(exhibition).nameKo("A").build());
+                .artist(artistA).nameKo("A").build());
         var profileB = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
-                .artist(artistB).exhibition(exhibition).nameKo("B").build());
+                .artist(artistB).nameKo("B").build());
         var shared = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()
                 .exhibition(exhibition).title("shared").build());
         var sole = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()

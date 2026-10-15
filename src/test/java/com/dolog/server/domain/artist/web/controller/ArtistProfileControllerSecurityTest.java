@@ -181,6 +181,18 @@ class ArtistProfileControllerSecurityTest {
     }
 
     @Test
+    @DisplayName("프로필 상세 조회에는 전시 문맥을 위한 exhibitionId가 필수다")
+    void detailRequiresExhibitionId() throws Exception {
+        mockMvc.perform(get(
+                        "/api/artist-profiles/{profileId}",
+                        UUID.randomUUID()
+                ).contextPath("/api"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(artistProfileService);
+    }
+
+    @Test
     @DisplayName("비로그인 프로필 상세 조회는 v2 명세 JSON을 반환한다")
     void detailRemainsPublicAndReturnsV2Response() throws Exception {
         UUID profileId = UUID.randomUUID();
@@ -225,13 +237,15 @@ class ArtistProfileControllerSecurityTest {
         when(artistProfileService.getArtistProfileDetail(
                 null,
                 profileId,
+                exhibitionId,
                 "vis_test"
         )).thenReturn(response);
 
         mockMvc.perform(get(
                         "/api/artist-profiles/{profileId}",
                         profileId
-                ).contextPath("/api"))
+                ).param("exhibitionId", exhibitionId.toString())
+                        .contextPath("/api"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message")
                         .value("프로필 상세 조회 성공"))
@@ -273,6 +287,7 @@ class ArtistProfileControllerSecurityTest {
         verify(artistProfileService).getArtistProfileDetail(
                 null,
                 profileId,
+                exhibitionId,
                 "vis_test"
         );
     }
@@ -280,10 +295,9 @@ class ArtistProfileControllerSecurityTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
             "DOLOG_ADMIN"
     })
-    @DisplayName("작가·전시·두록 어드민은 SNS 추가 API에 접근할 수 있다")
+    @DisplayName("작가·두록 어드민은 SNS 추가 API에 접근할 수 있다")
     void supportedRolesCanAddSns(String role) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
@@ -354,7 +368,7 @@ class ArtistProfileControllerSecurityTest {
                 .url("https://instagram.com/dolog")
                 .build();
 
-        when(artistProfileService.getArtistSnsList(null, profileId))
+        when(artistProfileService.getArtistSnsList(profileId))
                 .thenReturn(new ArtistSnsListResponse(List.of(item)));
 
         mockMvc.perform(get(
@@ -372,16 +386,15 @@ class ArtistProfileControllerSecurityTest {
                 .andExpect(jsonPath("$.data.snsList[0].url")
                         .value("https://instagram.com/dolog"));
 
-        verify(artistProfileService).getArtistSnsList(null, profileId);
+        verify(artistProfileService).getArtistSnsList(profileId);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
             "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
             "DOLOG_ADMIN"
     })
-    @DisplayName("작가·전시·두록 어드민은 SNS 수정 API에 접근할 수 있다")
+    @DisplayName("작가·두록 어드민은 SNS 수정 API에 접근할 수 있다")
     void supportedRolesCanUpdateSns(String role) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();
@@ -419,10 +432,9 @@ class ArtistProfileControllerSecurityTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
             "DOLOG_ADMIN"
     })
-    @DisplayName("작가·전시·두록 어드민은 SNS 삭제 API에 접근할 수 있다")
+    @DisplayName("작가·두록 어드민은 SNS 삭제 API에 접근할 수 있다")
     void supportedRolesCanDeleteSns(String role) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();
@@ -462,13 +474,72 @@ class ArtistProfileControllerSecurityTest {
         verifyNoInteractions(artistProfileService);
     }
 
+    @Test
+    @DisplayName("전시 어드민은 작가의 공통 프로필과 SNS를 변경할 수 없다")
+    void exhibitionAdminCannotMutateGlobalProfile() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        UUID snsId = UUID.randomUUID();
+        CustomUserDetails exhibitionAdmin = userDetails(
+                accountId,
+                "EXHIBITION_ADMIN"
+        );
+        ArtistSnsRequest createRequest = new ArtistSnsRequest(
+                "instagram",
+                "https://instagram.com/dolog"
+        );
+        ArtistSnsUpdateRequest updateRequest = new ArtistSnsUpdateRequest(
+                null,
+                "https://behance.net/dolog"
+        );
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/{profileId}",
+                        profileId
+                )
+                        .file(updateRequestPart())
+                        .contextPath("/api")
+                        .with(user(exhibitionAdmin)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post(
+                        "/api/artist-profiles/{profileId}/sns",
+                        profileId
+                )
+                        .contextPath("/api")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsBytes(createRequest))
+                        .with(user(exhibitionAdmin)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(patch(
+                        "/api/artist-profiles/sns/{snsId}",
+                        snsId
+                )
+                        .contextPath("/api")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsBytes(updateRequest))
+                        .with(user(exhibitionAdmin)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete(
+                        "/api/artist-profiles/sns/{snsId}",
+                        snsId
+                )
+                        .contextPath("/api")
+                        .with(user(exhibitionAdmin)))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(artistProfileService);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
             "DOLOG_ADMIN"
     })
-    @DisplayName("작가·전시·두록 어드민은 프로필 수정 API에 접근할 수 있다")
+    @DisplayName("작가·두록 어드민은 프로필 수정 API에 접근할 수 있다")
     void supportedRolesCanAccessUpdate(String role) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();

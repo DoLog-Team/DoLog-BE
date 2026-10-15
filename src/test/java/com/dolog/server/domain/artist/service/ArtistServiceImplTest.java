@@ -30,7 +30,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -378,10 +377,8 @@ class ArtistServiceImplTest {
 
         when(artistRepository.findById(artistId))
                 .thenReturn(Optional.of(artist));
-        when(artistProfileRepository.findLatestJoinedProfileInPublicExhibition(
-                org.mockito.ArgumentMatchers.eq(artistId),
-                any(Pageable.class)
-        )).thenReturn(List.of(profile));
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.of(profile));
         when(artistSnsRepository
                 .findByArtistProfileIdOrderByCreatedAtAscIdAsc(profileId))
                 .thenReturn(List.of(sns));
@@ -429,10 +426,8 @@ class ArtistServiceImplTest {
 
         when(artistRepository.findById(artistId))
                 .thenReturn(Optional.of(artist));
-        when(artistProfileRepository.findLatestJoinedProfileInPublicExhibition(
-                org.mockito.ArgumentMatchers.eq(artistId),
-                any(Pageable.class)
-        )).thenReturn(List.of());
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.empty());
         when(exhibitionArtistMapRepository
                 .findPublicJoinedExhibitionsByArtistId(artistId))
                 .thenReturn(List.of());

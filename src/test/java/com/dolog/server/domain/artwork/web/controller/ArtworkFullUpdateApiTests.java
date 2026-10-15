@@ -378,7 +378,7 @@ class ArtworkFullUpdateApiTests {
         participations.saveAndFlush(ExhibitionArtistMap.builder()
                 .exhibition(exhibition).artist(artist).status(status).build());
         return profiles.saveAndFlush(ArtistProfile.builder()
-                .artist(artist).exhibition(exhibition).nameKo(artist.getNameKo()).build());
+                .artist(artist).nameKo(artist.getNameKo()).build());
     }
 
     private Artwork submittedArtwork(Artist artist, ArtistProfile profile, ExhibitionZone zone, int orderIndex) {

@@ -64,7 +64,7 @@ public class LikeService {
         return new ArtworkLikeResponse(artworkId, visitorId, artworkLikeRepository.countByArtworkId(artworkId), false);
     }
 
-    // 공개 프로필 기준(지우 파트)과 같이, 그 전시에 참여 중(JOINED)인 작가의 프로필만 좋아요를 받는다.
+    // 한 전시에라도 참여 중(JOINED)인 작가의 공통 프로필만 좋아요를 받는다.
     public ArtistProfileLikeResponse likeArtistProfile(UUID profileId, String visitorId) {
 
         ArtistProfile profile = artistProfileRepository.findById(profileId)
@@ -95,11 +95,11 @@ public class LikeService {
     }
 
     private boolean isJoined(ArtistProfile profile) {
-
         return exhibitionArtistMapRepository
-                .findByExhibitionIdAndArtistId(profile.getExhibition().getId(), profile.getArtist().getId())
-                .filter(map -> map.getStatus() == ExhibitionArtistStatus.JOINED)
-                .isPresent();
+                .existsByArtistIdAndStatus(
+                        profile.getArtist().getId(),
+                        ExhibitionArtistStatus.JOINED
+                );
     }
 
     // 동시에 같은 좋아요가 들어오면 UNIQUE 제약에서 걸리므로 409 로 맞춘다.

@@ -99,7 +99,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         }
 
         // 중복 체크 (이미 프로필이 있는지)
-        if (profileRepository.existsByArtistAndExhibition(artist, exhibition)) {
+        if (profileRepository.existsByArtistId(artistId)) {
             throw new ArtistProfileAlreadyExistsException();
         }
 
@@ -111,7 +111,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         );
         ArtistProfile profile = ArtistProfile.builder()
                 .artist(artist)
-                .exhibition(exhibition)
                 .nameKo(request.getNameKo().trim())
                 .nameEn(request.getNameEn())
                 .bio(TextUtils.normalizeNewlines(request.getBio()))
@@ -202,12 +201,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
             return true;
         }
 
-        if (actor.getRole() == Role.EXHIBITION_ADMIN
-                && profile.getExhibition().getAccount().getId()
-                .equals(actor.getId())) {
-            return true;
-        }
-
         return actor.getRole() == Role.ARTIST_ADMIN
                 && profile.getArtist().getAccount() != null
                 && profile.getArtist().getAccount().getId()
@@ -216,11 +209,12 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
     private void requireCanViewProfile(
             UUID accountId,
-            ArtistProfile profile
+            ArtistProfile profile,
+            Exhibition exhibition
     ) {
         boolean joined = exhibitionArtistMapRepository
                 .existsByExhibitionIdAndArtistIdAndStatus(
-                        profile.getExhibition().getId(),
+                        exhibition.getId(),
                         profile.getArtist().getId(),
                         ExhibitionArtistStatus.JOINED
                 );
@@ -233,7 +227,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
             Account actor = accountRepository.findById(accountId)
                     .orElseThrow(JwtInvalidException::new);
-            if (!canUpdateProfile(actor, profile)) {
+            if (!canUpdateProfile(actor, profile)
+                    && !canManageExhibition(actor, exhibition)) {
                 throw new ArtistProfileNotFoundException();
             }
             return;
@@ -241,6 +236,14 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
         // 프로필에는 별도 공개/비공개 상태가 없으므로,
         // 전시에 참여 중인 작가의 프로필은 누구나 조회할 수 있다.
+    }
+
+    private boolean canManageExhibition(
+            Account actor,
+            Exhibition exhibition
+    ) {
+        return actor.getRole() == Role.EXHIBITION_ADMIN
+                && exhibition.getAccount().getId().equals(actor.getId());
     }
 
     // 관리자용 프로필 목록 조회
@@ -292,11 +295,16 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     public ArtistProfileDetailResponse getArtistProfileDetail(
             UUID accountId,
             UUID profileId,
+            UUID exhibitionId,
             String visitorId
     ) {
         ArtistProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
-        requireCanViewProfile(accountId, profile);
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(
+                        ExhibitionErrorCode.EXHIBITION_NOT_FOUND
+                ));
+        requireCanViewProfile(accountId, profile, exhibition);
 
         int updatedRows = profileRepository.incrementViewCount(profileId);
         if (updatedRows != 1) {
@@ -314,7 +322,6 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .toList();
 
         UUID artistId = profile.getArtist().getId();
-        UUID exhibitionId = profile.getExhibition().getId();
         List<ArtistProfileDetailResponse.ArtworkSummary> artworkResponses =
                 artworkRepository.findVisibleInExhibitionByArtistId(
                                 exhibitionId,
@@ -328,7 +335,10 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .toList();
 
-        ArtistNeighbors neighbors = findArtistNeighbors(profile);
+        ArtistNeighbors neighbors = findArtistNeighbors(
+                profile,
+                exhibition
+        );
         int likeCount = Math.toIntExact(
                 artistProfileLikeRepository.countByArtistProfileId(profileId)
         );
@@ -359,16 +369,19 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .build();
     }
 
-    private ArtistNeighbors findArtistNeighbors(ArtistProfile profile) {
+    private ArtistNeighbors findArtistNeighbors(
+            ArtistProfile profile,
+            Exhibition exhibition
+    ) {
         List<ExhibitionArtistItemResponse> artists = new ArrayList<>(
                 exhibitionArtistMapRepository.findArtists(
-                        profile.getExhibition().getId()
+                        exhibition.getId()
                 )
         );
 
-        SortType sortType = profile.getExhibition().getExhibitionDetail()
+        SortType sortType = exhibition.getExhibitionDetail()
                 != null
-                ? profile.getExhibition().getExhibitionDetail().getSortType()
+                ? exhibition.getExhibitionDetail().getSortType()
                 : SortType.ABC;
 
         if (sortType == SortType.RANDOM) {
@@ -479,13 +492,9 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     // SNS 목록 조회
     @Transactional(readOnly = true)
     @Override
-    public ArtistSnsListResponse getArtistSnsList(
-            UUID accountId,
-            UUID profileId
-    ) {
-        ArtistProfile profile = profileRepository.findById(profileId)
+    public ArtistSnsListResponse getArtistSnsList(UUID profileId) {
+        profileRepository.findById(profileId)
                 .orElseThrow(ArtistProfileNotFoundException::new);
-        requireCanViewProfile(accountId, profile);
 
         List<ArtistSnsResponse> snsList =
                 artistSnsRepository.findByArtistProfileId(profileId)

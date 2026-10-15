@@ -5,8 +5,6 @@ import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.time.LocalDateTime;
 
@@ -41,9 +39,8 @@ public class Artist extends BaseEntity {
     private String phone;
 
 
-    @OneToMany(mappedBy = "artist", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<ArtistProfile> profiles = new ArrayList<>();
+    @OneToOne(mappedBy = "artist", cascade = CascadeType.ALL, orphanRemoval = true)
+    private ArtistProfile profile;
 
     public void updateArtistInfo(String nameKo, String nameEn, String phone) {
         if (nameKo != null) this.nameKo = nameKo;

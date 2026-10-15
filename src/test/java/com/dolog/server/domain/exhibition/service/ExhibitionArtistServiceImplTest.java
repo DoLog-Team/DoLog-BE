@@ -386,7 +386,6 @@ class ExhibitionArtistServiceImplTest {
         ArtistProfile profile = ArtistProfile.builder()
                 .id(UUID.randomUUID())
                 .artist(artist)
-                .exhibition(exhibition)
                 .nameKo("유지할 프로필")
                 .build();
         Artwork artwork = artwork(exhibition, artist);
@@ -594,10 +593,7 @@ class ExhibitionArtistServiceImplTest {
                             .build();
                 });
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of());
 
         var response = service.addArtistToExhibition(
@@ -620,7 +616,6 @@ class ExhibitionArtistServiceImplTest {
         ).toList();
         assertEquals(1, profiles.size());
         assertEquals(artist.getId(), profiles.get(0).getArtist().getId());
-        assertEquals(exhibition.getId(), profiles.get(0).getExhibition().getId());
     }
 
     @Test
@@ -652,10 +647,7 @@ class ExhibitionArtistServiceImplTest {
                             .build();
                 });
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of(artist.getId()));
 
         var response = service.addArtistToExhibition(
@@ -693,10 +685,7 @@ class ExhibitionArtistServiceImplTest {
                 artist.getId()
         )).thenReturn(Optional.of(existingMap));
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of(artist.getId()));
 
         var response = service.addArtistToExhibition(
@@ -806,10 +795,7 @@ class ExhibitionArtistServiceImplTest {
                 ))
                 .thenReturn(List.of(firstMap, secondMap));
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of(firstArtist.getId()));
 
         var response = service.updateArtistStatuses(

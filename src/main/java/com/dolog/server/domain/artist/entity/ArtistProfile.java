@@ -1,7 +1,6 @@
 package com.dolog.server.domain.artist.entity;
 
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
-import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,7 +19,7 @@ import java.util.UUID;
 @Table(
         name = "artist_profiles",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"artist_id", "exhibition_id"})
+                @UniqueConstraint(columnNames = {"artist_id"})
         }
 )
 public class ArtistProfile extends BaseEntity {
@@ -33,13 +32,9 @@ public class ArtistProfile extends BaseEntity {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "artist_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "artist_id", nullable = false, unique = true)
     private Artist artist;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
-    private Exhibition exhibition;
 
     @Column(name = "name_ko", length = 100)
     private String nameKo;
