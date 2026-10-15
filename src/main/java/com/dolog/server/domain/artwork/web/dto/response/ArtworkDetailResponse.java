@@ -13,6 +13,8 @@ import java.util.UUID;
 public class ArtworkDetailResponse {
     private String title;
     private String category;
+    // 작품이 속한 구역 이름. 구역 미지정이면 null
+    private String zoneName;
     private String material;
     private String size;
     private String description;
