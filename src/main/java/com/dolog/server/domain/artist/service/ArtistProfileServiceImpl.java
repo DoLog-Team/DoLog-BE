@@ -28,6 +28,7 @@ import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundExcept
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.entity.enums.SortType;
@@ -61,6 +62,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
     private final ArtistRepository artistRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
+    private final BtsRepository btsRepository;
     private final ArtistProfileLikeRepository artistProfileLikeRepository;
     private final FileService fileService;
     private final ArtistSnsRepository artistSnsRepository;
@@ -279,6 +281,20 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                         .build())
                 .toList();
 
+        List<ArtistProfileDetailResponse.BtsSummary> btsResponses =
+                btsRepository.findAllByArtistProfileIdAndExhibitionId(
+                                profileId,
+                                exhibitionId
+                        )
+                        .stream()
+                        .map(bts -> ArtistProfileDetailResponse.BtsSummary
+                                .builder()
+                                .btsId(bts.getId())
+                                .title(bts.getTitle())
+                                .mainImg(bts.getMainImg())
+                                .build())
+                        .toList();
+
         ArtistNeighbors neighbors = findArtistNeighbors(
                 profile,
                 exhibition
@@ -304,6 +320,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
                 .email(profile.getEmail())
                 .snsList(snsList)
                 .purchaseContactUrl(profile.getPurchaseContactUrl())
+                .behindTheScenes(btsResponses)
                 .artworks(artworkResponses)
                 .prevArtist(neighbors.previous())
                 .nextArtist(neighbors.next())

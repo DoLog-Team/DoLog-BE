@@ -389,6 +389,7 @@ class ArtistProfileControllerSecurityTest {
         UUID exhibitionId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();
         UUID artworkId = UUID.randomUUID();
+        UUID btsId = UUID.randomUUID();
         ArtistProfileDetailResponse response =
                 ArtistProfileDetailResponse.builder()
                         .profileId(profileId)
@@ -407,6 +408,13 @@ class ArtistProfileControllerSecurityTest {
                                         .build()
                         ))
                         .purchaseContactUrl(null)
+                        .behindTheScenes(List.of(
+                                ArtistProfileDetailResponse.BtsSummary.builder()
+                                        .btsId(btsId)
+                                        .title("졸업전시 준비 과정")
+                                        .mainImg("https://cdn.test/bts.webp")
+                                        .build()
+                        ))
                         .artworks(List.of(
                                 ArtistProfileDetailResponse.ArtworkSummary.builder()
                                         .artworkId(artworkId)
@@ -455,6 +463,12 @@ class ArtistProfileControllerSecurityTest {
                         .value(snsId.toString()))
                 .andExpect(jsonPath("$.data.purchaseContactUrl")
                         .value(nullValue()))
+                .andExpect(jsonPath("$.data.behindTheScenes[0].btsId")
+                        .value(btsId.toString()))
+                .andExpect(jsonPath("$.data.behindTheScenes[0].title")
+                        .value("졸업전시 준비 과정"))
+                .andExpect(jsonPath("$.data.behindTheScenes[0].mainImg")
+                        .value("https://cdn.test/bts.webp"))
                 .andExpect(jsonPath("$.data.artworks[0].artworkId")
                         .value(artworkId.toString()))
                 .andExpect(jsonPath("$.data.artworks[0].mainImg")
@@ -470,8 +484,7 @@ class ArtistProfileControllerSecurityTest {
                         .doesNotExist())
                 .andExpect(jsonPath("$.data.isPublic").doesNotExist())
                 .andExpect(jsonPath("$.data.contact").doesNotExist())
-                .andExpect(jsonPath("$.data.behindTheScenes")
-                        .doesNotExist());
+                .andExpect(jsonPath("$.data.behindTheScenes").isArray());
 
         verify(artistProfileService).getArtistProfileDetail(
                 null,
