@@ -19,6 +19,8 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.bts.entity.Bts;
+import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -73,6 +75,9 @@ class ArtistProfileServiceImplTest {
 
     @Mock
     private ArtworkRepository artworkRepository;
+
+    @Mock
+    private BtsRepository btsRepository;
 
     @Mock
     private ArtistProfileLikeRepository artistProfileLikeRepository;
@@ -257,6 +262,13 @@ class ArtistProfileServiceImplTest {
                 .mainImg("https://cdn.test/artwork.webp")
                 .status(ArtworkStatus.PUBLISHED)
                 .build();
+        Bts bts = Bts.builder()
+                .id(UUID.randomUUID())
+                .exhibition(exhibition)
+                .artistProfile(profile)
+                .title("졸업전시 준비 과정")
+                .mainImg("https://cdn.test/bts.webp")
+                .build();
 
         when(profileRepository.findById(profile.getId()))
                 .thenReturn(Optional.of(profile));
@@ -271,6 +283,10 @@ class ArtistProfileServiceImplTest {
                 exhibition.getId(),
                 artist.getId()
         )).thenReturn(List.of(artwork));
+        when(btsRepository.findAllByArtistProfileIdAndExhibitionId(
+                profile.getId(),
+                exhibition.getId()
+        )).thenReturn(List.of(bts));
         when(exhibitionArtistMapRepository.findArtists(exhibition.getId()))
                 .thenReturn(List.of(
                         new ExhibitionArtistItemResponse(
@@ -329,6 +345,13 @@ class ArtistProfileServiceImplTest {
                 response.getArtworks().get(0).getArtworkId());
         assertEquals("https://cdn.test/artwork.webp",
                 response.getArtworks().get(0).getMainImg());
+        assertEquals(1, response.getBehindTheScenes().size());
+        assertEquals(bts.getId(),
+                response.getBehindTheScenes().get(0).getBtsId());
+        assertEquals("졸업전시 준비 과정",
+                response.getBehindTheScenes().get(0).getTitle());
+        assertEquals("https://cdn.test/bts.webp",
+                response.getBehindTheScenes().get(0).getMainImg());
         assertEquals(previousProfileId,
                 response.getPrevArtist().getProfileId());
         assertEquals(nextProfileId,
@@ -337,6 +360,10 @@ class ArtistProfileServiceImplTest {
         assertTrue(response.isLiked());
         assertEquals(121L, response.getViewCount());
         verify(profileRepository).incrementViewCount(profile.getId());
+        verify(btsRepository).findAllByArtistProfileIdAndExhibitionId(
+                profile.getId(),
+                exhibition.getId()
+        );
     }
 
     @Test
@@ -460,6 +487,7 @@ class ArtistProfileServiceImplTest {
         );
 
         assertEquals(profile.getId(), response.getProfileId());
+        assertTrue(response.getBehindTheScenes().isEmpty());
         assertNull(response.getPrevArtist());
         assertNull(response.getNextArtist());
     }
@@ -718,6 +746,10 @@ class ArtistProfileServiceImplTest {
         when(artworkRepository.findVisibleInExhibitionByArtistId(
                 exhibition.getId(),
                 profile.getArtist().getId()
+        )).thenReturn(List.of());
+        when(btsRepository.findAllByArtistProfileIdAndExhibitionId(
+                profile.getId(),
+                exhibition.getId()
         )).thenReturn(List.of());
         when(exhibitionArtistMapRepository.findArtists(
                 exhibition.getId()
