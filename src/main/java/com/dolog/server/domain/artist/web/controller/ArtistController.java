@@ -5,6 +5,7 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest
 import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistPublicResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.MyArtistProfileResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
@@ -36,6 +37,18 @@ public class ArtistController {
 
     private final ArtistService artistService;
     private final VisitorIdResolver visitorIdResolver;
+
+    @Operation(summary = "내 작가 공통 프로필 조회")
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<MyArtistProfileResponse> getMyArtistProfile(
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        return SuccessResponse.ok(
+                artistService.getMyArtistProfile(user.getId()),
+                "내 프로필 조회 성공"
+        );
+    }
 
     @Operation(summary = "내 작가 공통 프로필 수정")
     @PatchMapping(

@@ -4,6 +4,7 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.artist.service.ArtistService;
 import com.dolog.server.domain.artist.web.dto.response.ArtistCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.MyArtistProfileResponse;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
 import com.dolog.server.global.jwt.JwtTokenProvider;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -59,6 +61,72 @@ class AdminArtistControllerSecurityTest {
 
     @MockitoBean
     private JpaMetamodelMappingContext jpaMappingContext;
+
+    @Test
+    void artistGetsOwnCommonProfileUsingTokenAccount() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        MyArtistProfileResponse response = new MyArtistProfileResponse(
+                artistId,
+                profileId,
+                "김두록",
+                "Dolog Kim",
+                "01012345678",
+                "작가 소개",
+                "artist@test.com",
+                "https://open.kakao.com/o/test",
+                "https://cdn.test/profile.webp"
+        );
+        when(artistService.getMyArtistProfile(accountId))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/artists/me")
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                accountId,
+                                Role.ARTIST_ADMIN
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("내 프로필 조회 성공"))
+                .andExpect(jsonPath("$.data.artistId")
+                        .value(artistId.toString()))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()))
+                .andExpect(jsonPath("$.data.nameKo").value("김두록"))
+                .andExpect(jsonPath("$.data.nameEn")
+                        .value("Dolog Kim"))
+                .andExpect(jsonPath("$.data.phone")
+                        .value("01012345678"))
+                .andExpect(jsonPath("$.data.bio").value("작가 소개"))
+                .andExpect(jsonPath("$.data.email")
+                        .value("artist@test.com"))
+                .andExpect(jsonPath("$.data.purchaseContactUrl")
+                        .value("https://open.kakao.com/o/test"))
+                .andExpect(jsonPath("$.data.profileImg")
+                        .value("https://cdn.test/profile.webp"));
+
+        verify(artistService).getMyArtistProfile(accountId);
+    }
+
+    @Test
+    void ownProfileGetRequiresArtistAdmin() throws Exception {
+        mockMvc.perform(get("/api/artists/me").contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        for (Role role : List.of(Role.DOLOG_ADMIN, Role.EXHIBITION_ADMIN)) {
+            mockMvc.perform(get("/api/artists/me")
+                            .contextPath("/api")
+                            .with(user(userDetails(
+                                    UUID.randomUUID(),
+                                    role
+                            ))))
+                    .andExpect(status().isForbidden());
+        }
+
+        verifyNoInteractions(artistService);
+    }
 
     @Test
     void artistUpdatesOwnNameUsingTokenAccount() throws Exception {

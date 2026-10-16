@@ -123,6 +123,58 @@ class ArtistServiceImplTest {
     }
 
     @Test
+    void ownArtistCanGetCommonProfileForEditScreen() {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        Account owner = account(
+                accountId,
+                Role.ARTIST_ADMIN,
+                AccountStatus.ACTIVE
+        );
+        Artist artist = Artist.builder()
+                .id(artistId)
+                .account(owner)
+                .phone("01012345678")
+                .build();
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(profileId)
+                .artist(artist)
+                .nameKo("김두록")
+                .nameEn("Dolog Kim")
+                .bio("작가 소개")
+                .email("artist@test.com")
+                .purchaseContactUrl("https://open.kakao.com/o/test")
+                .profileImg("https://cdn.test/profile.webp")
+                .build();
+        when(accountRepository.findById(accountId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.of(profile));
+
+        var response = artistService.getMyArtistProfile(accountId);
+
+        assertEquals(artistId, response.artistId());
+        assertEquals(profileId, response.profileId());
+        assertEquals("김두록", response.nameKo());
+        assertEquals("Dolog Kim", response.nameEn());
+        assertEquals("01012345678", response.phone());
+        assertEquals("작가 소개", response.bio());
+        assertEquals("artist@test.com", response.email());
+        assertEquals(
+                "https://open.kakao.com/o/test",
+                response.purchaseContactUrl()
+        );
+        assertEquals(
+                "https://cdn.test/profile.webp",
+                response.profileImg()
+        );
+        verifyNoInteractions(fileService, profileImageValidator);
+    }
+
+    @Test
     void ownArtistUpdateRejectsNonArtistAndMissingArtist() {
         UUID accountId = UUID.randomUUID();
         ArtistProfileUpdateRequest request = new ArtistProfileUpdateRequest();

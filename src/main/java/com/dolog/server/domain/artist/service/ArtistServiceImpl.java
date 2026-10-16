@@ -230,6 +230,22 @@ public class ArtistServiceImpl implements ArtistService {
         return response;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public MyArtistProfileResponse getMyArtistProfile(UUID accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        requireEligibleArtistAccount(account);
+
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(ArtistNotFoundException::new);
+        ArtistProfile profile = artistProfileRepository
+                .findByArtistId(artist.getId())
+                .orElseThrow(ArtistProfileNotFoundException::new);
+
+        return MyArtistProfileResponse.from(artist, profile);
+    }
+
     private ArtistUpdateResponse updateArtistInfo(Artist artist, ArtistUpdateRequest request) {
         return updateArtistInfo(
                 artist,

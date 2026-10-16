@@ -7,6 +7,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistPublicResponse;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.MyArtistProfileResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -21,6 +22,8 @@ public interface ArtistService {
             ArtistProfileUpdateRequest request,
             MultipartFile profileImg
     ) throws IOException;
+
+    MyArtistProfileResponse getMyArtistProfile(UUID accountId);
 
     ArtistUpdateResponse updateArtist(UUID accountId, UUID artistId, ArtistUpdateRequest request);
 
