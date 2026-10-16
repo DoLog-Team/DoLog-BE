@@ -21,7 +21,6 @@
   "profileId": "UUID",
   "nameKo": "김두록",
   "nameEn": "Dolog Kim",
-  "phone": "01012345678",
   "bio": "작가 소개",
   "email": "artist@test.com",
   "purchaseContactUrl": "https://open.kakao.com/o/test",
@@ -37,17 +36,15 @@
 
 - 인증: `Authorization: Bearer <accessToken>`, ARTIST_ADMIN 전용
 - `multipart/form-data`의 `request` JSON part와 선택적 `profileImg` file part를 사용한다.
-- `nameKo`, `nameEn`, `phone`, `bio`, `email`, `purchaseContactUrl`은 모두 선택값이며, 생략 또는 `null`이면 기존 값을 유지한다.
+- `nameKo`, `nameEn`, `bio`, `email`, `purchaseContactUrl`은 모두 선택값이며, 생략 또는 `null`이면 기존 값을 유지한다.
 - `nameKo`는 한글·영문·숫자·띄어쓰기만 허용하고 최대 10자, `nameEn`은 영문·띄어쓰기만 허용하고 최대 50자다.
-- `bio`는 최대 200자, `phone`은 최대 30자다.
-- 전화번호는 기존 관리자 수정과 동일하게 공백·하이픈 제거 및 숫자·중복 검증을 수행한다.
+- `bio`는 최대 200자다.
 - 이미지는 JPG/JPEG/PNG, 5MB 이하만 허용한다.
 
 ```json
 {
   "nameKo": "김두록",
   "nameEn": "Dolog Kim",
-  "phone": "010-9999-8888",
   "bio": "작가 소개를 수정했습니다.",
   "email": "artist@test.com",
   "purchaseContactUrl": "https://open.kakao.com/o/test"
@@ -59,11 +56,15 @@
 - 파일이 있는 `profileImg` part: 새 이미지로 교체.
 - 성공: HTTP 200, 응답 data는 `{ "artistId": "UUID" }`.
 - 잘못된 입력: 400, 비로그인/유효하지 않은 토큰: 401, 다른 역할: 403.
-- Artist 또는 공통 ArtistProfile이 없으면 404, 중복 전화번호: 409.
-- 작가의 기본 이름과 공통 프로필 이름을 함께 갱신한다.
+- Artist 또는 공통 ArtistProfile이 없으면 404.
+- `nameKo`, `nameEn`은 공개용 공통 프로필의 표시명만 갱신하며,
+  관리자용 작가 마스터 정보의 이름은 변경하지 않는다.
+- 작가 마스터 정보의 이름과 전화번호는 이 API에서 변경하지 않는다.
 
 ## DB
 
-V18__artist_name_nullable.sql로 artists.name_ko의 NOT NULL 제약만 제거한다.
-번호는 사용자 제공 dev DB 이력(V1~V17 성공)과 열린 PR #413/#415의 마이그레이션 목록을 대조하여 정했다.
+V18__artist_name_nullable.sql로 artists.name_ko의 NOT NULL 제약을 제거한다.
+V19__remove_artist_profile_visibility.sql로 프로필 공개 여부 컬럼을 제거한다.
+V20__make_artist_profile_global.sql로 작가별 대표 프로필 하나를 남기고 전시 외래 키를 제거한다.
+기존 프로필의 조회수는 합산하고 좋아요·SNS·BTS·작품 연결은 대표 프로필로 이관한다.
 배포 시 마이그레이션 적용이 필수다. 기존 마이그레이션과 기존 데이터는 수정하지 않는다.

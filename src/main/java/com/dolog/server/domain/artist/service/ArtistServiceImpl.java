@@ -194,13 +194,6 @@ public class ArtistServiceImpl implements ArtistService {
                 .findByArtistId(artist.getId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        ArtistUpdateResponse response = updateArtistInfo(
-                artist,
-                request.getNameKo(),
-                request.getNameEn(),
-                request.getPhone()
-        );
-
         profileImageValidator.validate(profileImg);
         String oldImageUrl = profile.getProfileImg();
         String newImageUrl = null;
@@ -227,7 +220,7 @@ public class ArtistServiceImpl implements ArtistService {
                 newImageUrl
         );
 
-        return response;
+        return ArtistUpdateResponse.from(artist);
     }
 
     @Override

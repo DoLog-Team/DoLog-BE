@@ -26,9 +26,6 @@ public class ArtistProfileUpdateRequest {
     )
     private String nameEn;
 
-    @Size(max = 30, message = "전화번호는 최대 30자까지 입력할 수 있습니다.")
-    private String phone;
-
     @Size(max = 200, message = "소개는 최대 200자까지 입력할 수 있습니다.")
     private String bio;
 

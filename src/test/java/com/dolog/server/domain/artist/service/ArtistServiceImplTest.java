@@ -95,7 +95,13 @@ class ArtistServiceImplTest {
         UUID accountId = UUID.randomUUID();
         UUID artistId = UUID.randomUUID();
         Account owner = account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE);
-        Artist artist = Artist.builder().id(artistId).account(owner).build();
+        Artist artist = Artist.builder()
+                .id(artistId)
+                .account(owner)
+                .nameKo("김에스케이")
+                .nameEn("Kim SK")
+                .phone("01000000000")
+                .build();
         ArtistProfile profile = ArtistProfile.builder()
                 .id(UUID.randomUUID())
                 .artist(artist)
@@ -108,6 +114,7 @@ class ArtistServiceImplTest {
                 .thenReturn(Optional.of(profile));
         ArtistProfileUpdateRequest request = new ArtistProfileUpdateRequest();
         ReflectionTestUtils.setField(request, "nameKo", " 직접 입력 ");
+        ReflectionTestUtils.setField(request, "nameEn", "Artist SK");
         ReflectionTestUtils.setField(request, "bio", "새 소개\\n둘째 줄");
 
         assertEquals(
@@ -115,8 +122,11 @@ class ArtistServiceImplTest {
                 artistService.updateMyArtist(accountId, request, null)
                         .artistId()
         );
-        assertEquals("직접 입력", artist.getNameKo());
+        assertEquals("김에스케이", artist.getNameKo());
+        assertEquals("Kim SK", artist.getNameEn());
+        assertEquals("01000000000", artist.getPhone());
         assertEquals("직접 입력", profile.getNameKo());
+        assertEquals("Artist SK", profile.getNameEn());
         assertEquals("새 소개\n둘째 줄", profile.getBio());
         verify(profileImageValidator).validate(null);
         verify(artistRepository, never()).findById(any());
@@ -160,7 +170,6 @@ class ArtistServiceImplTest {
         assertEquals(profileId, response.profileId());
         assertEquals("김두록", response.nameKo());
         assertEquals("Dolog Kim", response.nameEn());
-        assertEquals("01012345678", response.phone());
         assertEquals("작가 소개", response.bio());
         assertEquals("artist@test.com", response.email());
         assertEquals(

@@ -72,7 +72,6 @@ class AdminArtistControllerSecurityTest {
                 profileId,
                 "김두록",
                 "Dolog Kim",
-                "01012345678",
                 "작가 소개",
                 "artist@test.com",
                 "https://open.kakao.com/o/test",
@@ -97,8 +96,6 @@ class AdminArtistControllerSecurityTest {
                 .andExpect(jsonPath("$.data.nameKo").value("김두록"))
                 .andExpect(jsonPath("$.data.nameEn")
                         .value("Dolog Kim"))
-                .andExpect(jsonPath("$.data.phone")
-                        .value("01012345678"))
                 .andExpect(jsonPath("$.data.bio").value("작가 소개"))
                 .andExpect(jsonPath("$.data.email")
                         .value("artist@test.com"))
