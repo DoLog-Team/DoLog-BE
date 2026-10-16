@@ -10,11 +10,16 @@ import com.dolog.server.domain.artist.entity.ArtistSns;
 import com.dolog.server.domain.artist.exception.artistError.ArtistAccountNotEligibleException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistAlreadyExistsException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAccessDeniedException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.repository.ArtistSnsRepository;
 import com.dolog.server.domain.artist.web.dto.request.ArtistCreateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
+import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -23,6 +28,7 @@ import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
+import com.dolog.server.global.util.FileService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,9 +36,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -77,35 +83,398 @@ class ArtistServiceImplTest {
     @Mock
     private ArtistProfileLikeRepository artistProfileLikeRepository;
 
+    @Mock
+    private FileService fileService;
+
+    @Mock
+    private ArtistProfileImageValidator profileImageValidator;
+
     @InjectMocks
     private ArtistServiceImpl artistService;
 
     @Test
-    void ownArtistNameCanBeFilledAfterAutomaticCreation() {
+    void ownArtistCanUpdateCommonProfileAfterAutomaticCreation() throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID artistId = UUID.randomUUID();
         Account owner = account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE);
-        Artist artist = Artist.builder().id(artistId).account(owner).build();
+        Artist artist = Artist.builder()
+                .id(artistId)
+                .account(owner)
+                .nameKo("김에스케이")
+                .nameEn("Kim SK")
+                .phone("01000000000")
+                .build();
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(UUID.randomUUID())
+                .artist(artist)
+                .nameKo("기존 이름")
+                .bio("기존 소개")
+                .build();
         when(accountRepository.findByIdForUpdate(accountId)).thenReturn(Optional.of(owner));
         when(artistRepository.findByAccountId(accountId)).thenReturn(Optional.of(artist));
-        ArtistUpdateRequest request = new ArtistUpdateRequest();
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.of(profile));
+        ArtistProfileUpdateRequest request = new ArtistProfileUpdateRequest();
         ReflectionTestUtils.setField(request, "nameKo", " 직접 입력 ");
-        assertEquals(artistId, artistService.updateMyArtist(accountId, request).artistId());
-        assertEquals("직접 입력", artist.getNameKo());
+        ReflectionTestUtils.setField(request, "nameEn", "Artist SK");
+        ReflectionTestUtils.setField(request, "bio", "새 소개\\n둘째 줄");
+
+        assertEquals(
+                profile.getId(),
+                artistService.updateMyArtistProfile(accountId, request, null)
+                        .profileId()
+        );
+        assertEquals("김에스케이", artist.getNameKo());
+        assertEquals("Kim SK", artist.getNameEn());
+        assertEquals("01000000000", artist.getPhone());
+        assertEquals("직접 입력", profile.getNameKo());
+        assertEquals("Artist SK", profile.getNameEn());
+        assertEquals("새 소개\n둘째 줄", profile.getBio());
+        verify(profileImageValidator).validate(null);
         verify(artistRepository, never()).findById(any());
+    }
+
+    @Test
+    void profileOwnerCanUpdateCommonProfileByProfileId() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        Account owner = account(
+                accountId,
+                Role.ARTIST_ADMIN,
+                AccountStatus.ACTIVE
+        );
+        Artist artist = Artist.builder()
+                .id(UUID.randomUUID())
+                .account(owner)
+                .build();
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(profileId)
+                .artist(artist)
+                .nameKo("기존 프로필명")
+                .build();
+        ArtistProfileUpdateRequest request =
+                new ArtistProfileUpdateRequest();
+        ReflectionTestUtils.setField(request, "nameKo", "새 프로필명");
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(owner));
+        when(artistProfileRepository.findById(profileId))
+                .thenReturn(Optional.of(profile));
+
+        var response = artistService.updateArtistProfile(
+                accountId,
+                profileId,
+                request,
+                null
+        );
+
+        assertEquals(profileId, response.profileId());
+        assertEquals("새 프로필명", profile.getNameKo());
+        verify(profileImageValidator).validate(null);
+    }
+
+    @Test
+    void dologAdminCanUpdateAnyCommonProfileByProfileId() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        Account dologAdmin = account(
+                accountId,
+                Role.DOLOG_ADMIN,
+                AccountStatus.ACTIVE
+        );
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(profileId)
+                .artist(Artist.builder()
+                        .id(UUID.randomUUID())
+                        .account(account(
+                                UUID.randomUUID(),
+                                Role.ARTIST_ADMIN,
+                                AccountStatus.ACTIVE
+                        ))
+                        .build())
+                .build();
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(dologAdmin));
+        when(artistProfileRepository.findById(profileId))
+                .thenReturn(Optional.of(profile));
+
+        var response = artistService.updateArtistProfile(
+                accountId,
+                profileId,
+                new ArtistProfileUpdateRequest(),
+                null
+        );
+
+        assertEquals(profileId, response.profileId());
+        verify(profileImageValidator).validate(null);
+    }
+
+    @Test
+    void otherArtistCannotUpdateCommonProfileByProfileId() {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        Account otherArtist = account(
+                accountId,
+                Role.ARTIST_ADMIN,
+                AccountStatus.ACTIVE
+        );
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(profileId)
+                .artist(Artist.builder()
+                        .id(UUID.randomUUID())
+                        .account(account(
+                                UUID.randomUUID(),
+                                Role.ARTIST_ADMIN,
+                                AccountStatus.ACTIVE
+                        ))
+                        .build())
+                .build();
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(otherArtist));
+        when(artistProfileRepository.findById(profileId))
+                .thenReturn(Optional.of(profile));
+
+        assertThrows(
+                ArtistProfileAccessDeniedException.class,
+                () -> artistService.updateArtistProfile(
+                        accountId,
+                        profileId,
+                        new ArtistProfileUpdateRequest(),
+                        null
+                )
+        );
+        verifyNoInteractions(profileImageValidator, fileService);
+    }
+
+    @Test
+    void ownArtistCanUpdateBasicInformationIndependently() {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        Account owner = account(
+                accountId,
+                Role.ARTIST_ADMIN,
+                AccountStatus.ACTIVE
+        );
+        Artist artist = Artist.builder()
+                .id(artistId)
+                .account(owner)
+                .nameKo("기존 기본 이름")
+                .nameEn("Old Name")
+                .phone("01011112222")
+                .build();
+        ArtistUpdateRequest request = new ArtistUpdateRequest();
+        ReflectionTestUtils.setField(request, "nameKo", " 새 기본 이름 ");
+        ReflectionTestUtils.setField(request, "nameEn", "New Name");
+        ReflectionTestUtils.setField(request, "phone", "010-3333-4444");
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(artistRepository.countByPhoneIncludingDeletedAndIdNot(
+                "01033334444",
+                artistId
+        )).thenReturn(0L);
+
+        ArtistUpdateResponse response = artistService.updateMyArtist(
+                accountId,
+                request
+        );
+
+        assertEquals(artistId, response.artistId());
+        assertEquals("새 기본 이름", artist.getNameKo());
+        assertEquals("New Name", artist.getNameEn());
+        assertEquals("01033334444", artist.getPhone());
+        verifyNoInteractions(artistProfileRepository);
+    }
+
+    @Test
+    void ownArtistBasicUpdateRejectsNonArtistAndMissingArtist() {
+        UUID accountId = UUID.randomUUID();
+        ArtistUpdateRequest request = new ArtistUpdateRequest();
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(account(
+                        accountId,
+                        Role.DOLOG_ADMIN,
+                        AccountStatus.ACTIVE
+                )));
+
+        assertThrows(
+                ArtistAccountNotEligibleException.class,
+                () -> artistService.updateMyArtist(accountId, request)
+        );
+
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(account(
+                        accountId,
+                        Role.ARTIST_ADMIN,
+                        AccountStatus.ACTIVE
+                )));
+
+        assertThrows(
+                ArtistNotFoundException.class,
+                () -> artistService.updateMyArtist(accountId, request)
+        );
+    }
+
+    @Test
+    void ownArtistCanGetCommonProfileForEditScreen() {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        Account owner = account(
+                accountId,
+                Role.ARTIST_ADMIN,
+                AccountStatus.ACTIVE
+        );
+        Artist artist = Artist.builder()
+                .id(artistId)
+                .account(owner)
+                .phone("01012345678")
+                .build();
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(profileId)
+                .artist(artist)
+                .nameKo("김두록")
+                .nameEn("Dolog Kim")
+                .bio("작가 소개")
+                .email("artist@test.com")
+                .purchaseContactUrl("https://open.kakao.com/o/test")
+                .profileImg("https://cdn.test/profile.webp")
+                .build();
+        when(accountRepository.findById(accountId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.of(profile));
+
+        var response = artistService.getMyArtistProfile(accountId);
+
+        assertEquals(artistId, response.artistId());
+        assertEquals(profileId, response.profileId());
+        assertEquals("김두록", response.nameKo());
+        assertEquals("Dolog Kim", response.nameEn());
+        assertEquals("작가 소개", response.bio());
+        assertEquals("artist@test.com", response.email());
+        assertEquals(
+                "https://open.kakao.com/o/test",
+                response.purchaseContactUrl()
+        );
+        assertEquals(
+                "https://cdn.test/profile.webp",
+                response.profileImg()
+        );
+        verifyNoInteractions(fileService, profileImageValidator);
     }
 
     @Test
     void ownArtistUpdateRejectsNonArtistAndMissingArtist() {
         UUID accountId = UUID.randomUUID();
+        ArtistProfileUpdateRequest request = new ArtistProfileUpdateRequest();
         when(accountRepository.findByIdForUpdate(accountId))
                 .thenReturn(Optional.of(account(accountId, Role.DOLOG_ADMIN, AccountStatus.ACTIVE)));
         assertThrows(ArtistAccountNotEligibleException.class,
-                () -> artistService.updateMyArtist(accountId, new ArtistUpdateRequest()));
+                () -> artistService.updateMyArtistProfile(
+                        accountId,
+                        request,
+                        null
+                ));
         when(accountRepository.findByIdForUpdate(accountId))
                 .thenReturn(Optional.of(account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE)));
         assertThrows(ArtistNotFoundException.class,
-                () -> artistService.updateMyArtist(accountId, new ArtistUpdateRequest()));
+                () -> artistService.updateMyArtistProfile(
+                        accountId,
+                        request,
+                        null
+                ));
+    }
+
+    @Test
+    void ownArtistUpdateRequiresProfileCreatedByParticipationApproval() {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        Account owner = account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE);
+        Artist artist = Artist.builder().id(artistId).account(owner).build();
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.empty());
+
+        assertThrows(
+                ArtistProfileNotFoundException.class,
+                () -> artistService.updateMyArtistProfile(
+                        accountId,
+                        new ArtistProfileUpdateRequest(),
+                        null
+                )
+        );
+        verifyNoInteractions(fileService, profileImageValidator);
+    }
+
+    @Test
+    void ownArtistCanReplaceProfileImage() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        Account owner = account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE);
+        Artist artist = Artist.builder().id(artistId).account(owner).build();
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(UUID.randomUUID())
+                .artist(artist)
+                .profileImg("https://cdn.test/old.webp")
+                .build();
+        MultipartFile image = org.mockito.Mockito.mock(MultipartFile.class);
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.of(profile));
+        when(image.isEmpty()).thenReturn(false);
+        when(fileService.uploadFile(image, "artist-profiles"))
+                .thenReturn("https://cdn.test/new.webp");
+
+        artistService.updateMyArtistProfile(
+                accountId,
+                new ArtistProfileUpdateRequest(),
+                image
+        );
+
+        assertEquals("https://cdn.test/new.webp", profile.getProfileImg());
+        verify(profileImageValidator).validate(image);
+        verify(fileService).deleteFile("https://cdn.test/old.webp");
+    }
+
+    @Test
+    void emptyProfileImagePartDeletesExistingImage() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        Account owner = account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE);
+        Artist artist = Artist.builder().id(artistId).account(owner).build();
+        ArtistProfile profile = ArtistProfile.builder()
+                .id(UUID.randomUUID())
+                .artist(artist)
+                .profileImg("https://cdn.test/old.webp")
+                .build();
+        MultipartFile emptyImage = org.mockito.Mockito.mock(MultipartFile.class);
+        when(accountRepository.findByIdForUpdate(accountId))
+                .thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.of(profile));
+        when(emptyImage.isEmpty()).thenReturn(true);
+
+        artistService.updateMyArtistProfile(
+                accountId,
+                new ArtistProfileUpdateRequest(),
+                emptyImage
+        );
+
+        assertNull(profile.getProfileImg());
+        verify(profileImageValidator).validate(emptyImage);
+        verify(fileService).deleteFile("https://cdn.test/old.webp");
+        verify(fileService, never()).uploadFile(any(), any());
     }
 
     @Test
@@ -317,7 +686,7 @@ class ArtistServiceImplTest {
     }
 
     @Test
-    @DisplayName("작가 상세는 최신 공개 프로필과 전시, 공개 작품, 집계값을 반환한다")
+    @DisplayName("작가 상세는 최신 참여 프로필과 공개 전시·작품, 집계값을 반환한다")
     void returnsArtistDetailInV2Format() {
         UUID artistId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
@@ -337,7 +706,6 @@ class ArtistServiceImplTest {
                 .bio("대표 프로필 소개")
                 .profileImg("https://cdn.test/profile.webp")
                 .email("artist@test.com")
-                .isPublic(true)
                 .build();
         ArtistSns sns = ArtistSns.builder()
                 .id(UUID.randomUUID())
@@ -379,10 +747,8 @@ class ArtistServiceImplTest {
 
         when(artistRepository.findById(artistId))
                 .thenReturn(Optional.of(artist));
-        when(artistProfileRepository.findLatestPublicJoinedProfile(
-                org.mockito.ArgumentMatchers.eq(artistId),
-                any(Pageable.class)
-        )).thenReturn(List.of(profile));
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.of(profile));
         when(artistSnsRepository
                 .findByArtistProfileIdOrderByCreatedAtAscIdAsc(profileId))
                 .thenReturn(List.of(sns));
@@ -420,7 +786,7 @@ class ArtistServiceImplTest {
     }
 
     @Test
-    @DisplayName("대표 공개 프로필과 방문자 식별자가 없으면 nullable 필드와 liked 기본값을 반환한다")
+    @DisplayName("대표 참여 프로필과 방문자 식별자가 없으면 nullable 필드와 liked 기본값을 반환한다")
     void returnsDefaultsWithoutRepresentativeProfileOrVisitor() {
         UUID artistId = UUID.randomUUID();
         Artist artist = Artist.builder()
@@ -430,10 +796,8 @@ class ArtistServiceImplTest {
 
         when(artistRepository.findById(artistId))
                 .thenReturn(Optional.of(artist));
-        when(artistProfileRepository.findLatestPublicJoinedProfile(
-                org.mockito.ArgumentMatchers.eq(artistId),
-                any(Pageable.class)
-        )).thenReturn(List.of());
+        when(artistProfileRepository.findByArtistId(artistId))
+                .thenReturn(Optional.empty());
         when(exhibitionArtistMapRepository
                 .findPublicJoinedExhibitionsByArtistId(artistId))
                 .thenReturn(List.of());

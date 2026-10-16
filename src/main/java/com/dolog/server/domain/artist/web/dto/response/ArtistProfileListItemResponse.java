@@ -15,7 +15,6 @@ public class ArtistProfileListItemResponse {
     private String nameKo;
     private String nameEn;
     private String profileImg;
-    private Boolean isPublic;
     private long viewCount;
     private int likeCount;
 
@@ -28,7 +27,6 @@ public class ArtistProfileListItemResponse {
                 .nameKo(projection.getNameKo())
                 .nameEn(projection.getNameEn())
                 .profileImg(projection.getProfileImg())
-                .isPublic(Boolean.TRUE.equals(projection.getIsPublic()))
                 .viewCount(projection.getViewCount())
                 .likeCount(Math.toIntExact(projection.getLikeCount()))
                 .build();

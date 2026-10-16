@@ -60,15 +60,21 @@ public class ArtworkSubmissionProcessor {
         Exhibition exhibition = getJoinedExhibition(request.getExhibitionId(), artist);
         ExhibitionZone zone = artworkValidator.validateZone(request.getZoneId(), exhibition.getId());
 
-        // 출품하는 작가는 프로필이 꼭 있어야 하고, 다른 연결 작가는 그 전시 프로필이 있을 때만 연결한다.
-        ArtistProfile myProfile = artistProfileRepository.findByArtistAndExhibition(artist, exhibition)
+        // 출품하는 작가는 공통 프로필이 꼭 있어야 하고,
+        // 다른 연결 작가는 해당 전시에 참여 중일 때 공통 프로필을 연결한다.
+        ArtistProfile myProfile = artistProfileRepository.findByArtistId(artist.getId())
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTIST_NOT_JOINED_EXHIBITION));
 
         for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
             if (map.getArtist().getId().equals(artist.getId())) {
                 map.linkProfile(myProfile);
-            } else {
-                artistProfileRepository.findByArtistAndExhibition(map.getArtist(), exhibition)
+            } else if (exhibitionArtistMapRepository
+                    .existsByExhibitionIdAndArtistIdAndStatus(
+                            exhibition.getId(),
+                            map.getArtist().getId(),
+                            ExhibitionArtistStatus.JOINED
+                    )) {
+                artistProfileRepository.findByArtistId(map.getArtist().getId())
                         .ifPresent(map::linkProfile);
             }
         }

@@ -68,6 +68,7 @@ class AdminArtistControllerSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nameKo\":\"직접 입력\"}"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("작가 수정 성공"))
                 .andExpect(jsonPath("$.data.artistId").value(artistId.toString()));
         verify(artistService).updateMyArtist(eq(actorId), any());
     }
@@ -75,17 +76,22 @@ class AdminArtistControllerSecurityTest {
     @Test
     void ownArtistUpdateRequiresAuthenticationRoleAndValidName() throws Exception {
         mockMvc.perform(patch("/api/artists/me").contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
                 .andExpect(status().isUnauthorized());
         for (Role role : List.of(Role.DOLOG_ADMIN, Role.EXHIBITION_ADMIN)) {
             mockMvc.perform(patch("/api/artists/me").contextPath("/api")
                             .with(user(userDetails(UUID.randomUUID(), role)))
-                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
                     .andExpect(status().isForbidden());
         }
         for (String name : List.of("   ", "가".repeat(101))) {
             mockMvc.perform(patch("/api/artists/me").contextPath("/api")
-                            .with(user(userDetails(UUID.randomUUID(), Role.ARTIST_ADMIN)))
+                            .with(user(userDetails(
+                                    UUID.randomUUID(),
+                                    Role.ARTIST_ADMIN
+                            )))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{\"nameKo\":\"" + name + "\"}"))
                     .andExpect(status().isBadRequest());

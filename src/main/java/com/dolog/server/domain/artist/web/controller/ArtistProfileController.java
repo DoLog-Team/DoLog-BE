@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import com.dolog.server.domain.artist.service.ArtistProfileService;
+import com.dolog.server.domain.artist.service.ArtistService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
@@ -11,10 +12,11 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
-import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.MyArtistProfileResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
@@ -40,7 +42,66 @@ import java.util.UUID;
 public class ArtistProfileController {
 
     private final ArtistProfileService artistProfileService;
+    private final ArtistService artistService;
     private final VisitorIdResolver visitorIdResolver;
+
+    @Operation(summary = "내 작가 공통 프로필 조회")
+    @GetMapping("/me")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<MyArtistProfileResponse> getMyArtistProfile(
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        return SuccessResponse.ok(
+                artistService.getMyArtistProfile(user.getId()),
+                "내 프로필 조회 성공"
+        );
+    }
+
+    @Operation(summary = "내 작가 공통 프로필 수정")
+    @PatchMapping(
+            value = "/me",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtistProfileUpdateResponse> updateMyArtistProfile(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestPart("request") @Valid ArtistProfileUpdateRequest request,
+            @RequestPart(value = "profileImg", required = false)
+            MultipartFile profileImg
+    ) throws IOException {
+        return SuccessResponse.ok(
+                artistService.updateMyArtistProfile(
+                        user.getId(),
+                        request,
+                        profileImg
+                ),
+                "프로필 수정 성공"
+        );
+    }
+
+    @Operation(summary = "작가 공통 프로필 수정")
+    @PatchMapping(
+            value = "/{profileId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @PreAuthorize("hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')")
+    public SuccessResponse<ArtistProfileUpdateResponse> updateArtistProfile(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID profileId,
+            @RequestPart("request") @Valid ArtistProfileUpdateRequest request,
+            @RequestPart(value = "profileImg", required = false)
+            MultipartFile profileImg
+    ) throws IOException {
+        return SuccessResponse.ok(
+                artistService.updateArtistProfile(
+                        user.getId(),
+                        profileId,
+                        request,
+                        profileImg
+                ),
+                "프로필 수정 성공"
+        );
+    }
 
     @Operation(summary = "관리자용 전시 작가 프로필 목록 조회")
     @GetMapping
@@ -66,7 +127,8 @@ public class ArtistProfileController {
     public SuccessResponse<ArtistProfileDetailResponse> getArtistProfileDetail(
             @AuthenticationPrincipal CustomUserDetails user,
             HttpServletRequest request,
-            @PathVariable UUID profileId
+            @PathVariable UUID profileId,
+            @RequestParam UUID exhibitionId
     ) {
         UUID accountId = user == null ? null : user.getId();
         String visitorId = visitorIdResolver.resolve(request, null)
@@ -75,6 +137,7 @@ public class ArtistProfileController {
                 artistProfileService.getArtistProfileDetail(
                         accountId,
                         profileId,
+                        exhibitionId,
                         visitorId
                 );
         return SuccessResponse.ok(response, "프로필 상세 조회 성공");
@@ -82,7 +145,7 @@ public class ArtistProfileController {
 
 
     // 프로필 생성
-    @Operation(summary = "전시 작가 프로필 생성")
+    @Operation(summary = "작가 공통 프로필 생성")
     @PostMapping(
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
@@ -113,40 +176,6 @@ public class ArtistProfileController {
                 ));
     }
 
-    // 프로필 수정
-    @Operation(summary = "전시 작가 프로필 수정")
-    @PatchMapping(
-            value = "/{profileId}",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
-    )
-    @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
-    )
-    public SuccessResponse<ArtistProfileUpdateResponse> updateArtistProfile(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @PathVariable UUID profileId,
-            @Valid
-            @RequestPart("request")
-            ArtistProfileUpdateRequest request,
-
-            @RequestPart(
-                    value = "profileImg",
-                    required = false
-            )
-            MultipartFile profileImg
-    ) throws IOException {
-        ArtistProfileUpdateResponse response =
-                artistProfileService.updateArtistProfile(
-                        user.getId(),
-                        profileId,
-                        request,
-                        profileImg
-                );
-
-        return SuccessResponse.ok(response, "프로필 수정 성공");
-    }
-
-
 //    -------------------------[ SNS ]-----------------------------------
 
 
@@ -155,7 +184,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 추가")
     @PostMapping("/{profileId}/sns")
     @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
     )
     public ResponseEntity<SuccessResponse<ArtistSnsCreateResponse>> addArtistSns(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -182,7 +211,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 삭제")
     @DeleteMapping("/sns/{snsId}")
     @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
     )
     public SuccessResponse<Void> deleteArtistSns(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -198,16 +227,11 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 목록 조회")
     @GetMapping("/{profileId}/sns")
     public SuccessResponse<ArtistSnsListResponse> getArtistSnsList(
-            @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID profileId
     ) {
 
-        UUID accountId = user == null ? null : user.getId();
         ArtistSnsListResponse response =
-                artistProfileService.getArtistSnsList(
-                        accountId,
-                        profileId
-                );
+                artistProfileService.getArtistSnsList(profileId);
 
         return SuccessResponse.ok(response, "SNS 목록 조회 성공");
     }
@@ -217,7 +241,7 @@ public class ArtistProfileController {
     @Operation(summary = "작가 SNS 수정")
     @PatchMapping("/sns/{snsId}")
     @PreAuthorize(
-            "hasAnyRole('ARTIST_ADMIN', 'EXHIBITION_ADMIN', 'DOLOG_ADMIN')"
+            "hasAnyRole('ARTIST_ADMIN', 'DOLOG_ADMIN')"
     )
     public SuccessResponse<ArtistSnsUpdateResponse> updateArtistSns(
             @AuthenticationPrincipal CustomUserDetails user,

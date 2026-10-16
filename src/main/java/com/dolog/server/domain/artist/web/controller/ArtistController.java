@@ -1,23 +1,29 @@
 package com.dolog.server.domain.artist.web.controller;
 
+import com.dolog.server.domain.artist.service.ArtistService;
+import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistPublicResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
+import com.dolog.server.global.response.SuccessResponse;
+import com.dolog.server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import com.dolog.server.domain.artist.service.ArtistService;
-import com.dolog.server.global.response.SuccessResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
-import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
-import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
-import com.dolog.server.global.security.CustomUserDetails;
-import jakarta.validation.Valid;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @Tag(name = "artist-기본 정보")
 @RestController
@@ -36,7 +42,8 @@ public class ArtistController {
             @RequestBody @Valid ArtistUpdateRequest request
     ) {
         return SuccessResponse.ok(
-                artistService.updateMyArtist(user.getId(), request), "작가 수정 성공"
+                artistService.updateMyArtist(user.getId(), request),
+                "작가 수정 성공"
         );
     }
 

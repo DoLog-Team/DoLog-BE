@@ -29,6 +29,10 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     List<ExhibitionArtistMap> findByExhibitionId(UUID exhibitionId);
     Optional<ExhibitionArtistMap> findByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
     boolean existsByArtistId(UUID artistId);
+    boolean existsByArtistIdAndStatus(
+            UUID artistId,
+            ExhibitionArtistStatus status
+    );
     long countByExhibitionIdAndStatus(UUID exhibitionId, ExhibitionArtistStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -49,10 +53,9 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
         FROM ExhibitionArtistMap m
         JOIN m.artist a
         JOIN ArtistProfile p
-            ON p.artist = a AND p.exhibition.id = :exhibitionId
+            ON p.artist = a
         WHERE m.exhibition.id = :exhibitionId
                 AND m.status = com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
-                AND p.isPublic = true
         """)
     List<ExhibitionArtistItemResponse> findArtists(UUID exhibitionId);
 
@@ -75,14 +78,10 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             JOIN FETCH m.exhibition e
             JOIN FETCH e.exhibitionDetail d
             LEFT JOIN FETCH e.exhibitionMap em
-            JOIN ArtistProfile p
-              ON p.artist = m.artist
-             AND p.exhibition = e
             WHERE m.artist.id = :artistId
               AND m.status =
                   com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus.JOINED
               AND e.isPublic = true
-              AND p.isPublic = true
             ORDER BY d.startDate DESC, e.id DESC
             """)
     List<ExhibitionArtistMap> findPublicJoinedExhibitionsByArtistId(
