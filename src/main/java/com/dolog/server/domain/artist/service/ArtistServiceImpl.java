@@ -12,6 +12,7 @@ import com.dolog.server.domain.artist.exception.artistError.ArtistAlreadyExistsE
 import com.dolog.server.domain.artist.exception.artistError.ArtistBadRequestException;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistError.DuplicateArtistPhoneException;
+import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileAccessDeniedException;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
@@ -182,6 +183,20 @@ public class ArtistServiceImpl implements ArtistService {
     @Override
     public ArtistUpdateResponse updateMyArtist(
             UUID accountId,
+            ArtistUpdateRequest request
+    ) {
+        Account account = accountRepository.findByIdForUpdate(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        requireEligibleArtistAccount(account);
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(ArtistNotFoundException::new);
+
+        return updateArtistInfo(artist, request);
+    }
+
+    @Override
+    public ArtistProfileUpdateResponse updateMyArtistProfile(
+            UUID accountId,
             ArtistProfileUpdateRequest request,
             MultipartFile profileImg
     ) throws IOException {
@@ -193,6 +208,49 @@ public class ArtistServiceImpl implements ArtistService {
         ArtistProfile profile = artistProfileRepository
                 .findByArtistId(artist.getId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
+
+        return applyProfileUpdate(profile, request, profileImg);
+    }
+
+    @Override
+    public ArtistProfileUpdateResponse updateArtistProfile(
+            UUID accountId,
+            UUID profileId,
+            ArtistProfileUpdateRequest request,
+            MultipartFile profileImg
+    ) throws IOException {
+        Account account = accountRepository.findByIdForUpdate(accountId)
+                .orElseThrow(JwtInvalidException::new);
+        ArtistProfile profile = artistProfileRepository.findById(profileId)
+                .orElseThrow(ArtistProfileNotFoundException::new);
+
+        requireCanUpdateProfile(account, profile);
+        return applyProfileUpdate(profile, request, profileImg);
+    }
+
+    private void requireCanUpdateProfile(
+            Account account,
+            ArtistProfile profile
+    ) {
+        if (account.getRole() == Role.DOLOG_ADMIN) {
+            return;
+        }
+
+        boolean isOwner = account.getRole() == Role.ARTIST_ADMIN
+                && profile.getArtist().getAccount() != null
+                && profile.getArtist().getAccount().getId()
+                .equals(account.getId());
+
+        if (!isOwner) {
+            throw new ArtistProfileAccessDeniedException();
+        }
+    }
+
+    private ArtistProfileUpdateResponse applyProfileUpdate(
+            ArtistProfile profile,
+            ArtistProfileUpdateRequest request,
+            MultipartFile profileImg
+    ) throws IOException {
 
         profileImageValidator.validate(profileImg);
         String oldImageUrl = profile.getProfileImg();
@@ -220,7 +278,7 @@ public class ArtistServiceImpl implements ArtistService {
                 newImageUrl
         );
 
-        return ArtistUpdateResponse.from(artist);
+        return new ArtistProfileUpdateResponse(profile.getId());
     }
 
     @Override

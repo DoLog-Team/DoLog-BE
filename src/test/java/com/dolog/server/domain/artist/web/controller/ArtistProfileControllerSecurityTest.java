@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artist.web.controller;
 
 import com.dolog.server.domain.artist.service.ArtistProfileService;
+import com.dolog.server.domain.artist.service.ArtistService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
@@ -8,10 +9,12 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateRespon
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileDetailResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListItemResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileListResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistProfileUpdateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.MyArtistProfileResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
@@ -27,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
+import org.springframework.http.HttpMethod;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -65,6 +69,9 @@ class ArtistProfileControllerSecurityTest {
     private ArtistProfileService artistProfileService;
 
     @MockitoBean
+    private ArtistService artistService;
+
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @MockitoBean
@@ -75,6 +82,191 @@ class ArtistProfileControllerSecurityTest {
 
     @MockitoBean
     private VisitorIdResolver visitorIdResolver;
+
+    @Test
+    void artistGetsOwnCommonProfileUsingTokenAccount() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        MyArtistProfileResponse response = new MyArtistProfileResponse(
+                artistId,
+                profileId,
+                "작가 두록",
+                "Artist Dolog",
+                "작가 소개",
+                "artist@test.com",
+                "https://open.kakao.com/o/test",
+                "https://cdn.test/profile.webp"
+        );
+        when(artistService.getMyArtistProfile(accountId))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/artist-profiles/me")
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                accountId,
+                                "ARTIST_ADMIN"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("내 프로필 조회 성공"))
+                .andExpect(jsonPath("$.data.artistId")
+                        .value(artistId.toString()))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()))
+                .andExpect(jsonPath("$.data.nameKo")
+                        .value("작가 두록"));
+
+        verify(artistService).getMyArtistProfile(accountId);
+    }
+
+    @Test
+    void ownCommonProfileGetRequiresArtistAdmin() throws Exception {
+        mockMvc.perform(get("/api/artist-profiles/me")
+                        .contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        for (String role : List.of("DOLOG_ADMIN", "EXHIBITION_ADMIN")) {
+            mockMvc.perform(get("/api/artist-profiles/me")
+                            .contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), role))))
+                    .andExpect(status().isForbidden());
+        }
+
+        verifyNoInteractions(artistService, artistProfileService);
+    }
+
+    @Test
+    void artistUpdatesOwnCommonProfileUsingTokenAccount() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        MockMultipartFile profileImg = new MockMultipartFile(
+                "profileImg",
+                "profile.png",
+                "image/png",
+                new byte[]{1}
+        );
+        when(artistService.updateMyArtistProfile(
+                eq(accountId),
+                any(),
+                eq(profileImg)
+        )).thenReturn(new ArtistProfileUpdateResponse(profileId));
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/me"
+                )
+                        .file(jsonPart(
+                                "{\"nameKo\":\"작가 두록\",\"bio\":\"소개\"}"
+                        ))
+                        .file(profileImg)
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                accountId,
+                                "ARTIST_ADMIN"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("프로필 수정 성공"))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()));
+
+        verify(artistService).updateMyArtistProfile(
+                eq(accountId),
+                any(),
+                eq(profileImg)
+        );
+    }
+
+    @Test
+    void ownCommonProfileUpdateRequiresArtistAdmin() throws Exception {
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/me"
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        for (String role : List.of("DOLOG_ADMIN", "EXHIBITION_ADMIN")) {
+            mockMvc.perform(multipart(
+                            HttpMethod.PATCH,
+                            "/api/artist-profiles/me"
+                    )
+                            .file(jsonPart("{}"))
+                            .contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), role))))
+                    .andExpect(status().isForbidden());
+        }
+
+        verifyNoInteractions(artistService, artistProfileService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ARTIST_ADMIN", "DOLOG_ADMIN"})
+    void ownerOrDologAdminCanAccessProfileUpdateById(
+            String role
+    ) throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        when(artistService.updateArtistProfile(
+                eq(accountId),
+                eq(profileId),
+                any(),
+                eq(null)
+        )).thenReturn(new ArtistProfileUpdateResponse(profileId));
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/{profileId}",
+                        profileId
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api")
+                        .with(user(userDetails(accountId, role))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("프로필 수정 성공"))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()));
+
+        verify(artistService).updateArtistProfile(
+                eq(accountId),
+                eq(profileId),
+                any(),
+                eq(null)
+        );
+    }
+
+    @Test
+    void profileUpdateByIdRejectsUnauthenticatedAndExhibitionAdmin()
+            throws Exception {
+        UUID profileId = UUID.randomUUID();
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/{profileId}",
+                        profileId
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/{profileId}",
+                        profileId
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                UUID.randomUUID(),
+                                "EXHIBITION_ADMIN"
+                        ))))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(artistService, artistProfileService);
+    }
 
     @Test
     @DisplayName("비로그인 사용자의 관리자용 프로필 목록 조회는 401을 반환한다")
@@ -548,6 +740,15 @@ class ArtistProfileControllerSecurityTest {
                 1L,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
+        );
+    }
+
+    private MockMultipartFile jsonPart(String json) {
+        return new MockMultipartFile(
+                "request",
+                "",
+                "application/json",
+                json.getBytes(java.nio.charset.StandardCharsets.UTF_8)
         );
     }
 }
