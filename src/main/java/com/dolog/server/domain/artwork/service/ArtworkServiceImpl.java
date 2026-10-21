@@ -19,6 +19,7 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkSubmitRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkExhibitionOnlyUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkStatusUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkHiddenUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkHiddenRequest;
@@ -26,6 +27,7 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkZoneRequest;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkArtistMappingResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkContentImageResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkCreateResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkExhibitionOnlyResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgCreateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullResponse;
@@ -160,6 +162,16 @@ public class ArtworkServiceImpl implements ArtworkService {
     ) {
 
         return artworkVisibilityProcessor.changeStatus(accountId, artworkId, request.status());
+    }
+
+    @Override
+    public ArtworkExhibitionOnlyResponse changeArtworkExhibitionOnly(
+            UUID accountId,
+            UUID artworkId,
+            ArtworkExhibitionOnlyUpdateRequest request
+    ) {
+
+        return artworkVisibilityProcessor.changeExhibitionOnly(accountId, artworkId, request.exhibitionOnly());
     }
 
     @Override

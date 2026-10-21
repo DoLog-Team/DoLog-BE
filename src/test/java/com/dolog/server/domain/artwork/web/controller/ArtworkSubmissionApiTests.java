@@ -315,6 +315,41 @@ class ArtworkSubmissionApiTests {
     }
 
     @Test
+    @DisplayName("전시에서만 공개로 설정하면 두록 노출은 꺼지고 전시 노출은 그대로 유지된다")
+    void exhibitionOnlyHidesFromDologButKeepsExhibitionVisible() throws Exception {
+        exhibition.publish(null);
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        em.flush();
+
+        mvc.perform(withToken(changeExhibitionOnly(artwork.getId(), true), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.exhibitionOnly").value(true));
+
+        endRequest();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertTrue(found.isExhibitionOnly());
+        assertFalse(found.isVisibleOnDolog());
+        assertTrue(found.isVisibleOnExhibition());
+
+        mvc.perform(withToken(changeExhibitionOnly(artwork.getId(), false), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.exhibitionOnly").value(false));
+
+        endRequest();
+        assertTrue(artworks.findById(artwork.getId()).orElseThrow().isVisibleOnDolog());
+    }
+
+    @Test
+    @DisplayName("전시에서만 공개 설정은 남의 작품이면 404")
+    void rejectsExhibitionOnlyForOthersArtwork() throws Exception {
+        Artwork othersArtwork = artworkOf(artist("남작가"), "남의 작품");
+
+        mvc.perform(withToken(changeExhibitionOnly(othersArtwork.getId(), true), myToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("전시 소유 어드민이 숨기면 숨김 시각이 기록되고, 재공개하면 비워진다. 공개 상태는 그대로다")
     void ownerHidesAndUnhides() throws Exception {
         Artwork artwork = submitted(artworkOf(me, "작품"));
@@ -591,6 +626,11 @@ class ArtworkSubmissionApiTests {
     private MockHttpServletRequestBuilder changeHidden(UUID artworkId, boolean hidden) {
         return patch("/api/artworks/{id}/hidden", artworkId)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"hidden\":" + hidden + "}");
+    }
+
+    private MockHttpServletRequestBuilder changeExhibitionOnly(UUID artworkId, boolean exhibitionOnly) {
+        return patch("/api/artworks/{id}/exhibition-only", artworkId)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"exhibitionOnly\":" + exhibitionOnly + "}");
     }
 
     private <T extends MockHttpServletRequestBuilder> T withToken(T builder, String token) {

@@ -180,6 +180,18 @@ public class ArtworkController {
                 ? "작품이 공개 처리되었습니다." : "작품이 비공개 처리되었습니다.");
     }
 
+    @Operation(summary = "작품 전시전용 공개 설정 (작가 어드민)", description = "true면 출품된 작품이어도 두록 개인 페이지에는 노출되지 않고 전시에서만 보입니다. 전시 노출은 그대로입니다.")
+    @PatchMapping("/artworks/{artworkId}/exhibition-only")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtworkExhibitionOnlyResponse> changeArtworkExhibitionOnly(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId,
+            @Valid @RequestBody ArtworkExhibitionOnlyUpdateRequest request) {
+        ArtworkExhibitionOnlyResponse data = artworkService.changeArtworkExhibitionOnly(user.getId(), artworkId, request);
+        return SuccessResponse.ok(data, request.exhibitionOnly()
+                ? "전시에서만 공개로 설정되었습니다." : "두록 개인 페이지 공개로 설정되었습니다.");
+    }
+
     @Operation(summary = "작품 숨김/재공개 처리 (전시 어드민)", description = "전시 URL 에서만 숨깁니다. 두록 URL 노출과 공개 상태는 그대로입니다.")
     @PatchMapping("/artworks/{artworkId}/hidden")
     @PreAuthorize("hasRole('EXHIBITION_ADMIN')")

@@ -40,6 +40,7 @@ public class ArtworkEditResponse {
     private String mainImg;
     private ArtworkStatus status;
     private boolean hidden;
+    private boolean exhibitionOnly;
     private UUID exhibitionId;
     private String exhibitionName;
     private UUID zoneId;
@@ -71,6 +72,7 @@ public class ArtworkEditResponse {
                 .mainImg(artwork.getMainImg())
                 .status(artwork.getStatus())
                 .hidden(artwork.isHidden())
+                .exhibitionOnly(artwork.isExhibitionOnly())
                 .exhibitionId(artwork.getExhibition() != null ? artwork.getExhibition().getId() : null)
                 .exhibitionName(exhibitionName)
                 .zoneId(artwork.getExhibitionZone() != null ? artwork.getExhibitionZone().getId() : null)

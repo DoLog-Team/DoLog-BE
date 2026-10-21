@@ -27,6 +27,8 @@ public interface ArtworkService {
 
     ArtworkStatusResponse changeArtworkStatus(UUID accountId, UUID artworkId, ArtworkStatusUpdateRequest request);
 
+    ArtworkExhibitionOnlyResponse changeArtworkExhibitionOnly(UUID accountId, UUID artworkId, ArtworkExhibitionOnlyUpdateRequest request);
+
     ArtworkHiddenResponse changeArtworkHidden(UUID accountId, UUID artworkId, ArtworkHiddenUpdateRequest request);
 
     ArtworkBulkHiddenResponse changeArtworksHidden(UUID accountId, UUID exhibitionId, ArtworkBulkHiddenRequest request);

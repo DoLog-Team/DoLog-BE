@@ -10,6 +10,7 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkHiddenResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkExhibitionOnlyResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -52,6 +53,21 @@ public class ArtworkVisibilityProcessor {
         artwork.changeStatus(status);
 
         return new ArtworkStatusResponse(artwork.getId(), artwork.getStatus());
+    }
+
+    // 작가 본인의 "전시에서만 공개" 토글. 전시 노출(isVisibleOnExhibition)은 그대로 유지된다.
+    public ArtworkExhibitionOnlyResponse changeExhibitionOnly(
+            UUID accountId,
+            UUID artworkId,
+            boolean exhibitionOnly
+    ) {
+
+        Artist artist = artworkValidator.getLoginArtist(accountId);
+        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
+
+        artwork.updateExhibitionOnly(exhibitionOnly);
+
+        return new ArtworkExhibitionOnlyResponse(artwork.getId(), artwork.isExhibitionOnly());
     }
 
     // 전시 어드민의 숨김/재공개. 공개 상태(status)는 건드리지 않는다.
