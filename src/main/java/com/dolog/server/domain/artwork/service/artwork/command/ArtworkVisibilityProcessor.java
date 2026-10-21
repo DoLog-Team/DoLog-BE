@@ -4,15 +4,15 @@ import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkVisibilityOption;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkHiddenResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkExhibitionOnlyResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkVisibilityUpdateResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.notification.service.NotificationService;
@@ -36,38 +36,33 @@ public class ArtworkVisibilityProcessor {
     private final NotificationService notificationService;
     private final ArtworkPlanLimitService artworkPlanLimitService;
 
-    // 작가 본인의 공개/임시저장 전환. 전시 어드민의 숨김(hidden_at)은 건드리지 않는다.
-    public ArtworkStatusResponse changeStatus(
+    // 작가 본인의 공개 상태 전환. PUBLIC/PRIVATE/EXHIBITION_ONLY 중 하나로 설정한다.
+    // 전시 어드민의 숨김(hidden_at)은 건드리지 않는다.
+    public ArtworkVisibilityUpdateResponse changeVisibility(
             UUID accountId,
             UUID artworkId,
-            ArtworkStatus status
+            ArtworkVisibilityOption visibility
     ) {
 
         Artist artist = artworkValidator.getLoginArtist(accountId);
         Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
+
+        if (visibility == ArtworkVisibilityOption.EXHIBITION_ONLY && artwork.getExhibition() == null) {
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
+        }
+
+        ArtworkStatus status = visibility == ArtworkVisibilityOption.PRIVATE
+                ? ArtworkStatus.DRAFT
+                : ArtworkStatus.PUBLISHED;
 
         if (status == ArtworkStatus.PUBLISHED && !artworkFieldRequirement.isSatisfied(artwork)) {
             throw new ArtworkException(ArtworkErrorCode.REQUIRED_FIELDS_MISSING);
         }
 
         artwork.changeStatus(status);
+        artwork.updateExhibitionOnly(visibility == ArtworkVisibilityOption.EXHIBITION_ONLY);
 
-        return new ArtworkStatusResponse(artwork.getId(), artwork.getStatus());
-    }
-
-    // 작가 본인의 "전시에서만 공개" 토글. 전시 노출(isVisibleOnExhibition)은 그대로 유지된다.
-    public ArtworkExhibitionOnlyResponse changeExhibitionOnly(
-            UUID accountId,
-            UUID artworkId,
-            boolean exhibitionOnly
-    ) {
-
-        Artist artist = artworkValidator.getLoginArtist(accountId);
-        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
-
-        artwork.updateExhibitionOnly(exhibitionOnly);
-
-        return new ArtworkExhibitionOnlyResponse(artwork.getId(), artwork.isExhibitionOnly());
+        return new ArtworkVisibilityUpdateResponse(artwork.getId(), visibility);
     }
 
     // 전시 어드민의 숨김/재공개. 공개 상태(status)는 건드리지 않는다.

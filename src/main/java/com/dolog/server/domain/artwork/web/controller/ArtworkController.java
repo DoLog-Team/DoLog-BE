@@ -168,28 +168,21 @@ public class ArtworkController {
         return SuccessResponse.ok(data, "작품 출품 상태 조회에 성공했습니다.");
     }
 
-    @Operation(summary = "작품 공개/비공개 처리 (작가 어드민)", description = "DRAFT/PUBLISHED 전환. 출품된 작품은 전시의 필수 항목을 채워야 공개할 수 있습니다.")
+    @Operation(summary = "작품 공개 상태 설정 (작가 어드민)", description = "PUBLIC(공개)/PRIVATE(비공개)/EXHIBITION_ONLY(전시에서만 공개) 중 하나로 설정합니다. " +
+            "공개 또는 전시에서만 공개로 바꾸려면 전시의 필수 항목을 채워야 하고, 출품되지 않은 작품은 전시에서만 공개를 선택할 수 없습니다.")
     @PatchMapping("/artworks/{artworkId}/exhibition")
     @PreAuthorize("hasRole('ARTIST_ADMIN')")
-    public SuccessResponse<ArtworkStatusResponse> changeArtworkStatus(
+    public SuccessResponse<ArtworkVisibilityUpdateResponse> changeArtworkVisibility(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID artworkId,
-            @Valid @RequestBody ArtworkStatusUpdateRequest request) {
-        ArtworkStatusResponse data = artworkService.changeArtworkStatus(user.getId(), artworkId, request);
-        return SuccessResponse.ok(data, request.status() == ArtworkStatus.PUBLISHED
-                ? "작품이 공개 처리되었습니다." : "작품이 비공개 처리되었습니다.");
-    }
-
-    @Operation(summary = "작품 전시전용 공개 설정 (작가 어드민)", description = "true면 출품된 작품이어도 두록 개인 페이지에는 노출되지 않고 전시에서만 보입니다. 전시 노출은 그대로입니다.")
-    @PatchMapping("/artworks/{artworkId}/exhibition-only")
-    @PreAuthorize("hasRole('ARTIST_ADMIN')")
-    public SuccessResponse<ArtworkExhibitionOnlyResponse> changeArtworkExhibitionOnly(
-            @AuthenticationPrincipal CustomUserDetails user,
-            @PathVariable UUID artworkId,
-            @Valid @RequestBody ArtworkExhibitionOnlyUpdateRequest request) {
-        ArtworkExhibitionOnlyResponse data = artworkService.changeArtworkExhibitionOnly(user.getId(), artworkId, request);
-        return SuccessResponse.ok(data, request.exhibitionOnly()
-                ? "전시에서만 공개로 설정되었습니다." : "두록 개인 페이지 공개로 설정되었습니다.");
+            @Valid @RequestBody ArtworkVisibilityUpdateRequest request) {
+        ArtworkVisibilityUpdateResponse data = artworkService.changeArtworkVisibility(user.getId(), artworkId, request);
+        String message = switch (request.visibility()) {
+            case PUBLIC -> "작품이 공개 처리되었습니다.";
+            case PRIVATE -> "작품이 비공개 처리되었습니다.";
+            case EXHIBITION_ONLY -> "전시에서만 공개로 설정되었습니다.";
+        };
+        return SuccessResponse.ok(data, message);
     }
 
     @Operation(summary = "작품 숨김/재공개 처리 (전시 어드민)", description = "전시 URL 에서만 숨깁니다. 두록 URL 노출과 공개 상태는 그대로입니다.")
