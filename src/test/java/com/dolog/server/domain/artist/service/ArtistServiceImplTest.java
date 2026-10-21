@@ -72,6 +72,9 @@ class ArtistServiceImplTest {
     private ArtistProfileRepository artistProfileRepository;
 
     @Mock
+    private ArtistProfileProvisionService artistProfileProvisionService;
+
+    @Mock
     private ArtistSnsRepository artistSnsRepository;
 
     @Mock
@@ -508,6 +511,7 @@ class ArtistServiceImplTest {
         assertEquals("Dolog Kim", saved.getNameEn());
         assertEquals("01012345678", saved.getPhone());
         assertNull(saved.getDeletedAt());
+        verify(artistProfileProvisionService).ensureProfile(saved);
     }
 
     @Test
@@ -551,6 +555,7 @@ class ArtistServiceImplTest {
         assertEquals("01099998888", deletedArtist.getPhone());
         assertSame(target, deletedArtist.getAccount());
         verify(artistRepository, never()).save(any());
+        verify(artistProfileProvisionService).ensureProfile(deletedArtist);
     }
 
     @Test

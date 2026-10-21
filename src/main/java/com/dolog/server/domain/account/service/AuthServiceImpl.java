@@ -3,6 +3,7 @@ package com.dolog.server.domain.account.service;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.artist.service.ArtistProfileProvisionService;
 import com.dolog.server.domain.account.entity.RefreshToken;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
@@ -37,6 +38,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
     private final ArtistRepository artistRepository;
+    private final ArtistProfileProvisionService artistProfileProvisionService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
@@ -114,7 +116,9 @@ public class AuthServiceImpl implements AuthService {
         Account lockedAccount = accountRepository.findByIdForUpdate(account.getId())
                 .orElseThrow(JwtInvalidException::new);
         if (artistRepository.findByAccountIdIncludingDeleted(account.getId()).isEmpty()) {
-            artistRepository.save(Artist.builder().account(lockedAccount).build());
+            Artist artist = Artist.builder().account(lockedAccount).build();
+            artistRepository.save(artist);
+            artistProfileProvisionService.ensureProfile(artist);
         }
         return new SocialLoginResponse(isFirstLogin, needsTermsAgreement,
                 new SocialLoginResponse.Profile(profile.name(), account.getEmail()), account.getRole(),
