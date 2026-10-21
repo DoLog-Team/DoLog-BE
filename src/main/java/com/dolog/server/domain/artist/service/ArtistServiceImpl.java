@@ -51,6 +51,7 @@ public class ArtistServiceImpl implements ArtistService {
     private final ArtistRepository artistRepository;
     private final AccountRepository accountRepository;
     private final ArtistProfileRepository artistProfileRepository;
+    private final ArtistProfileProvisionService artistProfileProvisionService;
     private final ArtistSnsRepository artistSnsRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
@@ -101,6 +102,7 @@ public class ArtistServiceImpl implements ArtistService {
             }
 
             artist.restore(nameKo, request.getNameEn(), phone);
+            artistProfileProvisionService.ensureProfile(artist);
             return ArtistCreateResponse.from(artist);
         }
 
@@ -117,6 +119,7 @@ public class ArtistServiceImpl implements ArtistService {
                 .build();
 
         artistRepository.save(artist);
+        artistProfileProvisionService.ensureProfile(artist);
 
         return ArtistCreateResponse.from(artist);
     }
@@ -482,6 +485,9 @@ public class ArtistServiceImpl implements ArtistService {
 
         return ArtistPublicResponse.builder()
                 .artistId(artist.getId())
+                .profileId(representativeProfile == null
+                        ? null
+                        : representativeProfile.getId())
                 .nameKo(artist.getNameKo())
                 .nameEn(artist.getNameEn())
                 .bio(representativeProfile == null

@@ -6,7 +6,6 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
-import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
@@ -44,7 +43,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -67,9 +65,6 @@ class ExhibitionArtistServiceImplTest {
 
     @Mock
     private ArtistRepository artistRepository;
-
-    @Mock
-    private ArtistProfileRepository artistProfileRepository;
 
     @Mock
     private AccountRepository accountRepository;
@@ -444,7 +439,7 @@ class ExhibitionArtistServiceImplTest {
         assertEquals("유지할 프로필", profile.getNameKo());
         verify(artworkSubmissionCanceller).cancel(artwork);
         verify(exhibitionArtistMapRepository, never()).delete(any());
-        verifyNoInteractions(accountRepository, artistProfileRepository);
+        verifyNoInteractions(accountRepository);
     }
 
     @Test
@@ -474,7 +469,7 @@ class ExhibitionArtistServiceImplTest {
                 exception.getErrorCode()
         );
         verify(exhibitionRepository, never()).findByIdForUpdate(any());
-        verifyNoInteractions(artworkRepository, artistProfileRepository);
+        verifyNoInteractions(artworkRepository);
     }
 
     @Test
@@ -515,7 +510,7 @@ class ExhibitionArtistServiceImplTest {
                 exception.getErrorCode()
         );
         assertEquals(ExhibitionArtistStatus.REMOVED, removedMap.getStatus());
-        verifyNoInteractions(artworkRepository, artistProfileRepository);
+        verifyNoInteractions(artworkRepository);
     }
 
     @Test
@@ -592,10 +587,6 @@ class ExhibitionArtistServiceImplTest {
                             .greeting(unsaved.getGreeting())
                             .build();
                 });
-        when(artistProfileRepository
-                .findArtistIdsByArtistIdIn(anyCollection()))
-                .thenReturn(List.of());
-
         var response = service.addArtistToExhibition(
                 ownerId,
                 exhibition.getId(),
@@ -605,17 +596,6 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(mapId, response.exhibitionArtistId());
         assertEquals(ExhibitionArtistStatus.JOINED, response.status());
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<Iterable<ArtistProfile>> profilesCaptor =
-                ArgumentCaptor.forClass(Iterable.class);
-        verify(artistProfileRepository).saveAll(profilesCaptor.capture());
-
-        List<ArtistProfile> profiles = StreamSupport.stream(
-                profilesCaptor.getValue().spliterator(),
-                false
-        ).toList();
-        assertEquals(1, profiles.size());
-        assertEquals(artist.getId(), profiles.get(0).getArtist().getId());
     }
 
     @Test
@@ -646,10 +626,6 @@ class ExhibitionArtistServiceImplTest {
                             .status(unsaved.getStatus())
                             .build();
                 });
-        when(artistProfileRepository
-                .findArtistIdsByArtistIdIn(anyCollection()))
-                .thenReturn(List.of(artist.getId()));
-
         var response = service.addArtistToExhibition(
                 dologAdminId,
                 exhibition.getId(),
@@ -658,7 +634,6 @@ class ExhibitionArtistServiceImplTest {
 
         assertEquals(mapId, response.exhibitionArtistId());
         assertEquals(ExhibitionArtistStatus.JOINED, response.status());
-        verify(artistProfileRepository, never()).saveAll(any());
     }
 
     @Test
@@ -684,10 +659,6 @@ class ExhibitionArtistServiceImplTest {
                 exhibition.getId(),
                 artist.getId()
         )).thenReturn(Optional.of(existingMap));
-        when(artistProfileRepository
-                .findArtistIdsByArtistIdIn(anyCollection()))
-                .thenReturn(List.of(artist.getId()));
-
         var response = service.addArtistToExhibition(
                 ownerId,
                 exhibition.getId(),
@@ -699,7 +670,6 @@ class ExhibitionArtistServiceImplTest {
         assertEquals("기존 인사말", existingMap.getGreeting());
         verify(exhibitionArtistMapRepository, never())
                 .save(any(ExhibitionArtistMap.class));
-        verify(artistProfileRepository, never()).saveAll(any());
     }
 
     @Test
@@ -738,7 +708,6 @@ class ExhibitionArtistServiceImplTest {
                 exception.getErrorCode()
         );
         assertEquals(409, exception.getErrorCode().getHttpStatus());
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test
@@ -762,12 +731,11 @@ class ExhibitionArtistServiceImplTest {
 
         verifyNoInteractions(artistRepository);
         verifyNoInteractions(exhibitionArtistMapRepository);
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test
-    @DisplayName("대기 중인 작가를 일괄 수락하고 없는 전시 프로필만 생성한다")
-    void acceptsPendingArtistsAndCreatesOnlyMissingProfiles() {
+    @DisplayName("대기 중인 작가를 일괄 수락한다")
+    void acceptsPendingArtists() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
@@ -794,10 +762,6 @@ class ExhibitionArtistServiceImplTest {
                         anyCollection()
                 ))
                 .thenReturn(List.of(firstMap, secondMap));
-        when(artistProfileRepository
-                .findArtistIdsByArtistIdIn(anyCollection()))
-                .thenReturn(List.of(firstArtist.getId()));
-
         var response = service.updateArtistStatuses(
                 ownerId,
                 exhibition.getId(),
@@ -809,19 +773,6 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(ExhibitionArtistStatus.JOINED, firstMap.getStatus());
         assertEquals(ExhibitionArtistStatus.JOINED, secondMap.getStatus());
 
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<Iterable<ArtistProfile>> profilesCaptor =
-                ArgumentCaptor.forClass(Iterable.class);
-        verify(artistProfileRepository).saveAll(profilesCaptor.capture());
-
-        List<ArtistProfile> createdProfiles = StreamSupport.stream(
-                profilesCaptor.getValue().spliterator(),
-                false
-        ).toList();
-        assertEquals(1, createdProfiles.size());
-        assertEquals(secondArtist.getId(), createdProfiles.get(0).getArtist().getId());
-        assertEquals("두 번째", createdProfiles.get(0).getNameKo());
-        assertEquals("second@test.com", createdProfiles.get(0).getEmail());
     }
 
     @Test
@@ -866,12 +817,11 @@ class ExhibitionArtistServiceImplTest {
         );
         assertEquals(ExhibitionArtistStatus.PENDING, pendingMap.getStatus());
         assertEquals(ExhibitionArtistStatus.JOINED, joinedMap.getStatus());
-        verify(artistProfileRepository, never()).saveAll(any());
     }
 
     @Test
-    @DisplayName("대기 중인 작가를 거절하면 프로필을 생성하지 않는다")
-    void deniesPendingArtistWithoutCreatingProfile() {
+    @DisplayName("대기 중인 작가를 일괄 거절한다")
+    void deniesPendingArtist() {
         UUID ownerId = UUID.randomUUID();
         Exhibition exhibition = lockedExhibition(ownerId);
         mockAccount(ownerId, Role.EXHIBITION_ADMIN);
@@ -898,7 +848,6 @@ class ExhibitionArtistServiceImplTest {
 
         assertEquals(1, response.updatedCount());
         assertEquals(ExhibitionArtistStatus.DENIED, map.getStatus());
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test
@@ -931,7 +880,6 @@ class ExhibitionArtistServiceImplTest {
 
         assertEquals(1, response.updatedCount());
         assertEquals(ExhibitionArtistStatus.DENIED, map.getStatus());
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test
@@ -982,7 +930,6 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(ExhibitionArtistStatus.REMOVED, map.getStatus());
         assertNull(artwork.getExhibition());
         assertNull(artwork.getExhibitionZone());
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test
@@ -1006,7 +953,6 @@ class ExhibitionArtistServiceImplTest {
         verify(exhibitionRepository, never())
                 .findByIdForUpdate(exhibition.getId());
         verifyNoInteractions(exhibitionArtistMapRepository);
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test
@@ -1037,7 +983,6 @@ class ExhibitionArtistServiceImplTest {
         }
 
         verifyNoInteractions(exhibitionArtistMapRepository);
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test
@@ -1075,7 +1020,6 @@ class ExhibitionArtistServiceImplTest {
                 exception.getErrorCode()
         );
         assertEquals(ExhibitionArtistStatus.PENDING, existingMap.getStatus());
-        verifyNoInteractions(artistProfileRepository);
     }
 
     @Test

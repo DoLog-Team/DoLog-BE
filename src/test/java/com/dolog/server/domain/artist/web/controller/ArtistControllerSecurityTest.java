@@ -102,10 +102,12 @@ class ArtistControllerSecurityTest {
     @DisplayName("비로그인 사용자도 v2 형식의 작가 상세를 조회할 수 있다")
     void publicArtistDetailReturnsV2Response() throws Exception {
         UUID artistId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
         UUID exhibitionId = UUID.randomUUID();
         UUID artworkId = UUID.randomUUID();
         ArtistPublicResponse response = ArtistPublicResponse.builder()
                 .artistId(artistId)
+                .profileId(profileId)
                 .nameKo("테스트 작가")
                 .nameEn("Test Artist")
                 .bio("작가 소개")
@@ -146,6 +148,7 @@ class ArtistControllerSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("작가 상세 조회 성공"))
                 .andExpect(jsonPath("$.data.artistId").value(artistId.toString()))
+                .andExpect(jsonPath("$.data.profileId").value(profileId.toString()))
                 .andExpect(jsonPath("$.data.nameKo").value("테스트 작가"))
                 .andExpect(jsonPath("$.data.nameEn").value("Test Artist"))
                 .andExpect(jsonPath("$.data.bio").value("작가 소개"))

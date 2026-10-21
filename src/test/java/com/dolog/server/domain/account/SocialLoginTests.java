@@ -3,6 +3,7 @@ package com.dolog.server.domain.account;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
+import com.dolog.server.domain.artist.service.ArtistProfileProvisionService;
 import com.dolog.server.domain.account.entity.RefreshToken;
 import com.dolog.server.domain.account.entity.TermsAgreement;
 import com.dolog.server.domain.account.entity.enums.AccountStatus;
@@ -156,8 +157,9 @@ class SocialLoginTests {
         });
         when(jwtProvider.createAccessToken(accountId, 1L)).thenReturn("access");
         var artists = mock(ArtistRepository.class);
+        var profileProvisionService = mock(ArtistProfileProvisionService.class);
         when(accountRepo.findByIdForUpdate(accountId)).thenReturn(Optional.of(account));
-        var auth = new AuthServiceImpl(accountRepo, artists, tokenRepo, mock(PasswordEncoder.class),
+        var auth = new AuthServiceImpl(accountRepo, artists, profileProvisionService, tokenRepo, mock(PasswordEncoder.class),
                 jwtProvider, mock(ExhibitionRepository.class), mock(JwtUserDetailsService.class), terms);
 
         var result = auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", null, "verified@example.com"));
@@ -174,6 +176,7 @@ class SocialLoginTests {
 
         verify(artists).save(argThat(created -> created.getAccount() == account
                 && created.getNameKo() == null && created.getNameEn() == null));
+        verify(profileProvisionService).ensureProfile(argThat(created -> created.getAccount() == account));
         when(accountRepo.findBySocialProviderAndSocialProviderId("KAKAO", "12345"))
                 .thenReturn(Optional.of(account));
         Artist existingArtist = Artist.builder().account(account).nameKo("직접 입력한 이름").build();
@@ -189,6 +192,7 @@ class SocialLoginTests {
         when(artists.findByAccountIdIncludingDeleted(accountId)).thenReturn(Optional.empty());
         auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", null, null));
         verify(artists, times(2)).save(any());
+        verify(profileProvisionService, times(2)).ensureProfile(any(Artist.class));
 
         when(accountRepo.findBySocialProviderAndSocialProviderId("GOOGLE", "999")).thenReturn(Optional.empty());
         when(accountRepo.existsByEmail("verified@example.com")).thenReturn(true);

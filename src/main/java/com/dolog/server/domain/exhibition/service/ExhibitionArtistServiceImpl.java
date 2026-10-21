@@ -4,9 +4,7 @@ import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
-import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
-import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
@@ -52,7 +50,6 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
 
     private final ArtistRepository artistRepository;
-    private final ArtistProfileRepository artistProfileRepository;
     private final AccountRepository accountRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
@@ -100,8 +97,6 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             // 기존 참여 이력은 UNIQUE 제약 때문에 새 행을 만들지 않고 복구한다.
             map.updateStatus(ExhibitionArtistStatus.JOINED);
         }
-
-        createMissingArtistProfiles(List.of(map));
 
         return ExhibitionArtistAddResponse.from(map);
     }
@@ -357,7 +352,6 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         }
 
         if (targetStatus == ExhibitionArtistStatus.JOINED) {
-            createMissingArtistProfiles(maps);
             maps.forEach(map -> notifyArtist(map.getArtist(), NotificationType.ARTIST_JOIN_APPROVED, exhibition));
         } else if (targetStatus == ExhibitionArtistStatus.DENIED) {
             maps.forEach(map -> notifyArtist(map.getArtist(), NotificationType.ARTIST_JOIN_REJECTED, exhibition));
@@ -578,33 +572,6 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             throw new ExhibitionException(
                     ExhibitionErrorCode.EXHIBITION_ARTIST_STATUS_INVALID
             );
-        }
-    }
-
-    private void createMissingArtistProfiles(List<ExhibitionArtistMap> maps) {
-        List<UUID> artistIds = maps.stream()
-                .map(map -> map.getArtist().getId())
-                .toList();
-
-        Set<UUID> existingProfileArtistIds = new HashSet<>(
-                artistProfileRepository
-                        .findArtistIdsByArtistIdIn(artistIds)
-        );
-
-        List<ArtistProfile> profilesToCreate = maps.stream()
-                .map(ExhibitionArtistMap::getArtist)
-                .filter(artist -> !existingProfileArtistIds.contains(artist.getId()))
-                .map(artist -> {
-                    ArtistProfile profile = ArtistProfile.builder()
-                            .artist(artist)
-                            .build();
-                    profile.fillDefaultInfoFromArtist();
-                    return profile;
-                })
-                .toList();
-
-        if (!profilesToCreate.isEmpty()) {
-            artistProfileRepository.saveAll(profilesToCreate);
         }
     }
 

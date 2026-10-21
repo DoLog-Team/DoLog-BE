@@ -302,13 +302,25 @@ class LikeApiTests {
     }
 
     @Test
-    @DisplayName("제외되었거나 승인 대기 중인 작가의 프로필에는 좋아요를 누를 수 없다")
-    void cannotLikeNotJoinedArtistProfile() throws Exception {
-        ArtistProfile removed = profile(ExhibitionArtistStatus.REMOVED);
+    @DisplayName("전시 참여 이력이 없는 작가의 프로필에도 좋아요/취소할 수 있다")
+    void likesArtistProfileWithoutExhibitionParticipation() throws Exception {
+        ArtistProfile profile = profiles.saveAndFlush(ArtistProfile.builder()
+                .artist(artist)
+                .nameKo("단독 작품 작가")
+                .build());
 
-        mvc.perform(withApi(post("/api/artist-profiles/{id}/likes", removed.getId())))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("ARTIST_PROFILE_404"));
+        mvc.perform(withApi(post("/api/artist-profiles/{id}/likes", profile.getId()))
+                        .cookie(visitor("vis_solo")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.profileId").value(profile.getId().toString()))
+                .andExpect(jsonPath("$.data.likeCount").value(1))
+                .andExpect(jsonPath("$.data.liked").value(true));
+
+        mvc.perform(withApi(delete("/api/artist-profiles/{id}/likes", profile.getId()))
+                        .cookie(visitor("vis_solo")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.likeCount").value(0))
+                .andExpect(jsonPath("$.data.liked").value(false));
     }
 
     private Account account(Role role) {
