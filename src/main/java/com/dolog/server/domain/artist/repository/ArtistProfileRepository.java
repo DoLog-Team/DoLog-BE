@@ -60,15 +60,6 @@ public interface ArtistProfileRepository extends JpaRepository<ArtistProfile, UU
             """, nativeQuery = true)
     long sumViewCountByArtistId(@Param("artistId") UUID artistId);
 
-    @Query("""
-            SELECT p.artist.id
-            FROM ArtistProfile p
-            WHERE p.artist.id IN :artistIds
-            """)
-    List<UUID> findArtistIdsByArtistIdIn(
-            @Param("artistIds") java.util.Collection<UUID> artistIds
-    );
-
     @Modifying(flushAutomatically = true)
     @Query("""
             UPDATE ArtistProfile p
