@@ -5,8 +5,10 @@ import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
+import com.dolog.server.domain.artwork.entity.ExhibitionFieldSettings;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
+import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
 import com.dolog.server.domain.artwork.service.order.ArtworkOrderAdapter;
 import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkSubmissionCanceller;
@@ -43,6 +45,7 @@ public class ArtworkSubmissionProcessor {
     private final ArtworkSubmissionCanceller artworkSubmissionCanceller;
     private final NotificationService notificationService;
     private final ArtworkPlanLimitService artworkPlanLimitService;
+    private final ExhibitionFieldSettingsRepository fieldSettingsRepository;
 
     public ArtworkSubmitResponse submit(
             UUID accountId,
@@ -102,7 +105,11 @@ public class ArtworkSubmissionProcessor {
             throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
         }
 
-        return ArtworkExhibitionStatusResponse.of(artwork, resolveExhibitionName(artwork.getExhibition()));
+        Exhibition exhibition = artwork.getExhibition();
+        ExhibitionFieldSettings settings = fieldSettingsRepository.findByExhibitionId(exhibition.getId())
+                .orElseGet(() -> ExhibitionFieldSettings.defaultsFor(exhibition));
+
+        return ArtworkExhibitionStatusResponse.of(artwork, resolveExhibitionName(exhibition), settings);
     }
 
     public void cancel(

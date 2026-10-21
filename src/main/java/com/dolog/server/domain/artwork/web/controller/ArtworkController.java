@@ -158,7 +158,7 @@ public class ArtworkController {
         return SuccessResponse.ok(null, "작품 출품이 취소되었습니다.");
     }
 
-    @Operation(summary = "작품 출품 상태 조회", description = "본인 작품만. 출품된 전시/구역과 노출 상태(숨김, 플랜 한도 초과)를 조회합니다.")
+    @Operation(summary = "작품 출품 상태 조회", description = "본인 작품만. 출품된 전시/구역, 노출 상태(숨김, 플랜 한도 초과), 전시의 항목 필수/숨김 설정을 조회합니다.")
     @GetMapping("/artworks/{artworkId}/exhibition")
     @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtworkExhibitionStatusResponse> getSubmissionStatus(

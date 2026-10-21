@@ -208,6 +208,47 @@ class ArtworkSubmissionApiTests {
     }
 
     @Test
+    @DisplayName("출품 상태 조회 시 전시 항목 설정이 없으면 모두 선택/노출인 기본값으로 내려온다")
+    void submissionStatusDefaultsFieldSettingsWhenMissing() throws Exception {
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+
+        mvc.perform(withToken(get("/api/artworks/{id}/exhibition", artwork.getId()), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fieldSettings.required.mainImg").value(false))
+                .andExpect(jsonPath("$.data.fieldSettings.required.size").value(false))
+                .andExpect(jsonPath("$.data.fieldSettings.required.materials").value(false))
+                .andExpect(jsonPath("$.data.fieldSettings.required.locationMap").value(false))
+                .andExpect(jsonPath("$.data.fieldSettings.hidden.size").value(false))
+                .andExpect(jsonPath("$.data.fieldSettings.hidden.materials").value(false));
+    }
+
+    @Test
+    @DisplayName("출품 상태 조회 시 전시에 설정된 항목 필수/숨김 값을 그대로 내려준다")
+    void submissionStatusReturnsFieldSettings() throws Exception {
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+        fieldSettings.saveAndFlush(ExhibitionFieldSettings.builder()
+                .exhibition(exhibition).requiredMainImg(true).requiredSize(true)
+                .hiddenMaterials(true).build());
+
+        mvc.perform(withToken(get("/api/artworks/{id}/exhibition", artwork.getId()), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fieldSettings.required.mainImg").value(true))
+                .andExpect(jsonPath("$.data.fieldSettings.required.size").value(true))
+                .andExpect(jsonPath("$.data.fieldSettings.required.materials").value(false))
+                .andExpect(jsonPath("$.data.fieldSettings.hidden.materials").value(true));
+    }
+
+    @Test
+    @DisplayName("출품되지 않은 작품의 출품 상태를 조회하면 400")
+    void submissionStatusRejectsUnsubmittedArtwork() throws Exception {
+        Artwork artwork = artworkOf(me, "작품");
+
+        mvc.perform(withToken(get("/api/artworks/{id}/exhibition", artwork.getId()), myToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ARTWORK_010"));
+    }
+
+    @Test
     @DisplayName("출품을 취소하면 전시에 묶인 정보가 모두 비워지고 공개 상태는 그대로다")
     void cancelClearsExhibitionData() throws Exception {
         Artwork artwork = submitted(artworkOf(me, "작품"));
