@@ -38,6 +38,7 @@ public class ArtworkEditResponse {
     private Boolean showPurchaseButton;
     private String youtubeUrl;
     private String mainImg;
+    private String locationMap;
     private ArtworkStatus status;
     private boolean hidden;
     private boolean exhibitionOnly;
@@ -70,6 +71,7 @@ public class ArtworkEditResponse {
                 .showPurchaseButton(artwork.getShowPurchaseButton())
                 .youtubeUrl(artwork.getYoutubeUrl())
                 .mainImg(artwork.getMainImg())
+                .locationMap(artwork.getLocationMap())
                 .status(artwork.getStatus())
                 .hidden(artwork.isHidden())
                 .exhibitionOnly(artwork.isExhibitionOnly())

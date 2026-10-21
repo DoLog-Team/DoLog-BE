@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -387,6 +388,17 @@ class ArtworkCommandApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.locationMap").value("https://s3/old-map.webp"));
         verify(fileService, never()).deleteFile(any());
+    }
+
+    @Test
+    @DisplayName("내 작품 상세(편집용) 조회 응답에 위치 이미지가 담긴다")
+    void myArtworkDetailIncludesLocationMap() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").locationMap("https://s3/map.webp").build(), me));
+
+        mvc.perform(withToken(get("/api/artworks/{id}/me", artwork.getId()), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/map.webp"));
     }
 
     @Test
