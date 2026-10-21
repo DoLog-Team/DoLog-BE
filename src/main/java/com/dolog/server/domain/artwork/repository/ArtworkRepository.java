@@ -226,8 +226,6 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     // 시스템이 항목설정 때문에 자동으로 비공개한 작품 (항목설정이 완화되면 다시 공개할 후보)
     List<Artwork> findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(UUID exhibitionId, ArtworkStatus status);
 
-    // 플랜 한도 재계산 대상: 출품됐고(exhibition 연결) 관리자 숨김이 아닌 작품을 연결 순서대로
-    List<Artwork> findByExhibitionIdAndHiddenAtIsNullOrderByOrderIndexAsc(UUID exhibitionId);
 
     // 작품 관리 상단 배너용: 숨긴 작품은 한도 계산에서 빠지므로 세지 않는다
     long countByExhibitionIdAndHiddenAtIsNullAndPlanLimitExceededAtIsNotNull(UUID exhibitionId);
