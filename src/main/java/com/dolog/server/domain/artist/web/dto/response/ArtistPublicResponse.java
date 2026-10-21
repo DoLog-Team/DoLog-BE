@@ -12,6 +12,7 @@ import java.util.UUID;
 public class ArtistPublicResponse {
 
     private UUID artistId;
+    private UUID profileId;
     private String nameKo;
     private String nameEn;
     private String bio;

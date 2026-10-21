@@ -485,6 +485,9 @@ public class ArtistServiceImpl implements ArtistService {
 
         return ArtistPublicResponse.builder()
                 .artistId(artist.getId())
+                .profileId(representativeProfile == null
+                        ? null
+                        : representativeProfile.getId())
                 .nameKo(artist.getNameKo())
                 .nameEn(artist.getNameEn())
                 .bio(representativeProfile == null

@@ -774,6 +774,7 @@ class ArtistServiceImplTest {
         var response = artistService.getArtist(artistId, "visitor-1");
 
         assertEquals(artistId, response.getArtistId());
+        assertEquals(profileId, response.getProfileId());
         assertEquals("김두록", response.getNameKo());
         assertEquals("Dolog Kim", response.getNameEn());
         assertEquals("대표 프로필 소개", response.getBio());
@@ -815,6 +816,7 @@ class ArtistServiceImplTest {
 
         var response = artistService.getArtist(artistId, null);
 
+        assertNull(response.getProfileId());
         assertNull(response.getBio());
         assertNull(response.getProfileImg());
         assertNull(response.getEmail());
