@@ -365,6 +365,44 @@ class ArtworkCommandApiTests {
     }
 
     @Test
+    @DisplayName("위치 이미지를 보내면 출품 여부와 상관없이 업로드한 URL 로 교체되고, 기존 파일은 커밋 전에는 지우지 않는다")
+    void replacesLocationMap() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").locationMap("https://s3/old-map.webp").build(), me));
+        when(fileService.uploadFile(any(), eq("artworks/maps"))).thenReturn("https://s3/new-map.webp");
+
+        mvc.perform(withToken(patch(artwork.getId()).file(image("locationMapFile")), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/new-map.webp"));
+        verify(fileService, never()).deleteFile(any());
+    }
+
+    @Test
+    @DisplayName("위치 이미지를 안 보내면 기존 값을 지우지 않는다")
+    void keepsLocationMapWhenNotSent() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").locationMap("https://s3/old-map.webp").build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("title", "새 제목"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/old-map.webp"));
+        verify(fileService, never()).deleteFile(any());
+    }
+
+    @Test
+    @DisplayName("출품 전(DRAFT, 전시 미소속) 작품도 위치 이미지를 처음 등록할 수 있다")
+    void setsLocationMapBeforeSubmission() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").build(), me));
+        assertNull(artwork.getExhibition());
+        when(fileService.uploadFile(any(), eq("artworks/maps"))).thenReturn("https://s3/first-map.webp");
+
+        mvc.perform(withToken(patch(artwork.getId()).file(image("locationMapFile")), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/first-map.webp"));
+    }
+
+    @Test
     @DisplayName("본인 작품을 삭제하면 숨겨지고, 재료는 보관 기간 동안 남으며 BTS 연결은 조회되지 않는다")
     void deletesOwnArtworkWithRelations() throws Exception {
         Artwork artwork = artworkOf(me, "작품");

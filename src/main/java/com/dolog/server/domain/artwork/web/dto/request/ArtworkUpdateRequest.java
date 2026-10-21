@@ -76,4 +76,6 @@ public class ArtworkUpdateRequest implements ArtworkInfoFields {
     private String artistRole;
 
     private MultipartFile mainImageFile;
+
+    private MultipartFile locationMapFile;
 }

@@ -65,6 +65,9 @@ public class ArtworkUpdateProcessor {
         artwork.updateMainImg(
                 artworkFileHandler.replaceMainImage(artwork.getMainImg(), request.getMainImageFile())
         );
+        artwork.updateLocationMap(
+                artworkFileHandler.replaceLocationMap(artwork.getLocationMap(), request.getLocationMapFile())
+        );
 
         artworkFieldRequirement.requireIfPublished(artwork);
 
