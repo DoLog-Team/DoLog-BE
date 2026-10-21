@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.entity;
 
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
+import com.dolog.server.domain.exhibition.entity.Exhibition;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -32,13 +33,13 @@ class ArtworkTest {
     }
 
     @Test
-    @DisplayName("PUBLISHED 작품은 두록 URL, 전시 URL 모두 노출된다")
+    @DisplayName("PUBLISHED 작품은 두록 URL 에 노출된다. 출품 안 한 작품은 전시 URL 자체가 없다")
     void publishedIsVisible() {
         Artwork artwork = Artwork.builder().build();
         artwork.changeStatus(ArtworkStatus.PUBLISHED);
 
         assertTrue(artwork.isVisibleOnDolog());
-        assertTrue(artwork.isVisibleOnExhibition());
+        assertFalse(artwork.isVisibleOnExhibition());
     }
 
     @Test
@@ -60,7 +61,8 @@ class ArtworkTest {
     @Test
     @DisplayName("숨김을 풀면 전시 URL 노출이 돌아온다")
     void unhideRestoresExhibitionVisibility() {
-        Artwork artwork = Artwork.builder().build();
+        Exhibition exhibition = Exhibition.builder().isPublic(true).build();
+        Artwork artwork = Artwork.builder().exhibition(exhibition).build();
         artwork.changeStatus(ArtworkStatus.PUBLISHED);
         artwork.hide(LocalDateTime.of(2026, 10, 3, 12, 0));
 
@@ -69,6 +71,17 @@ class ArtworkTest {
         assertFalse(artwork.isHidden());
         assertNull(artwork.getHiddenAt());
         assertTrue(artwork.isVisibleOnExhibition());
+    }
+
+    @Test
+    @DisplayName("출품된 작품은 전시가 비공개(만료 포함)여도 두록 개인 페이지 노출은 그대로 유지된다")
+    void dologVisibilityIsIndependentFromExhibitionState() {
+        Exhibition unpublishedExhibition = Exhibition.builder().isPublic(false).build();
+        Artwork artwork = Artwork.builder().exhibition(unpublishedExhibition).build();
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+
+        assertTrue(artwork.isVisibleOnDolog());
+        assertFalse(artwork.isVisibleOnExhibition());
     }
 
     @Test

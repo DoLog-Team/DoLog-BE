@@ -127,9 +127,10 @@ class ArtworkViewApiTests {
     }
 
     @Test
-    @DisplayName("두록 URL 에 안 보이는 작품(비공개, 게시 전 전시, 삭제, 없음)은 404, 숨김 작품은 센다")
+    @DisplayName("두록 URL 에 안 보이는 작품(비공개, 삭제, 없음)은 404, 숨김/게시 전 전시 작품은 센다")
     void onlyCountsVisibleArtworks() throws Exception {
         Artwork draft = artworkOf(me, ArtworkStatus.DRAFT, exhibition(true));
+        // 전시가 게시 전이어도 출품 작가의 두록 개인 페이지 노출은 별개로 유지된다
         Artwork unpublishedExhibition = artworkOf(me, ArtworkStatus.PUBLISHED, exhibition(false));
         Artwork deleted = artworkOf(me, ArtworkStatus.PUBLISHED, exhibition(true));
         deleted.markDeleted(LocalDateTime.now());
@@ -137,12 +138,14 @@ class ArtworkViewApiTests {
         hidden.hide(LocalDateTime.now());
         endRequest();
 
-        for (UUID id : new UUID[]{draft.getId(), unpublishedExhibition.getId(), deleted.getId(), UUID.randomUUID()}) {
+        for (UUID id : new UUID[]{draft.getId(), deleted.getId(), UUID.randomUUID()}) {
             mvc.perform(api(post("/api/artworks/{id}/views", id)).header("X-Visitor-Id", "vis_x"))
                     .andExpect(status().isNotFound())
                     .andExpect(jsonPath("$.code").value("ARTWORK_001"));
         }
         mvc.perform(api(view(hidden)).header("X-Visitor-Id", "vis_x"))
+                .andExpect(jsonPath("$.data.counted").value(true));
+        mvc.perform(api(view(unpublishedExhibition)).header("X-Visitor-Id", "vis_x"))
                 .andExpect(jsonPath("$.data.counted").value(true));
     }
 

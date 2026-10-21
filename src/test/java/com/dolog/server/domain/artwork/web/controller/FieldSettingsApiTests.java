@@ -167,7 +167,7 @@ class FieldSettingsApiTests {
         endRequest();
 
         mvc.perform(withToken(patch("/api/artworks/{id}/exhibition", artwork.getId()), token(artist.getAccount()))
-                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"PUBLISHED\"}"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"visibility\":\"PUBLIC\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("ARTWORK_013"));
     }

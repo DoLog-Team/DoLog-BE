@@ -249,9 +249,9 @@ class ArtworkSubmissionApiTests {
     void publishesUnsubmittedArtwork() throws Exception {
         Artwork artwork = artworkOf(me, "작품");
 
-        mvc.perform(withToken(changeStatus(artwork.getId(), "PUBLISHED"), myToken))
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
+                .andExpect(jsonPath("$.data.visibility").value("PUBLIC"));
     }
 
     @Test
@@ -261,7 +261,7 @@ class ArtworkSubmissionApiTests {
         fieldSettings.saveAndFlush(ExhibitionFieldSettings.builder()
                 .exhibition(exhibition).requiredMainImg(true).requiredSize(true).build());
 
-        mvc.perform(withToken(changeStatus(artwork.getId(), "PUBLISHED"), myToken))
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("ARTWORK_013"));
 
@@ -269,22 +269,25 @@ class ArtworkSubmissionApiTests {
         artwork.updateSize(new BigDecimal("30"), new BigDecimal("40"), null);
         em.flush();
 
-        mvc.perform(withToken(changeStatus(artwork.getId(), "PUBLISHED"), myToken))
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
+                .andExpect(jsonPath("$.data.visibility").value("PUBLIC"));
     }
 
     @Test
-    @DisplayName("필수 항목이 비어 있어도 비공개(DRAFT)로는 바꿀 수 있다")
+    @DisplayName("필수 항목이 비어 있어도 비공개(PRIVATE)로는 바꿀 수 있다")
     void draftIgnoresFieldSettings() throws Exception {
         Artwork artwork = submitted(artworkOf(me, "작품"));
         artwork.changeStatus(ArtworkStatus.PUBLISHED);
         fieldSettings.saveAndFlush(ExhibitionFieldSettings.builder()
                 .exhibition(exhibition).requiredMainImg(true).build());
 
-        mvc.perform(withToken(changeStatus(artwork.getId(), "DRAFT"), myToken))
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PRIVATE"), myToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("DRAFT"));
+                .andExpect(jsonPath("$.data.visibility").value("PRIVATE"));
+
+        endRequest();
+        assertEquals(ArtworkStatus.DRAFT, artworks.findById(artwork.getId()).orElseThrow().getStatus());
     }
 
     @Test
@@ -295,7 +298,7 @@ class ArtworkSubmissionApiTests {
         artwork.hide(hiddenAt);
         em.flush();
 
-        mvc.perform(withToken(changeStatus(artwork.getId(), "PUBLISHED"), myToken))
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))
                 .andExpect(status().isOk());
 
         endRequest();
@@ -303,14 +306,60 @@ class ArtworkSubmissionApiTests {
     }
 
     @Test
-    @DisplayName("없는 상태값이나 남의 작품은 거절한다")
+    @DisplayName("없는 공개 상태값이나 남의 작품은 거절한다")
     void rejectsInvalidStatusRequests() throws Exception {
         Artwork artwork = artworkOf(me, "작품");
         Artwork othersArtwork = artworkOf(artist("남작가"), "남의 작품");
 
-        mvc.perform(withToken(changeStatus(artwork.getId(), "HIDDEN"), myToken))
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "HIDDEN"), myToken))
                 .andExpect(status().isBadRequest());
-        mvc.perform(withToken(changeStatus(othersArtwork.getId(), "PUBLISHED"), myToken))
+        mvc.perform(withToken(changeVisibility(othersArtwork.getId(), "PUBLIC"), myToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("전시에서만 공개로 설정하면 두록 노출은 꺼지고 전시 노출은 그대로 유지된다")
+    void exhibitionOnlyHidesFromDologButKeepsExhibitionVisible() throws Exception {
+        exhibition.publish(null);
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "EXHIBITION_ONLY"), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.visibility").value("EXHIBITION_ONLY"));
+
+        endRequest();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertEquals(ArtworkStatus.PUBLISHED, found.getStatus());
+        assertTrue(found.isExhibitionOnly());
+        assertFalse(found.isVisibleOnDolog());
+        assertTrue(found.isVisibleOnExhibition());
+
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.visibility").value("PUBLIC"));
+
+        endRequest();
+        Artwork backToPublic = artworks.findById(artwork.getId()).orElseThrow();
+        assertFalse(backToPublic.isExhibitionOnly());
+        assertTrue(backToPublic.isVisibleOnDolog());
+    }
+
+    @Test
+    @DisplayName("출품 안 한 작품은 전시에서만 공개를 선택할 수 없다")
+    void rejectsExhibitionOnlyWhenNotSubmitted() throws Exception {
+        Artwork artwork = artworkOf(me, "작품");
+
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "EXHIBITION_ONLY"), myToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ARTWORK_010"));
+    }
+
+    @Test
+    @DisplayName("전시에서만 공개 설정은 남의 작품이면 404")
+    void rejectsExhibitionOnlyForOthersArtwork() throws Exception {
+        Artwork othersArtwork = artworkOf(artist("남작가"), "남의 작품");
+
+        mvc.perform(withToken(changeVisibility(othersArtwork.getId(), "EXHIBITION_ONLY"), myToken))
                 .andExpect(status().isNotFound());
     }
 
@@ -588,9 +637,9 @@ class ArtworkSubmissionApiTests {
         return builder;
     }
 
-    private MockHttpServletRequestBuilder changeStatus(UUID artworkId, String status) {
+    private MockHttpServletRequestBuilder changeVisibility(UUID artworkId, String visibility) {
         return patch("/api/artworks/{id}/exhibition", artworkId)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"" + status + "\"}");
+                .contentType(MediaType.APPLICATION_JSON).content("{\"visibility\":\"" + visibility + "\"}");
     }
 
     private MockHttpServletRequestBuilder changeHidden(UUID artworkId, boolean hidden) {

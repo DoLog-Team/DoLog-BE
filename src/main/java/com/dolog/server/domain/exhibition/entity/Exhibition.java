@@ -94,6 +94,11 @@ public class Exhibition extends BaseEntity {
         this.expiresAt = expiresAt;
     }
 
+    // 구독 만료로 자동 비공개 전환 (스케줄러). 전시만 비공개되며, 출품된 작품의 두록 개인 페이지 노출은 별개로 유지된다.
+    public void unpublish() {
+        this.isPublic = false;
+    }
+
     // 과거 시각도 허용한다 (전시 종료 후 기록 정리, 즉시 만료 처리 등). null이면 만료 없음으로 설정된다.
     public void extendExpiresAt(LocalDateTime newExpiresAt) {
         if (this.publishedAt == null) {

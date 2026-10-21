@@ -19,7 +19,7 @@ import com.dolog.server.domain.artwork.web.dto.request.ArtworkImgUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateFullRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkSubmitRequest;
-import com.dolog.server.domain.artwork.web.dto.request.ArtworkStatusUpdateRequest;
+import com.dolog.server.domain.artwork.web.dto.request.ArtworkVisibilityUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkHiddenUpdateRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkHiddenRequest;
 import com.dolog.server.domain.artwork.web.dto.request.ArtworkBulkZoneRequest;
@@ -31,7 +31,7 @@ import com.dolog.server.domain.artwork.web.dto.response.ArtworkImgUpdateResponse
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkUpdateFullResponse;
 import org.springframework.web.multipart.MultipartFile;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkSubmitResponse;
-import com.dolog.server.domain.artwork.web.dto.response.ArtworkStatusResponse;
+import com.dolog.server.domain.artwork.web.dto.response.ArtworkVisibilityUpdateResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkHiddenResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkZoneResponse;
@@ -153,13 +153,13 @@ public class ArtworkServiceImpl implements ArtworkService {
     }
 
     @Override
-    public ArtworkStatusResponse changeArtworkStatus(
+    public ArtworkVisibilityUpdateResponse changeArtworkVisibility(
             UUID accountId,
             UUID artworkId,
-            ArtworkStatusUpdateRequest request
+            ArtworkVisibilityUpdateRequest request
     ) {
 
-        return artworkVisibilityProcessor.changeStatus(accountId, artworkId, request.status());
+        return artworkVisibilityProcessor.changeVisibility(accountId, artworkId, request.visibility());
     }
 
     @Override

@@ -131,6 +131,11 @@ public class Artwork extends BaseEntity implements Orderable {
     @Column(name = "auto_drafted_at")
     private LocalDateTime autoDraftedAt;
 
+    // true면 출품된 작품이어도 두록 개인 페이지에는 노출되지 않고 전시에서만 보인다.
+    @Builder.Default
+    @Column(name = "exhibition_only", nullable = false)
+    private boolean exhibitionOnly = false;
+
     @Builder.Default
     @Column(name = "view_count", nullable = false)
     private long viewCount = 0L;
@@ -244,16 +249,24 @@ public class Artwork extends BaseEntity implements Orderable {
         this.planLimitExceededAt = null;
     }
 
-    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 작품이나 구역이 숨김이거나 플랜 한도를 넘으면 비노출.
-    // 출품된 작품은 전시가 게시된 뒤에만 보인다 (출품 안 한 개인 작품은 공개면 노출).
+    // 두록 개인 페이지는 작가 본인이 설정한 값(공개 여부)에만 좌우된다. 전시 상태(비공개·만료)와는 무관하다 —
+    // 전시가 비공개/만료되어도 출품 작가의 두록 개인 페이지 노출은 그대로 유지된다.
     public boolean isVisibleOnDolog() {
-        return status == ArtworkStatus.PUBLISHED
-                && (exhibition == null || exhibition.isPublic());
+        return status == ArtworkStatus.PUBLISHED && !exhibitionOnly;
     }
 
+    // 전시 경유 상세 페이지는 작품 자체가 공개여도 전시가 비공개면 같이 숨는다 (출품 안 한 개인 작품은 해당 없음).
+    // exhibitionOnly 여부와는 무관하다 — 전시 노출은 항상 그대로 유지된다.
     public boolean isVisibleOnExhibition() {
-        return isVisibleOnDolog() && !isHidden() && !exceedsPlanLimit()
+        return status == ArtworkStatus.PUBLISHED
+                && exhibition != null && exhibition.isPublic()
+                && !isHidden() && !exceedsPlanLimit()
                 && (exhibitionZone == null || !exhibitionZone.isHidden());
+    }
+
+    // 전시에서만 공개 토글. 출품 안 한 개인 작품에는 의미가 없다.
+    public void updateExhibitionOnly(boolean exhibitionOnly) {
+        this.exhibitionOnly = exhibitionOnly;
     }
 
     // 공백 이름은 버린다. multipart 에서 빈 값 하나만 보내면 재료 전체 삭제가 된다.

@@ -334,8 +334,8 @@ class ArtworkQueryApiTests {
     // ---------------- 게시 전 전시 ----------------
 
     @Test
-    @DisplayName("게시 전 전시의 작품은 전시 URL 목록(403), 상세(404), 두록 URL 상세(404), 전체 목록 어디에도 안 나온다")
-    void unpublishedExhibitionHidesArtworks() throws Exception {
+    @DisplayName("게시 전 전시의 작품은 전시 URL 목록(403), 상세(404)만 안 보이고, 두록 URL 상세/전체 목록은 그대로 보인다")
+    void unpublishedExhibitionHidesOnlyExhibitionUrls() throws Exception {
         exhibition = exhibition(false);
         zone = zone(exhibition, "1구역", 1);
         myProfile = join(me, exhibition, ExhibitionArtistStatus.JOINED);
@@ -347,11 +347,12 @@ class ArtworkQueryApiTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("EXHIBITION_403_1"));
         mvc.perform(api(exhibitionDetail(artwork))).andExpect(status().isNotFound());
-        mvc.perform(api(dologDetail(artwork))).andExpect(status().isNotFound());
+        // 전시가 게시 전이어도 출품 작가의 두록 개인 페이지 노출은 별개로 유지된다
+        mvc.perform(api(dologDetail(artwork))).andExpect(status().isOk());
         mvc.perform(api(get("/api/artworks").param("search", keyword)))
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data[*].id", contains(artwork.getId().toString())));
         mvc.perform(api(get("/api/artworks").param("main", "true").param("search", keyword)))
-                .andExpect(jsonPath("$.data", hasSize(0)));
+                .andExpect(jsonPath("$.data[*].id", contains(artwork.getId().toString())));
     }
 
     // ---------------- 작품 전체 목록 (C-01) ----------------
