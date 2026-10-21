@@ -238,13 +238,13 @@ class ArtworkCoArtistApiTests {
 
     private ArtistProfile join(Artist artist, Exhibition exhibition, ExhibitionArtistStatus status) {
         participations.saveAndFlush(ExhibitionArtistMap.builder().exhibition(exhibition).artist(artist).status(status).build());
-        return profiles.saveAndFlush(ArtistProfile.builder().artist(artist).exhibition(exhibition).nameKo(artist.getNameKo()).build());
+        return profiles.saveAndFlush(ArtistProfile.builder().artist(artist).nameKo(artist.getNameKo()).build());
     }
 
     private Artwork artworkOf(Artist owner, ArtistProfile profile) {
         Artwork artwork = Artwork.builder().title("작품").description("설명").build();
         if (profile != null) {
-            artwork.submitTo(profile.getExhibition(), null);
+            artwork.submitTo(exhibition, null);
         }
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                 .artwork(artwork).artist(owner).artistProfile(profile).artistRole("작가").build());

@@ -419,8 +419,15 @@ class ArtworkQueryApiTests {
         participations.saveAndFlush(ExhibitionArtistMap.builder()
                 .exhibition(exhibition).artist(artist).status(status).build());
         String email = artist == me ? "me@test.com" : "other@test.com";
-        return profiles.saveAndFlush(ArtistProfile.builder().artist(artist).exhibition(exhibition)
-                .nameKo(artist.getNameKo()).email(email).bio("소개").build());
+        return profiles.findByArtistId(artist.getId())
+                .orElseGet(() -> profiles.saveAndFlush(
+                        ArtistProfile.builder()
+                                .artist(artist)
+                                .nameKo(artist.getNameKo())
+                                .email(email)
+                                .bio("소개")
+                                .build()
+                ));
     }
 
     private Artwork artworkOf(Artist artist, String title) {

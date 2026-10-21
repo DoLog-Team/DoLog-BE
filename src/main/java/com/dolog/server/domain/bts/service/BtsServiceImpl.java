@@ -24,11 +24,13 @@ import com.dolog.server.domain.bts.web.dto.response.BtsDetailResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsListResponse;
 import com.dolog.server.domain.bts.web.dto.response.BtsMappingUpdateResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.artist.exception.artistError.ArtistNotFoundException;
 import com.dolog.server.domain.artist.exception.artistProfileError.ArtistProfileNotFoundException;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.global.exception.BaseException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -57,6 +59,7 @@ public class BtsServiceImpl implements BtsService {
     private final ExhibitionRepository exhibitionRepository;
     private final ArtistRepository artistRepository;
     private final ArtistProfileRepository artistProfileRepository;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
     private final FileService fileService;
 
@@ -87,9 +90,14 @@ public class BtsServiceImpl implements BtsService {
                 .map(ArtworkArtistMap::getArtist)
                 .orElseThrow(ArtistNotFoundException::new);
 
-        // 3. 해당 전시의 작가 프로필(ArtistProfile) 찾기 (중요!)
-        ArtistProfile artistProfile = artistProfileRepository.findByArtistAndExhibition(artist, exhibition)
+        // 3. 작가의 공통 프로필(ArtistProfile) 찾기
+        ArtistProfile artistProfile = artistProfileRepository.findByArtistId(artist.getId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
+        if (!isJoined(exhibitionId, artistProfile)) {
+            throw new BtsException(
+                    BtsErrorCode.ARTIST_PROFILE_EXHIBITION_MISMATCH
+            );
+        }
 
         // 4. 파일 업로드 (선택)
         String dbImageUrl = (mainImg != null && !mainImg.isEmpty())
@@ -137,7 +145,7 @@ public class BtsServiceImpl implements BtsService {
         if (request.getArtistProfileId() != null) {
             artistProfile = artistProfileRepository.findById(request.getArtistProfileId())
                     .orElseThrow(ArtistProfileNotFoundException::new);
-            if (!Objects.equals(artistProfile.getExhibition().getId(), exhibitionId)) {
+            if (!isJoined(exhibitionId, artistProfile)) {
                 throw new BtsException(BtsErrorCode.ARTIST_PROFILE_EXHIBITION_MISMATCH);
             }
         }
@@ -317,10 +325,10 @@ public class BtsServiceImpl implements BtsService {
             throw new BtsException(BtsErrorCode.BTS_EXHIBITION_MISMATCH);
         }
 
-        // 3. ArtistProfile 조회 및 해당 전시 소속 검증
+        // 3. ArtistProfile 조회 및 해당 전시 참여 여부 검증
         ArtistProfile artistProfile = artistProfileRepository.findById(request.getArtistProfileId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
-        if (!Objects.equals(artistProfile.getExhibition().getId(), exhibitionId)) {
+        if (!isJoined(exhibitionId, artistProfile)) {
             throw new BtsException(BtsErrorCode.ARTIST_PROFILE_EXHIBITION_MISMATCH);
         }
 
@@ -358,6 +366,15 @@ public class BtsServiceImpl implements BtsService {
                 .artistProfileId(artistProfile.getId())
                 .updatedArtworkIds(updatedArtworkIds)
                 .build();
+    }
+
+    private boolean isJoined(UUID exhibitionId, ArtistProfile profile) {
+        return exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibitionId,
+                        profile.getArtist().getId(),
+                        ExhibitionArtistStatus.JOINED
+                );
     }
 
 

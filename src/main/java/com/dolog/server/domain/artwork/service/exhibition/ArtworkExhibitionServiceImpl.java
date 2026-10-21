@@ -39,7 +39,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
         }
 
         // 2. 안내 지도 리스트 조회
-        List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionIdOrderByCreatedAtAsc(exhibitionId);
+        List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findByExhibitionIdOrderByOrderIndexAscCreatedAtAsc(exhibitionId);
 
         // 3. 작품 조회 로직 분기 (검색어 여부에 따라 다른 Repository 메서드 호출)
         List<Artwork> artworks;
@@ -92,6 +92,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
                                 .id(m.getId())
                                 .imageUrl(m.getImageUrl())
                                 .description(m.getDescription())
+                                .orderIndex(m.getOrderIndex())
                                 .build())
                         .toList())
                 .zones(zoneInfos) // 가공된 zones 데이터 삽입
@@ -108,6 +109,7 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
                     }
                     return aam.getArtist().getNameKo();
                 })
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.joining(", "));
 
         // 2. 전시회 제목 가져오기 (ExhibitionDetail이 @OneToOne이므로 바로 접근)

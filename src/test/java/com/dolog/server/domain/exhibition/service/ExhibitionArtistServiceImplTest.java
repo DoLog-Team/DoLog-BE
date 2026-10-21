@@ -386,9 +386,7 @@ class ExhibitionArtistServiceImplTest {
         ArtistProfile profile = ArtistProfile.builder()
                 .id(UUID.randomUUID())
                 .artist(artist)
-                .exhibition(exhibition)
                 .nameKo("유지할 프로필")
-                .isPublic(true)
                 .build();
         Artwork artwork = artwork(exhibition, artist);
         artwork.getArtworkArtistMaps().get(0).linkProfile(profile);
@@ -595,10 +593,7 @@ class ExhibitionArtistServiceImplTest {
                             .build();
                 });
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of());
 
         var response = service.addArtistToExhibition(
@@ -621,7 +616,6 @@ class ExhibitionArtistServiceImplTest {
         ).toList();
         assertEquals(1, profiles.size());
         assertEquals(artist.getId(), profiles.get(0).getArtist().getId());
-        assertEquals(exhibition.getId(), profiles.get(0).getExhibition().getId());
     }
 
     @Test
@@ -653,10 +647,7 @@ class ExhibitionArtistServiceImplTest {
                             .build();
                 });
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of(artist.getId()));
 
         var response = service.addArtistToExhibition(
@@ -694,10 +685,7 @@ class ExhibitionArtistServiceImplTest {
                 artist.getId()
         )).thenReturn(Optional.of(existingMap));
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of(artist.getId()));
 
         var response = service.addArtistToExhibition(
@@ -807,10 +795,7 @@ class ExhibitionArtistServiceImplTest {
                 ))
                 .thenReturn(List.of(firstMap, secondMap));
         when(artistProfileRepository
-                .findArtistIdsByExhibitionIdAndArtistIdIn(
-                        eq(exhibition.getId()),
-                        anyCollection()
-                ))
+                .findArtistIdsByArtistIdIn(anyCollection()))
                 .thenReturn(List.of(firstArtist.getId()));
 
         var response = service.updateArtistStatuses(
@@ -837,7 +822,6 @@ class ExhibitionArtistServiceImplTest {
         assertEquals(secondArtist.getId(), createdProfiles.get(0).getArtist().getId());
         assertEquals("두 번째", createdProfiles.get(0).getNameKo());
         assertEquals("second@test.com", createdProfiles.get(0).getEmail());
-        assertTrue(createdProfiles.get(0).isPublic());
     }
 
     @Test
@@ -1128,7 +1112,7 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("신규 작가는 PENDING 상태로 전시 참여를 신청한다")
     void appliesToExhibitionAsPending() {
         UUID accountId = UUID.randomUUID();
-        Artist artist = artist("신청 작가", "join-new@test.com");
+        Artist artist = artist(null, "join-new@test.com");
         Exhibition exhibition = joinableExhibition(
                 "2345ABCD",
                 null

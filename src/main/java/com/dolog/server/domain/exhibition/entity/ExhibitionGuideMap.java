@@ -33,6 +33,14 @@ public class ExhibitionGuideMap extends BaseEntity {
     @Column(name = "description")
     private String description;
 
+    // 전시 안에서의 노출 순서(1부터). 어드민이 reorder API로 변경한다.
+    @Column(name = "order_index")
+    private Integer orderIndex;
+
+    public void updateOrder(Integer orderIndex) {
+        this.orderIndex = orderIndex;
+    }
+
     public void updateGuideMap(ExhibitionZone zone, String imageUrl, String description) {
         this.zone = zone;
         this.imageUrl = imageUrl;

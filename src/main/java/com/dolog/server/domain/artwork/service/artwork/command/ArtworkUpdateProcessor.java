@@ -43,6 +43,7 @@ public class ArtworkUpdateProcessor {
     private final ArtworkOrderAdapter artworkOrderAdapter;
     private final ArtworkFieldRequirement artworkFieldRequirement;
     private final NotificationService notificationService;
+    private final ArtworkPlanLimitService artworkPlanLimitService;
 
     public ArtworkCreateResponse update(
             UUID accountId,
@@ -81,7 +82,7 @@ public class ArtworkUpdateProcessor {
                 .filter(found -> found.getExhibition() != null && found.getExhibition().getId().equals(exhibitionId))
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
-        applyZoneAndOrder(artwork, exhibitionId, request);
+        boolean zoneChanged = applyZoneAndOrder(artwork, exhibitionId, request);
 
         applyInfo(artwork, request);
 
@@ -112,11 +113,16 @@ public class ArtworkUpdateProcessor {
 
         artworkRepository.saveAndFlush(artwork);
 
+        // 구역이 바뀌면 전체 동선 순서가 달라지므로 플랜 한도를 다시 센다 (#421의 일괄 구역 지정과 동일)
+        if (zoneChanged) {
+            artworkPlanLimitService.recompute(exhibitionId);
+        }
+
         return ArtworkUpdateFullResponse.from(artwork);
     }
 
-    // 구역은 그 전시 것만. 구역을 옮기면서 순서를 안 주면 새 구역의 마지막으로 보낸다.
-    private void applyZoneAndOrder(Artwork artwork, UUID exhibitionId, ArtworkUpdateFullRequest request) {
+    // 구역은 그 전시 것만. 구역을 옮기면서 순서를 안 주면 새 구역의 마지막으로 보낸다. 구역이 바뀌었으면 true.
+    private boolean applyZoneAndOrder(Artwork artwork, UUID exhibitionId, ArtworkUpdateFullRequest request) {
 
         Integer prev = request.getPrevOrder();
         Integer next = request.getNextOrder();
@@ -138,6 +144,8 @@ public class ArtworkUpdateProcessor {
         } else if (zoneChanged) {
             artworkOrderAdapter.assign(artwork);
         }
+
+        return zoneChanged;
     }
 
     // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀). zoneName은 그룹 배치 알림일 때만 쓴다.

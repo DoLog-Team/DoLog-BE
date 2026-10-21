@@ -78,12 +78,12 @@ VALUES (@artist_map, @now, @now, 'JOINED', @artist, @exhibition);
 INSERT IGNORE INTO exhibition_zones (id, created_at, updated_at, name, description, order_id, exhibition_id)
 VALUES (@zone, @now, @now, 'A 구역', '1층 입구 오른쪽', 1, @exhibition);
 
-INSERT IGNORE INTO artist_profiles (id, created_at, updated_at, name_ko, name_en, bio, email, is_public,
-                                    profile_img, purchase_contact_url, artist_id, exhibition_id)
+INSERT IGNORE INTO artist_profiles (id, created_at, updated_at, name_ko, name_en, bio, email,
+                                    profile_img, purchase_contact_url, artist_id)
 VALUES (@artist_profile, @now, @now, '개발용 작가 ARTIST_1', 'Dev Artist 1', '로컬 개발용 더미 작가 소개다.',
-        'artist_1@example.test', 1,
+        'artist_1@example.test',
         'https://picsum.photos/seed/dolog-artist-1/400/400',
-        'https://open.kakao.com/o/local-demo', @artist, @exhibition);
+        'https://open.kakao.com/o/local-demo', @artist);
 
 -- 작품 2개. artwork_2는 QR 발급 확인용 더미다 (artworks.id를 프론트에서 그대로 쓴다).
 INSERT IGNORE INTO artworks (id, created_at, updated_at, title, short_intro, description, category,

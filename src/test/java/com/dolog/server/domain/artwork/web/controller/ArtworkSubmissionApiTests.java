@@ -595,8 +595,13 @@ class ArtworkSubmissionApiTests {
     private ArtistProfile join(Artist artist, Exhibition exhibition, ExhibitionArtistStatus status) {
         participations.saveAndFlush(ExhibitionArtistMap.builder()
                 .exhibition(exhibition).artist(artist).status(status).build());
-        return profiles.saveAndFlush(ArtistProfile.builder()
-                .artist(artist).exhibition(exhibition).nameKo(artist.getNameKo()).build());
+        return profiles.findByArtistId(artist.getId())
+                .orElseGet(() -> profiles.saveAndFlush(
+                        ArtistProfile.builder()
+                                .artist(artist)
+                                .nameKo(artist.getNameKo())
+                                .build()
+                ));
     }
 
     private Artwork artworkOf(Artist artist, String title) {

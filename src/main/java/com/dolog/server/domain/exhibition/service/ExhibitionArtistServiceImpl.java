@@ -101,7 +101,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
             map.updateStatus(ExhibitionArtistStatus.JOINED);
         }
 
-        createMissingArtistProfiles(exhibition, List.of(map));
+        createMissingArtistProfiles(List.of(map));
 
         return ExhibitionArtistAddResponse.from(map);
     }
@@ -244,7 +244,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         notificationService.send(
                 map.getExhibition().getAccount(),
                 NotificationType.ARTIST_WITHDRAWN,
-                Map.of("artistName", artist.getNameKo(), "exhibitionName", resolveExhibitionName(map.getExhibition())),
+                Map.of("artistName", java.util.Objects.toString(artist.getNameKo(), "이름 미등록"), "exhibitionName", resolveExhibitionName(map.getExhibition())),
                 exhibitionId
         );
     }
@@ -305,7 +305,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         notificationService.send(
                 exhibition.getAccount(),
                 NotificationType.ARTIST_JOIN_REQUESTED,
-                Map.of("artistName", context.artist().getNameKo(), "exhibitionName", resolveExhibitionName(exhibition)),
+                Map.of("artistName", java.util.Objects.toString(context.artist().getNameKo(), "이름 미등록"), "exhibitionName", resolveExhibitionName(exhibition)),
                 exhibition.getId()
         );
 
@@ -357,7 +357,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         }
 
         if (targetStatus == ExhibitionArtistStatus.JOINED) {
-            createMissingArtistProfiles(exhibition, maps);
+            createMissingArtistProfiles(maps);
             maps.forEach(map -> notifyArtist(map.getArtist(), NotificationType.ARTIST_JOIN_APPROVED, exhibition));
         } else if (targetStatus == ExhibitionArtistStatus.DENIED) {
             maps.forEach(map -> notifyArtist(map.getArtist(), NotificationType.ARTIST_JOIN_REJECTED, exhibition));
@@ -581,20 +581,14 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         }
     }
 
-    private void createMissingArtistProfiles(
-            Exhibition exhibition,
-            List<ExhibitionArtistMap> maps
-    ) {
+    private void createMissingArtistProfiles(List<ExhibitionArtistMap> maps) {
         List<UUID> artistIds = maps.stream()
                 .map(map -> map.getArtist().getId())
                 .toList();
 
         Set<UUID> existingProfileArtistIds = new HashSet<>(
                 artistProfileRepository
-                        .findArtistIdsByExhibitionIdAndArtistIdIn(
-                                exhibition.getId(),
-                                artistIds
-                        )
+                        .findArtistIdsByArtistIdIn(artistIds)
         );
 
         List<ArtistProfile> profilesToCreate = maps.stream()
@@ -603,8 +597,6 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                 .map(artist -> {
                     ArtistProfile profile = ArtistProfile.builder()
                             .artist(artist)
-                            .exhibition(exhibition)
-                            .isPublic(true)
                             .build();
                     profile.fillDefaultInfoFromArtist();
                     return profile;

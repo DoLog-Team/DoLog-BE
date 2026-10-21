@@ -39,5 +39,4 @@ public class ArtistProfileUpdateRequest {
     )
     private String purchaseContactUrl;
 
-    private Boolean isPublic;
 }

@@ -18,6 +18,7 @@ import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkImgRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
@@ -37,6 +38,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,6 +79,7 @@ class ArtworkFullUpdateApiTests {
     @Autowired JwtTokenProvider jwt;
     @Autowired EntityManager em;
     @MockitoBean FileService fileService;
+    @MockitoSpyBean ArtworkPlanLimitService artworkPlanLimitService;
 
     private String adminToken;
     private Exhibition exhibition;
@@ -134,6 +137,29 @@ class ArtworkFullUpdateApiTests {
         assertEquals("원래 역할", maps.get(me.getId()).getArtistRole());
         assertEquals("공동 제작", maps.get(co.getId()).getArtistRole());
         assertEquals(coProfile.getId(), maps.get(co.getId()).getArtistProfile().getId());
+    }
+
+    @Test
+    @DisplayName("구역을 바꾸면 플랜 한도를 다시 센다")
+    void recomputesPlanLimitWhenZoneChanges() throws Exception {
+        ExhibitionZone otherZone = zone(exhibition, "2구역");
+        var params = basic();
+        params.set("zoneId", otherZone.getId().toString());
+
+        mvc.perform(full(artwork).params(params)
+                        .param("artistProfileIds", myProfile.getId().toString()))
+                .andExpect(status().isOk());
+
+        verify(artworkPlanLimitService).recompute(exhibition.getId());
+    }
+
+    @Test
+    @DisplayName("구역이 그대로면 플랜 한도를 다시 세지 않는다")
+    void skipsPlanLimitRecomputeWhenZoneUnchanged() throws Exception {
+        mvc.perform(full(artwork).params(basic()).param("artistProfileIds", myProfile.getId().toString()))
+                .andExpect(status().isOk());
+
+        verify(artworkPlanLimitService, never()).recompute(any());
     }
 
     @Test
@@ -378,7 +404,7 @@ class ArtworkFullUpdateApiTests {
         participations.saveAndFlush(ExhibitionArtistMap.builder()
                 .exhibition(exhibition).artist(artist).status(status).build());
         return profiles.saveAndFlush(ArtistProfile.builder()
-                .artist(artist).exhibition(exhibition).nameKo(artist.getNameKo()).build());
+                .artist(artist).nameKo(artist.getNameKo()).build());
     }
 
     private Artwork submittedArtwork(Artist artist, ArtistProfile profile, ExhibitionZone zone, int orderIndex) {

@@ -23,6 +23,7 @@ public class ArtistProfileDetailResponse {
     private String email;
     private List<SnsInfo> snsList;
     private String purchaseContactUrl;
+    private List<BtsSummary> behindTheScenes;
     private List<ArtworkSummary> artworks;
     private NeighborArtist prevArtist;
     private NeighborArtist nextArtist;
@@ -38,6 +39,16 @@ public class ArtistProfileDetailResponse {
         private UUID snsId;
         private String platformName;
         private String url;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BtsSummary {
+        private UUID btsId;
+        private String title;
+        private String mainImg;
     }
 
     @Getter

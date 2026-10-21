@@ -1,8 +1,8 @@
 package com.dolog.server.domain.artist.web.controller;
 
 import com.dolog.server.domain.artist.service.ArtistProfileService;
+import com.dolog.server.domain.artist.service.ArtistService;
 import com.dolog.server.domain.artist.web.dto.request.ArtistProfileCreateRequest;
-import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsRequest;
 import com.dolog.server.domain.artist.web.dto.request.ArtistSnsUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistProfileCreateResponse;
@@ -14,6 +14,7 @@ import com.dolog.server.domain.artist.web.dto.response.ArtistSnsCreateResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistSnsUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.MyArtistProfileResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.config.SecurityConfig;
 import com.dolog.server.global.jwt.JwtAuthenticationEntryPoint;
@@ -68,6 +69,9 @@ class ArtistProfileControllerSecurityTest {
     private ArtistProfileService artistProfileService;
 
     @MockitoBean
+    private ArtistService artistService;
+
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @MockitoBean
@@ -78,6 +82,191 @@ class ArtistProfileControllerSecurityTest {
 
     @MockitoBean
     private VisitorIdResolver visitorIdResolver;
+
+    @Test
+    void artistGetsOwnCommonProfileUsingTokenAccount() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        MyArtistProfileResponse response = new MyArtistProfileResponse(
+                artistId,
+                profileId,
+                "작가 두록",
+                "Artist Dolog",
+                "작가 소개",
+                "artist@test.com",
+                "https://open.kakao.com/o/test",
+                "https://cdn.test/profile.webp"
+        );
+        when(artistService.getMyArtistProfile(accountId))
+                .thenReturn(response);
+
+        mockMvc.perform(get("/api/artist-profiles/me")
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                accountId,
+                                "ARTIST_ADMIN"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("내 프로필 조회 성공"))
+                .andExpect(jsonPath("$.data.artistId")
+                        .value(artistId.toString()))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()))
+                .andExpect(jsonPath("$.data.nameKo")
+                        .value("작가 두록"));
+
+        verify(artistService).getMyArtistProfile(accountId);
+    }
+
+    @Test
+    void ownCommonProfileGetRequiresArtistAdmin() throws Exception {
+        mockMvc.perform(get("/api/artist-profiles/me")
+                        .contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        for (String role : List.of("DOLOG_ADMIN", "EXHIBITION_ADMIN")) {
+            mockMvc.perform(get("/api/artist-profiles/me")
+                            .contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), role))))
+                    .andExpect(status().isForbidden());
+        }
+
+        verifyNoInteractions(artistService, artistProfileService);
+    }
+
+    @Test
+    void artistUpdatesOwnCommonProfileUsingTokenAccount() throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        MockMultipartFile profileImg = new MockMultipartFile(
+                "profileImg",
+                "profile.png",
+                "image/png",
+                new byte[]{1}
+        );
+        when(artistService.updateMyArtistProfile(
+                eq(accountId),
+                any(),
+                eq(profileImg)
+        )).thenReturn(new ArtistProfileUpdateResponse(profileId));
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/me"
+                )
+                        .file(jsonPart(
+                                "{\"nameKo\":\"작가 두록\",\"bio\":\"소개\"}"
+                        ))
+                        .file(profileImg)
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                accountId,
+                                "ARTIST_ADMIN"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("프로필 수정 성공"))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()));
+
+        verify(artistService).updateMyArtistProfile(
+                eq(accountId),
+                any(),
+                eq(profileImg)
+        );
+    }
+
+    @Test
+    void ownCommonProfileUpdateRequiresArtistAdmin() throws Exception {
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/me"
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        for (String role : List.of("DOLOG_ADMIN", "EXHIBITION_ADMIN")) {
+            mockMvc.perform(multipart(
+                            HttpMethod.PATCH,
+                            "/api/artist-profiles/me"
+                    )
+                            .file(jsonPart("{}"))
+                            .contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), role))))
+                    .andExpect(status().isForbidden());
+        }
+
+        verifyNoInteractions(artistService, artistProfileService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ARTIST_ADMIN", "DOLOG_ADMIN"})
+    void ownerOrDologAdminCanAccessProfileUpdateById(
+            String role
+    ) throws Exception {
+        UUID accountId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
+        when(artistService.updateArtistProfile(
+                eq(accountId),
+                eq(profileId),
+                any(),
+                eq(null)
+        )).thenReturn(new ArtistProfileUpdateResponse(profileId));
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/{profileId}",
+                        profileId
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api")
+                        .with(user(userDetails(accountId, role))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message")
+                        .value("프로필 수정 성공"))
+                .andExpect(jsonPath("$.data.profileId")
+                        .value(profileId.toString()));
+
+        verify(artistService).updateArtistProfile(
+                eq(accountId),
+                eq(profileId),
+                any(),
+                eq(null)
+        );
+    }
+
+    @Test
+    void profileUpdateByIdRejectsUnauthenticatedAndExhibitionAdmin()
+            throws Exception {
+        UUID profileId = UUID.randomUUID();
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/{profileId}",
+                        profileId
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(multipart(
+                        HttpMethod.PATCH,
+                        "/api/artist-profiles/{profileId}",
+                        profileId
+                )
+                        .file(jsonPart("{}"))
+                        .contextPath("/api")
+                        .with(user(userDetails(
+                                UUID.randomUUID(),
+                                "EXHIBITION_ADMIN"
+                        ))))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(artistService, artistProfileService);
+    }
 
     @Test
     @DisplayName("비로그인 사용자의 관리자용 프로필 목록 조회는 401을 반환한다")
@@ -127,7 +316,6 @@ class ArtistProfileControllerSecurityTest {
                                         .nameKo("김두록")
                                         .nameEn("Dolog Kim")
                                         .profileImg("https://cdn.test/profile.webp")
-                                        .isPublic(true)
                                         .viewCount(120L)
                                         .likeCount(8)
                                         .build()
@@ -152,7 +340,7 @@ class ArtistProfileControllerSecurityTest {
                 .andExpect(jsonPath("$.data.profiles[0].artistId")
                         .value(artistId.toString()))
                 .andExpect(jsonPath("$.data.profiles[0].isPublic")
-                        .value(true))
+                        .doesNotExist())
                 .andExpect(jsonPath("$.data.profiles[0].viewCount")
                         .value(120))
                 .andExpect(jsonPath("$.data.profiles[0].likeCount")
@@ -182,6 +370,18 @@ class ArtistProfileControllerSecurityTest {
     }
 
     @Test
+    @DisplayName("프로필 상세 조회에는 전시 문맥을 위한 exhibitionId가 필수다")
+    void detailRequiresExhibitionId() throws Exception {
+        mockMvc.perform(get(
+                        "/api/artist-profiles/{profileId}",
+                        UUID.randomUUID()
+                ).contextPath("/api"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(artistProfileService);
+    }
+
+    @Test
     @DisplayName("비로그인 프로필 상세 조회는 v2 명세 JSON을 반환한다")
     void detailRemainsPublicAndReturnsV2Response() throws Exception {
         UUID profileId = UUID.randomUUID();
@@ -189,6 +389,7 @@ class ArtistProfileControllerSecurityTest {
         UUID exhibitionId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();
         UUID artworkId = UUID.randomUUID();
+        UUID btsId = UUID.randomUUID();
         ArtistProfileDetailResponse response =
                 ArtistProfileDetailResponse.builder()
                         .profileId(profileId)
@@ -207,6 +408,13 @@ class ArtistProfileControllerSecurityTest {
                                         .build()
                         ))
                         .purchaseContactUrl(null)
+                        .behindTheScenes(List.of(
+                                ArtistProfileDetailResponse.BtsSummary.builder()
+                                        .btsId(btsId)
+                                        .title("졸업전시 준비 과정")
+                                        .mainImg("https://cdn.test/bts.webp")
+                                        .build()
+                        ))
                         .artworks(List.of(
                                 ArtistProfileDetailResponse.ArtworkSummary.builder()
                                         .artworkId(artworkId)
@@ -226,13 +434,15 @@ class ArtistProfileControllerSecurityTest {
         when(artistProfileService.getArtistProfileDetail(
                 null,
                 profileId,
+                exhibitionId,
                 "vis_test"
         )).thenReturn(response);
 
         mockMvc.perform(get(
                         "/api/artist-profiles/{profileId}",
                         profileId
-                ).contextPath("/api"))
+                ).param("exhibitionId", exhibitionId.toString())
+                        .contextPath("/api"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message")
                         .value("프로필 상세 조회 성공"))
@@ -253,6 +463,12 @@ class ArtistProfileControllerSecurityTest {
                         .value(snsId.toString()))
                 .andExpect(jsonPath("$.data.purchaseContactUrl")
                         .value(nullValue()))
+                .andExpect(jsonPath("$.data.behindTheScenes[0].btsId")
+                        .value(btsId.toString()))
+                .andExpect(jsonPath("$.data.behindTheScenes[0].title")
+                        .value("졸업전시 준비 과정"))
+                .andExpect(jsonPath("$.data.behindTheScenes[0].mainImg")
+                        .value("https://cdn.test/bts.webp"))
                 .andExpect(jsonPath("$.data.artworks[0].artworkId")
                         .value(artworkId.toString()))
                 .andExpect(jsonPath("$.data.artworks[0].mainImg")
@@ -268,12 +484,12 @@ class ArtistProfileControllerSecurityTest {
                         .doesNotExist())
                 .andExpect(jsonPath("$.data.isPublic").doesNotExist())
                 .andExpect(jsonPath("$.data.contact").doesNotExist())
-                .andExpect(jsonPath("$.data.behindTheScenes")
-                        .doesNotExist());
+                .andExpect(jsonPath("$.data.behindTheScenes").isArray());
 
         verify(artistProfileService).getArtistProfileDetail(
                 null,
                 profileId,
+                exhibitionId,
                 "vis_test"
         );
     }
@@ -281,10 +497,9 @@ class ArtistProfileControllerSecurityTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
             "DOLOG_ADMIN"
     })
-    @DisplayName("작가·전시·두록 어드민은 SNS 추가 API에 접근할 수 있다")
+    @DisplayName("작가·두록 어드민은 SNS 추가 API에 접근할 수 있다")
     void supportedRolesCanAddSns(String role) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
@@ -345,7 +560,7 @@ class ArtistProfileControllerSecurityTest {
     }
 
     @Test
-    @DisplayName("공개 프로필의 SNS 목록은 명세의 snsList 구조로 반환한다")
+    @DisplayName("프로필의 SNS 목록은 명세의 snsList 구조로 반환한다")
     void anonymousGetsSnsListResponse() throws Exception {
         UUID profileId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();
@@ -355,7 +570,7 @@ class ArtistProfileControllerSecurityTest {
                 .url("https://instagram.com/dolog")
                 .build();
 
-        when(artistProfileService.getArtistSnsList(null, profileId))
+        when(artistProfileService.getArtistSnsList(profileId))
                 .thenReturn(new ArtistSnsListResponse(List.of(item)));
 
         mockMvc.perform(get(
@@ -373,16 +588,15 @@ class ArtistProfileControllerSecurityTest {
                 .andExpect(jsonPath("$.data.snsList[0].url")
                         .value("https://instagram.com/dolog"));
 
-        verify(artistProfileService).getArtistSnsList(null, profileId);
+        verify(artistProfileService).getArtistSnsList(profileId);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {
             "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
             "DOLOG_ADMIN"
     })
-    @DisplayName("작가·전시·두록 어드민은 SNS 수정 API에 접근할 수 있다")
+    @DisplayName("작가·두록 어드민은 SNS 수정 API에 접근할 수 있다")
     void supportedRolesCanUpdateSns(String role) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();
@@ -420,10 +634,9 @@ class ArtistProfileControllerSecurityTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
             "DOLOG_ADMIN"
     })
-    @DisplayName("작가·전시·두록 어드민은 SNS 삭제 API에 접근할 수 있다")
+    @DisplayName("작가·두록 어드민은 SNS 삭제 API에 접근할 수 있다")
     void supportedRolesCanDeleteSns(String role) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID snsId = UUID.randomUUID();
@@ -445,65 +658,53 @@ class ArtistProfileControllerSecurityTest {
     }
 
     @Test
-    @DisplayName("비로그인 사용자의 프로필 수정은 401을 반환한다")
-    void unauthenticatedUpdateReturnsUnauthorized() throws Exception {
-        UUID profileId = UUID.randomUUID();
-
-        mockMvc.perform(multipart(
-                        HttpMethod.PATCH,
-                        "/api/artist-profiles/{profileId}",
-                        profileId
-                )
-                        .file(updateRequestPart())
-                        .contextPath("/api"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code")
-                        .value("JWT_401_UNAUTHORIZED"));
-
-        verifyNoInteractions(artistProfileService);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "ARTIST_ADMIN",
-            "EXHIBITION_ADMIN",
-            "DOLOG_ADMIN"
-    })
-    @DisplayName("작가·전시·두록 어드민은 프로필 수정 API에 접근할 수 있다")
-    void supportedRolesCanAccessUpdate(String role) throws Exception {
+    @DisplayName("전시 어드민은 작가의 공통 SNS를 변경할 수 없다")
+    void exhibitionAdminCannotMutateGlobalSns() throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
-        CustomUserDetails userDetails = userDetails(accountId, role);
-        ArtistProfileUpdateResponse response =
-                new ArtistProfileUpdateResponse(profileId);
+        UUID snsId = UUID.randomUUID();
+        CustomUserDetails exhibitionAdmin = userDetails(
+                accountId,
+                "EXHIBITION_ADMIN"
+        );
+        ArtistSnsRequest createRequest = new ArtistSnsRequest(
+                "instagram",
+                "https://instagram.com/dolog"
+        );
+        ArtistSnsUpdateRequest updateRequest = new ArtistSnsUpdateRequest(
+                null,
+                "https://behance.net/dolog"
+        );
 
-        when(artistProfileService.updateArtistProfile(
-                eq(accountId),
-                eq(profileId),
-                any(ArtistProfileUpdateRequest.class),
-                eq(null)
-        )).thenReturn(response);
-
-        mockMvc.perform(multipart(
-                        HttpMethod.PATCH,
-                        "/api/artist-profiles/{profileId}",
+        mockMvc.perform(post(
+                        "/api/artist-profiles/{profileId}/sns",
                         profileId
                 )
-                        .file(updateRequestPart())
                         .contextPath("/api")
-                        .with(user(userDetails)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.profileId")
-                        .value(profileId.toString()))
-                .andExpect(jsonPath("$.message")
-                        .value("프로필 수정 성공"));
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsBytes(createRequest))
+                        .with(user(exhibitionAdmin)))
+                .andExpect(status().isForbidden());
 
-        verify(artistProfileService).updateArtistProfile(
-                eq(accountId),
-                eq(profileId),
-                any(ArtistProfileUpdateRequest.class),
-                eq(null)
-        );
+        mockMvc.perform(patch(
+                        "/api/artist-profiles/sns/{snsId}",
+                        snsId
+                )
+                        .contextPath("/api")
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsBytes(updateRequest))
+                        .with(user(exhibitionAdmin)))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(delete(
+                        "/api/artist-profiles/sns/{snsId}",
+                        snsId
+                )
+                        .contextPath("/api")
+                        .with(user(exhibitionAdmin)))
+                .andExpect(status().isForbidden());
+
+        verifyNoInteractions(artistProfileService);
     }
 
     @Test
@@ -543,19 +744,6 @@ class ArtistProfileControllerSecurityTest {
                         .value(profileId.toString()));
     }
 
-    private MockMultipartFile updateRequestPart() throws Exception {
-        ArtistProfileUpdateRequest request =
-                new ArtistProfileUpdateRequest();
-        request.setNameKo("수정 이름");
-
-        return new MockMultipartFile(
-                "request",
-                "",
-                "application/json",
-                objectMapper.writeValueAsBytes(request)
-        );
-    }
-
     private CustomUserDetails userDetails(
             UUID accountId,
             String role
@@ -565,6 +753,15 @@ class ArtistProfileControllerSecurityTest {
                 1L,
                 null,
                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
+        );
+    }
+
+    private MockMultipartFile jsonPart(String json) {
+        return new MockMultipartFile(
+                "request",
+                "",
+                "application/json",
+                json.getBytes(java.nio.charset.StandardCharsets.UTF_8)
         );
     }
 }

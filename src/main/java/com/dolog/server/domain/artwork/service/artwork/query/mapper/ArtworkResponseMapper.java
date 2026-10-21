@@ -199,6 +199,7 @@ public class ArtworkResponseMapper {
 
                     return map.getArtist().getNameKo();
                 })
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.joining(", "));
     }
 }

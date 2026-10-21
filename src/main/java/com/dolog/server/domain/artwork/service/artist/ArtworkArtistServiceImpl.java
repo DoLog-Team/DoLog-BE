@@ -36,7 +36,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
     private final ArtworkValidator artworkValidator;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
-    // 공동 작가의 전시별 프로필을 연결해야 해서 출품된 작품에만 등록할 수 있다.
+    // 공동 작가의 공통 프로필을 연결해야 해서 출품된 작품에만 등록할 수 있다.
     // 작가는 전시 필수 항목이 아니라서 작가 연결이 바뀌어도 공개 상태는 다시 검사하지 않는다.
     @Override
     public ArtworkArtistMappingResponse createArtistMapping(
@@ -52,8 +52,10 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
         ArtistProfile profile = artistProfileRepository.findById(request.getArtistProfileId())
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
-        if (!profile.getExhibition().getId().equals(artwork.getExhibition().getId())
-                || !isJoined(profile)) {
+        if (!isJoined(
+                artwork.getExhibition().getId(),
+                profile.getArtist().getId()
+        )) {
             throw new ArtworkException(ArtworkErrorCode.CO_ARTIST_NOT_IN_EXHIBITION);
         }
 
@@ -87,7 +89,7 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
                             if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null) {
                                 return aam.getArtistProfile().getNameKo();
                             }
-                            return aam.getArtist().getNameKo();
+                            return java.util.Objects.toString(aam.getArtist().getNameKo(), "이름 미등록");
                         }, Collectors.joining(", "))
                 ));
     }
@@ -124,15 +126,17 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_ARTIST_MAPPING_NOT_FOUND));
     }
 
-    private boolean isJoined(ArtistProfile profile) {
-
+    private boolean isJoined(UUID exhibitionId, UUID artistId) {
         return exhibitionArtistMapRepository
-                .findByExhibitionIdAndArtistId(profile.getExhibition().getId(), profile.getArtist().getId())
-                .filter(map -> map.getStatus() == ExhibitionArtistStatus.JOINED)
-                .isPresent();
+                .existsByExhibitionIdAndArtistIdAndStatus(
+                        exhibitionId,
+                        artistId,
+                        ExhibitionArtistStatus.JOINED
+                );
     }
 
-    // 통합 수정용: 요청한 프로필 목록으로 작가 연결을 맞춘다. 프로필은 그 전시 것만, 새로 붙이는 작가는 참여 중(JOINED)이어야 한다.
+    // 통합 수정용: 요청한 공통 프로필 목록으로 작가 연결을 맞춘다.
+    // 새로 붙이는 작가는 해당 전시에 참여 중(JOINED)이어야 한다.
     // 이미 연결된 작가는 제외(REMOVED)됐어도 크레딧으로 남길 수 있게 참여 상태를 보지 않는다.
     @Override
     public void syncArtistProfiles(Artwork artwork, UUID exhibitionId, List<UUID> profileIds, Map<UUID, String> artistRoles) {
@@ -144,9 +148,13 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
         List<ArtistProfile> profiles = artistProfileRepository.findAllById(distinctIds);
 
         boolean invalid = profiles.size() != distinctIds.size()
-                || profiles.stream().anyMatch(profile -> !profile.getExhibition().getId().equals(exhibitionId))
                 || profiles.stream().map(profile -> profile.getArtist().getId()).distinct().count() != profiles.size()
-                || profiles.stream().anyMatch(profile -> !artwork.isLinkedTo(profile.getArtist().getId()) && !isJoined(profile));
+                || profiles.stream().anyMatch(profile ->
+                        !artwork.isLinkedTo(profile.getArtist().getId())
+                                && !isJoined(
+                                exhibitionId,
+                                profile.getArtist().getId()
+                        ));
         if (invalid) {
             throw new ArtworkException(ArtworkErrorCode.CO_ARTIST_NOT_IN_EXHIBITION);
         }

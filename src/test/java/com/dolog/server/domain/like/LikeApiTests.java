@@ -333,7 +333,7 @@ class LikeApiTests {
         participations.saveAndFlush(ExhibitionArtistMap.builder()
                 .exhibition(exhibition).artist(artist).status(status).build());
         return profiles.saveAndFlush(ArtistProfile.builder()
-                .artist(artist).exhibition(exhibition).nameKo("작가").build());
+                .artist(artist).nameKo("작가").build());
     }
 
     private MockHttpServletRequestBuilder likeArtwork(UUID artworkId) {

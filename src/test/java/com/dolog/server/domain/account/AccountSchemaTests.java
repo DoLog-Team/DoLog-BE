@@ -70,6 +70,62 @@ class AccountSchemaTests {
     @Autowired com.dolog.server.domain.bts.service.BtsService btsService;
 
     @Test
+    @DisplayName("탈퇴는 계정 개인정보와 동의·세션을 파기하고 같은 소셜 계정의 신규 가입을 허용한다")
+    void withdrawalErasesIdentityAndAllowsSignup() throws Exception {
+        var account = accounts.saveAndFlush(social("GOOGLE", "erased-subject", "erased@test.com"));
+        var oldSession = session(account);
+        String authorization = "Bearer " + jwt.createAccessToken(account.getId(), oldSession.getId());
+        String initial = "{\"termsVersion\":\"v1.0\",\"age14OrOverConfirmed\":true,\"serviceTermsAgreed\":true,\"privacyAgreed\":true,\"promotionAgreed\":false,\"marketingAgreed\":false,\"adReceiveAgreed\":false}";
+        mvc.perform(post("/api/accounts/me/terms").contextPath("/api").header("Authorization", authorization)
+                .contentType("application/json").content(initial)).andExpect(status().isCreated());
+        mvc.perform(delete("/api/accounts/me").contextPath("/api").header("Authorization", authorization))
+                .andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+        var withdrawn = accounts.findById(account.getId()).orElseThrow();
+        assertNull(withdrawn.getEmail());
+        assertNull(withdrawn.getPassword());
+        assertNull(withdrawn.getSocialProvider());
+        assertNull(withdrawn.getSocialProviderId());
+        assertFalse(tokens.existsById(oldSession.getId()));
+        for (String table : java.util.List.of("terms_agreements", "notifications")) {
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE account_id = ?",
+                    Integer.class, bytes(account.getId())));
+        }
+        var signup = auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.GOOGLE,
+                new com.dolog.server.domain.account.service.SocialProfile("erased-subject", "New", "erased@test.com"));
+        assertTrue(signup.isFirstLogin());
+        assertTrue(signup.needsTermsAgreement());
+        assertNotEquals(account.getId(), accounts.findByEmail("erased@test.com").orElseThrow().getId());
+    }
+
+    @Test
+    @DisplayName("이름과 이메일 없는 소셜 가입도 Artist를 만들고 재로그인 시 같은 Artist를 유지한다")
+    void socialSignupCreatesUnnamedArtist() {
+        String subject = "auto-artist-" + UUID.randomUUID();
+        var profile = new com.dolog.server.domain.account.service.SocialProfile(subject, null, null);
+        auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.KAKAO, profile);
+        artists.flush();
+        Account account = accounts.findBySocialProviderAndSocialProviderId("KAKAO", subject).orElseThrow();
+        var artist = artists.findByAccountId(account.getId()).orElseThrow();
+        assertNotNull(artist.getId());
+        assertNull(artist.getNameKo());
+        assertTrue(com.dolog.server.domain.bts.web.dto.response.BtsListResponse.from(
+                com.dolog.server.domain.bts.entity.Bts.builder().artistProfile(
+                        com.dolog.server.domain.artist.entity.ArtistProfile.builder().artist(artist).build()
+                ).build()).getArtistNames().isEmpty());
+        artist.updateArtistInfo("직접 입력", null, null);
+        artists.flush();
+        var response = auth.socialLogin(com.dolog.server.domain.account.entity.enums.SocialProvider.KAKAO,
+                new com.dolog.server.domain.account.service.SocialProfile(subject, "소셜 이름 변경", null));
+        artists.flush();
+        assertFalse(response.isFirstLogin());
+        var reloaded = artists.findByAccountId(account.getId()).orElseThrow();
+        assertEquals(artist.getId(), reloaded.getId());
+        assertEquals("직접 입력", reloaded.getNameKo());
+    }
+
+    @Test
     @DisplayName("선택 동의 PATCH는 실제 DB에 저장하고 본인·역할·입력을 검증한다")
     void optionalTermsPatchPersistsAndEnforcesAccess() throws Exception {
         TestTransaction.flagForRollback();
@@ -167,9 +223,9 @@ class AccountSchemaTests {
                 .account(b).nameKo("B").build());
         var exhibition = exhibitions.findByEntryCode("DEME2222").orElseThrow();
         var profileA = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
-                .artist(artistA).exhibition(exhibition).nameKo("A").isPublic(true).build());
+                .artist(artistA).nameKo("A").build());
         var profileB = profiles.saveAndFlush(com.dolog.server.domain.artist.entity.ArtistProfile.builder()
-                .artist(artistB).exhibition(exhibition).nameKo("B").isPublic(true).build());
+                .artist(artistB).nameKo("B").build());
         var shared = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()
                 .exhibition(exhibition).title("shared").build());
         var sole = artworks.saveAndFlush(com.dolog.server.domain.artwork.entity.Artwork.builder()

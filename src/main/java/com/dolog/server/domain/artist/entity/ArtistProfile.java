@@ -1,7 +1,6 @@
 package com.dolog.server.domain.artist.entity;
 
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
-import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,7 +19,7 @@ import java.util.UUID;
 @Table(
         name = "artist_profiles",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"artist_id", "exhibition_id"})
+                @UniqueConstraint(columnNames = {"artist_id"})
         }
 )
 public class ArtistProfile extends BaseEntity {
@@ -33,13 +32,9 @@ public class ArtistProfile extends BaseEntity {
     @Column(columnDefinition = "BINARY(16)")
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "artist_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "artist_id", nullable = false, unique = true)
     private Artist artist;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "exhibition_id", nullable = false)
-    private Exhibition exhibition;
 
     @Column(name = "name_ko", length = 100)
     private String nameKo;
@@ -49,9 +44,6 @@ public class ArtistProfile extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String bio;
-
-    @Column(name = "is_public", nullable = false)
-    private boolean isPublic;
 
     private String email;
 
@@ -80,7 +72,6 @@ public class ArtistProfile extends BaseEntity {
             String bio,
             String email,
             String purchaseContactUrl,
-            Boolean isPublic,
             String profileImg
     ) {
         // 값이 존재할 때만 업데이트 (기존 값 유지)
@@ -100,9 +91,6 @@ public class ArtistProfile extends BaseEntity {
             this.purchaseContactUrl = normalizeNullableText(
                     purchaseContactUrl
             );
-        }
-        if (isPublic != null) {
-            this.isPublic = isPublic;
         }
         if (profileImg != null) {
             this.profileImg = profileImg;
@@ -132,10 +120,6 @@ public class ArtistProfile extends BaseEntity {
                 this.email = this.artist.getAccount().getEmail();
             }
         }
-    }
-
-    public void togglePublicStatus(boolean isPublic) {
-        this.isPublic = isPublic;
     }
 
 }
