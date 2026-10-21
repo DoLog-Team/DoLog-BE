@@ -2,6 +2,7 @@ package com.dolog.server.domain.exhibition.web.controller;
 
 import com.dolog.server.domain.exhibition.service.ExhibitionGuideMapService;
 import com.dolog.server.domain.exhibition.web.dto.request.guideMap.ExhibitionGuideMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.guideMap.GuideMapReorderRequest;
 import com.dolog.server.global.response.SuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -11,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -77,6 +79,21 @@ public class ExhibitionGuideMapController {
         return SuccessResponse.ok(
                 null,
                 "관람 안내 지도가 성공적으로 삭제되었습니다."
+        );
+    }
+
+    @Operation(summary = "전시 구역 지도 순서 일괄 변경")
+    @PatchMapping("/{exhibitionId}/guide-maps/reorder")
+    @PreAuthorize("hasRole('DOLOG_ADMIN')")
+    public SuccessResponse<Void> reorderGuideMaps(
+            @PathVariable UUID exhibitionId,
+            @RequestBody List<GuideMapReorderRequest> requests
+    ) {
+        exhibitionGuideMapService.reorderGuideMaps(exhibitionId, requests);
+
+        return SuccessResponse.ok(
+                null,
+                "관람 안내 지도 순서가 변경되었습니다."
         );
     }
 }

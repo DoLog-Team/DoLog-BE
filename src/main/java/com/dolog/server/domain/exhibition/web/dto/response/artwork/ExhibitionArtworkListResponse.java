@@ -29,6 +29,7 @@ public class ExhibitionArtworkListResponse {
         private UUID id;
         private String imageUrl;
         private String description;
+        private Integer orderIndex;
     }
 
     @Getter @Builder
