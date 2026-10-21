@@ -1,6 +1,8 @@
 package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.exhibition.web.dto.request.guideMap.ExhibitionGuideMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.guideMap.GuideMapReorderRequest;
+import java.util.List;
 import java.util.UUID;
 
 public interface ExhibitionGuideMapService {
@@ -12,4 +14,6 @@ public interface ExhibitionGuideMapService {
     void updateGuideMap(UUID guideMapId, ExhibitionGuideMapCreateRequest request);
 
     void deleteGuideMap(UUID guideMapId);
+
+    void reorderGuideMaps(UUID exhibitionId, List<GuideMapReorderRequest> requests);
 }

@@ -10,13 +10,19 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepositor
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.guideMap.ExhibitionGuideMapCreateRequest;
+import com.dolog.server.domain.exhibition.web.dto.request.guideMap.GuideMapReorderRequest;
 import com.dolog.server.global.util.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -58,6 +64,8 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
                     .zone(zone)
                     .imageUrl(imageUrl)
                     .description(TextUtils.normalizeNewlines(request.getDescription()))
+                    // 새 이미지는 해당 전시의 맨 뒤 번호로 등록
+                    .orderIndex(exhibitionGuideMapRepository.findMaxOrderIndexByExhibitionId(exhibitionId) + 1)
                     .build();
 
             exhibitionGuideMapRepository.save(guideMap);
@@ -122,6 +130,52 @@ public class ExhibitionGuideMapServiceImpl implements ExhibitionGuideMapService 
         }
 
         // 3. DB 데이터 삭제
+        UUID exhibitionId = guideMap.getExhibition().getId();
         exhibitionGuideMapRepository.delete(guideMap);
+
+        // 4. 남은 이미지 번호를 빈틈없이 1, 2, 3 ... 으로 다시 매김
+        List<ExhibitionGuideMap> remaining = exhibitionGuideMapRepository
+                .findByExhibitionIdOrderByOrderIndexAscCreatedAtAsc(exhibitionId);
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).updateOrder(i + 1);
+        }
+    }
+
+    /**
+     * 가이드맵 순서 일괄 변경 (PATCH)
+     * 해당 전시에 속한 이미지만 허용하며, 다른 전시의 id가 섞여 있으면 400 처리한다.
+     */
+    @Override
+    public void reorderGuideMaps(UUID exhibitionId, List<GuideMapReorderRequest> requests) {
+        if (!exhibitionRepository.existsById(exhibitionId)) {
+            throw new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND);
+        }
+        if (requests == null || requests.isEmpty()) {
+            throw new ExhibitionException(ExhibitionErrorCode.GUIDE_MAP_REORDER_INVALID);
+        }
+
+        List<UUID> ids = new ArrayList<>();
+        for (GuideMapReorderRequest req : requests) {
+            if (req == null || req.getGuideMapId() == null || req.getOrder() == null || req.getOrder() < 1) {
+                throw new ExhibitionException(ExhibitionErrorCode.GUIDE_MAP_REORDER_INVALID);
+            }
+            ids.add(req.getGuideMapId());
+        }
+        if (new HashSet<>(ids).size() != ids.size()) {
+            throw new ExhibitionException(ExhibitionErrorCode.GUIDE_MAP_REORDER_INVALID);
+        }
+
+        List<ExhibitionGuideMap> guideMaps = exhibitionGuideMapRepository.findAllById(ids);
+        boolean hasInvalid = guideMaps.size() != ids.size()
+                || guideMaps.stream().anyMatch(m -> !m.getExhibition().getId().equals(exhibitionId));
+        if (hasInvalid) {
+            throw new ExhibitionException(ExhibitionErrorCode.GUIDE_MAP_REORDER_INVALID);
+        }
+
+        Map<UUID, ExhibitionGuideMap> byId = guideMaps.stream()
+                .collect(Collectors.toMap(ExhibitionGuideMap::getId, m -> m));
+        for (GuideMapReorderRequest req : requests) {
+            byId.get(req.getGuideMapId()).updateOrder(req.getOrder());
+        }
     }
 }
