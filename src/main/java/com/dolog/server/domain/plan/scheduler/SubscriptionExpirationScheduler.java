@@ -25,7 +25,11 @@ public class SubscriptionExpirationScheduler {
         List<Subscription> overdue = subscriptionRepository
                 .findByStatusAndEndedAtBefore(SubscriptionStatus.ACTIVE, LocalDateTime.now());
 
-        overdue.forEach(Subscription::markAsExpired);
+        overdue.forEach(subscription -> {
+            subscription.markAsExpired();
+            // 전시는 비공개 전환되지만, 출품된 작품의 두록 개인 페이지 노출은 별개로 유지된다
+            subscription.getExhibition().unpublish();
+        });
 
         log.info("만료 처리된 구독 {}건", overdue.size());
     }

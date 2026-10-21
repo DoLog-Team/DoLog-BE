@@ -244,15 +244,17 @@ public class Artwork extends BaseEntity implements Orderable {
         this.planLimitExceededAt = null;
     }
 
-    // 두록 URL 은 숨김과 무관하게 PUBLISHED 면 노출, 전시 URL 은 작품이나 구역이 숨김이거나 플랜 한도를 넘으면 비노출.
-    // 출품된 작품은 전시가 게시된 뒤에만 보인다 (출품 안 한 개인 작품은 공개면 노출).
+    // 두록 개인 페이지는 작가 본인이 설정한 값(공개 여부)에만 좌우된다. 전시 상태(비공개·만료)와는 무관하다 —
+    // 전시가 비공개/만료되어도 출품 작가의 두록 개인 페이지 노출은 그대로 유지된다.
     public boolean isVisibleOnDolog() {
-        return status == ArtworkStatus.PUBLISHED
-                && (exhibition == null || exhibition.isPublic());
+        return status == ArtworkStatus.PUBLISHED;
     }
 
+    // 전시 경유 상세 페이지는 작품 자체가 공개여도 전시가 비공개면 같이 숨는다 (출품 안 한 개인 작품은 해당 없음).
     public boolean isVisibleOnExhibition() {
-        return isVisibleOnDolog() && !isHidden() && !exceedsPlanLimit()
+        return status == ArtworkStatus.PUBLISHED
+                && exhibition != null && exhibition.isPublic()
+                && !isHidden() && !exceedsPlanLimit()
                 && (exhibitionZone == null || !exhibitionZone.isHidden());
     }
 
