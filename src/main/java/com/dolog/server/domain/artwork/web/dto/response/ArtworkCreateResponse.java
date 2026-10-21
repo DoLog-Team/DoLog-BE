@@ -31,6 +31,7 @@ public class ArtworkCreateResponse {
     private Integer productionEndMonth;
     private Integer productionEndDay;
     private String mainImage;
+    private String locationMap;
     private String purchaseUrl;
     private String purchaseChatUrl;
     private Boolean showPurchaseButton;
@@ -58,6 +59,7 @@ public class ArtworkCreateResponse {
                 .productionEndMonth(artwork.getProductionEndMonth())
                 .productionEndDay(artwork.getProductionEndDay())
                 .mainImage(artwork.getMainImg())
+                .locationMap(artwork.getLocationMap())
                 .purchaseUrl(artwork.getPurchaseUrl())
                 .purchaseChatUrl(artwork.getPurchaseChatUrl())
                 .showPurchaseButton(artwork.getShowPurchaseButton())

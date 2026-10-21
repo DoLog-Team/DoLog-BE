@@ -45,6 +45,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -362,6 +363,55 @@ class ArtworkCommandApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.mainImage").value("https://s3/old.webp"));
         verify(fileService, never()).deleteFile(any());
+    }
+
+    @Test
+    @DisplayName("위치 이미지를 보내면 출품 여부와 상관없이 업로드한 URL 로 교체되고, 기존 파일은 커밋 전에는 지우지 않는다")
+    void replacesLocationMap() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").locationMap("https://s3/old-map.webp").build(), me));
+        when(fileService.uploadFile(any(), eq("artworks/maps"))).thenReturn("https://s3/new-map.webp");
+
+        mvc.perform(withToken(patch(artwork.getId()).file(image("locationMapFile")), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/new-map.webp"));
+        verify(fileService, never()).deleteFile(any());
+    }
+
+    @Test
+    @DisplayName("위치 이미지를 안 보내면 기존 값을 지우지 않는다")
+    void keepsLocationMapWhenNotSent() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").locationMap("https://s3/old-map.webp").build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("title", "새 제목"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/old-map.webp"));
+        verify(fileService, never()).deleteFile(any());
+    }
+
+    @Test
+    @DisplayName("내 작품 상세(편집용) 조회 응답에 위치 이미지가 담긴다")
+    void myArtworkDetailIncludesLocationMap() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").locationMap("https://s3/map.webp").build(), me));
+
+        mvc.perform(withToken(get("/api/artworks/{id}/me", artwork.getId()), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/map.webp"));
+    }
+
+    @Test
+    @DisplayName("출품 전(DRAFT, 전시 미소속) 작품도 위치 이미지를 처음 등록할 수 있다")
+    void setsLocationMapBeforeSubmission() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").build(), me));
+        assertNull(artwork.getExhibition());
+        when(fileService.uploadFile(any(), eq("artworks/maps"))).thenReturn("https://s3/first-map.webp");
+
+        mvc.perform(withToken(patch(artwork.getId()).file(image("locationMapFile")), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value("https://s3/first-map.webp"));
     }
 
     @Test

@@ -72,6 +72,21 @@ public class ArtworkFileHandler {
         return newUrl;
     }
 
+    /**
+     * 위치 지도 교체. 새 파일이 없으면 null 을 반환하고 기존 파일은 그대로 둔다.
+     * 기존 파일은 커밋된 뒤에만 지운다.
+     */
+    public String replaceLocationMap(String oldUrl, MultipartFile file) {
+
+        String newUrl = uploadLocationMap(file);
+
+        if (newUrl != null) {
+            afterCommit(oldUrl);
+        }
+
+        return newUrl;
+    }
+
     private String upload(MultipartFile file, String folder) {
 
         try {
