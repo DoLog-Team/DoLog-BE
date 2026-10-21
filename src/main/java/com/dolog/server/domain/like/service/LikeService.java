@@ -7,8 +7,6 @@ import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
-import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
-import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.like.entity.ArtistProfileLike;
 import com.dolog.server.domain.like.entity.ArtworkLike;
 import com.dolog.server.domain.like.exception.LikeErrorCode;
@@ -33,7 +31,6 @@ public class LikeService {
     private final ArtworkLikeRepository artworkLikeRepository;
     private final ArtistProfileRepository artistProfileRepository;
     private final ArtistProfileLikeRepository artistProfileLikeRepository;
-    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
     // 두록 URL 에서도 보이는(PUBLISHED) 작품만 좋아요를 받는다.
     public ArtworkLikeResponse likeArtwork(UUID artworkId, String visitorId) {
@@ -64,11 +61,10 @@ public class LikeService {
         return new ArtworkLikeResponse(artworkId, visitorId, artworkLikeRepository.countByArtworkId(artworkId), false);
     }
 
-    // 한 전시에라도 참여 중(JOINED)인 작가의 공통 프로필만 좋아요를 받는다.
+    // 전시 참여 여부와 관계없이 존재하는 작가의 공통 프로필은 좋아요를 받을 수 있다.
     public ArtistProfileLikeResponse likeArtistProfile(UUID profileId, String visitorId) {
 
         ArtistProfile profile = artistProfileRepository.findById(profileId)
-                .filter(this::isJoined)
                 .orElseThrow(ArtistProfileNotFoundException::new);
 
         if (artistProfileLikeRepository.existsByArtistProfileIdAndVisitorId(profileId, visitorId)) {
@@ -92,14 +88,6 @@ public class LikeService {
 
         return new ArtistProfileLikeResponse(profileId, visitorId,
                 artistProfileLikeRepository.countByArtistProfileId(profileId), false);
-    }
-
-    private boolean isJoined(ArtistProfile profile) {
-        return exhibitionArtistMapRepository
-                .existsByArtistIdAndStatus(
-                        profile.getArtist().getId(),
-                        ExhibitionArtistStatus.JOINED
-                );
     }
 
     // 동시에 같은 좋아요가 들어오면 UNIQUE 제약에서 걸리므로 409 로 맞춘다.

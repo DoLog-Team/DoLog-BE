@@ -49,7 +49,7 @@ public class LikeController {
         return SuccessResponse.ok(likeService.cancelArtworkLike(artworkId, visitorId), "좋아요가 취소되었습니다.");
     }
 
-    @Operation(summary = "작가 좋아요", description = "비로그인 가능. 참여 중인 작가의 전시별 프로필만 가능합니다.")
+    @Operation(summary = "작가 좋아요", description = "비로그인 상태에서도 작가의 공통 프로필에 좋아요를 등록할 수 있습니다.")
     @PostMapping("/artist-profiles/{profileId}/likes")
     public ResponseEntity<SuccessResponse<ArtistProfileLikeResponse>> likeArtistProfile(
             @PathVariable UUID profileId,
