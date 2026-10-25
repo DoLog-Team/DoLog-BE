@@ -67,7 +67,7 @@ class ArtistProfileRequestValidationTest {
     }
 
     @Test
-    @DisplayName("SNS 추가 요청은 플랫폼 이름과 HTTP(S) URL이 필수다")
+    @DisplayName("SNS 추가 요청은 플랫폼 이름과 주소가 필수이지만, 주소 형식(http 등)은 제한하지 않는다")
     void validatesArtistSnsCreateRequest() {
         ArtistSnsRequest request = new ArtistSnsRequest(
                 "",
@@ -82,10 +82,18 @@ class ArtistProfileRequestValidationTest {
         );
 
         assertTrue(validator.validate(request).isEmpty());
+
+        // http(s) 스킴 없는 자유 형식 주소도 허용한다
+        request = new ArtistSnsRequest(
+                "instagram",
+                "@dolog_official"
+        );
+
+        assertTrue(validator.validate(request).isEmpty());
     }
 
     @Test
-    @DisplayName("SNS 수정 요청은 하나 이상의 유효한 필드를 요구한다")
+    @DisplayName("SNS 수정 요청은 하나 이상의 유효한 필드를 요구하지만, 주소 형식(http 등)은 제한하지 않는다")
     void validatesArtistSnsUpdateRequest() {
         ArtistSnsUpdateRequest request =
                 new ArtistSnsUpdateRequest(null, null);
@@ -102,6 +110,11 @@ class ArtistProfileRequestValidationTest {
         request = new ArtistSnsUpdateRequest(" ", null);
 
         assertFalse(validator.validate(request).isEmpty());
+
+        // http(s) 스킴 없는 자유 형식 주소도 허용한다
+        request = new ArtistSnsUpdateRequest(null, "instagram.com/dolog");
+
+        assertTrue(validator.validate(request).isEmpty());
     }
 
     private ArtistProfileCreateRequest validCreateRequest() {
