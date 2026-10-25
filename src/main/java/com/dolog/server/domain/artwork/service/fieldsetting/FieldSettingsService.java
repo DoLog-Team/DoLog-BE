@@ -108,6 +108,7 @@ public class FieldSettingsService {
         Map<String, String> payload = new java.util.HashMap<>();
         payload.put("exhibitionName", resolveExhibitionName(exhibition));
         payload.put("artworkTitle", artwork.getTitle());
+        payload.put("artworkId", artwork.getId().toString());
         if (requiredFieldNames != null) {
             payload.put("requiredFieldNames", requiredFieldNames);
         }

@@ -286,7 +286,11 @@ class ArtworkManageApiTests {
         assertTrue(artworks.findById(second.getId()).orElseThrow().isHidden());
         assertEquals(hiddenAt, artworks.findById(alreadyHidden.getId()).orElseThrow().getHiddenAt());
         assertEquals(ArtworkStatus.DRAFT, artworks.findById(first.getId()).orElseThrow().getStatus());
-        assertEquals(2, notificationsOf(me, NotificationType.ARTWORK_HIDDEN).size());
+        List<Notification> hiddenNotifications = notificationsOf(me, NotificationType.ARTWORK_HIDDEN);
+        assertEquals(2, hiddenNotifications.size());
+        assertTrue(hiddenNotifications.stream().allMatch(n ->
+                n.getPayload().get("artworkId").equals(first.getId().toString())
+                        || n.getPayload().get("artworkId").equals(second.getId().toString())));
     }
 
     @Test
@@ -306,7 +310,11 @@ class ArtworkManageApiTests {
 
         endRequest();
         assertFalse(artworks.findById(first.getId()).orElseThrow().isHidden());
-        assertEquals(2, notificationsOf(me, NotificationType.ARTWORK_SHOWN).size());
+        List<Notification> shownNotifications = notificationsOf(me, NotificationType.ARTWORK_SHOWN);
+        assertEquals(2, shownNotifications.size());
+        assertTrue(shownNotifications.stream().allMatch(n ->
+                n.getPayload().get("artworkId").equals(first.getId().toString())
+                        || n.getPayload().get("artworkId").equals(second.getId().toString())));
     }
 
     @Test
@@ -361,7 +369,11 @@ class ArtworkManageApiTests {
         assertEquals(30, artworks.findById(inB.getId()).orElseThrow().getOrderIndex());
         assertTrue(movedA.getOrderIndex() > 30);
         assertTrue(movedNone.getOrderIndex() > movedA.getOrderIndex());
-        assertEquals(2, notificationsOf(me, NotificationType.ARTWORK_GROUP_ASSIGNED).size());
+        List<Notification> assignedNotifications = notificationsOf(me, NotificationType.ARTWORK_GROUP_ASSIGNED);
+        assertEquals(2, assignedNotifications.size());
+        assertTrue(assignedNotifications.stream().allMatch(n ->
+                n.getPayload().get("artworkId").equals(fromA.getId().toString())
+                        || n.getPayload().get("artworkId").equals(fromNone.getId().toString())));
     }
 
     @Test

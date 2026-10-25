@@ -144,7 +144,8 @@ public class ArtworkVisibilityProcessor {
         Exhibition exhibition = artwork.getExhibition();
         Map<String, String> payload = Map.of(
                 "exhibitionName", resolveExhibitionName(exhibition),
-                "artworkTitle", artwork.getTitle()
+                "artworkTitle", artwork.getTitle(),
+                "artworkId", artwork.getId().toString()
         );
 
         for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
