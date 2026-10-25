@@ -7,8 +7,6 @@ public enum NotificationType {
     ARTIST_JOIN_APPROVED,       // 참여 승인
     ARTIST_JOIN_REJECTED,       // 참여 거절
     ARTIST_REMOVED,             // 참여 제외
-    ZONE_CREATED,               // 작품 그룹 추가
-    ZONE_DELETED,               // 작품 그룹 삭제
     ZONE_HIDDEN,                // 작품 그룹 숨김
     ZONE_SHOWN,                 // 작품 그룹 재공개
     ARTWORK_HIDDEN,             // 작품 숨김 처리 (관리자 조치)
@@ -17,6 +15,7 @@ public enum NotificationType {
     ARTWORK_GROUP_REMOVED,      // 소속 그룹이 삭제되어 그룹 해제됨
     ARTWORK_UNPUBLISHED,        // 전시 필수 항목 설정 변경으로 자동 비공개 처리
     ARTWORK_REPUBLISHED,        // 전시 필수 항목 설정 완화로 자동 재공개 처리
+    ARTWORK_FIELDS_HIDDEN,      // 전시 항목 설정 변경으로 출품 정보 항목이 새로 숨겨짐
 
     // 전시 어드민 알림
     ARTIST_JOIN_REQUESTED,      // 작가 참여 신청

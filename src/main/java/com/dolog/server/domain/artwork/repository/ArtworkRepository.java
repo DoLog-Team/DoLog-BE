@@ -223,6 +223,9 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
 
     List<Artwork> findByExhibitionIdAndStatus(UUID exhibitionId, ArtworkStatus status);
 
+    // 상태와 무관하게, 이 전시에 출품된 작품 전체 (항목 숨김 알림처럼 공개 여부와 상관없이 다뤄야 할 때)
+    List<Artwork> findByExhibitionId(UUID exhibitionId);
+
     // 시스템이 항목설정 때문에 자동으로 비공개한 작품 (항목설정이 완화되면 다시 공개할 후보)
     List<Artwork> findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(UUID exhibitionId, ArtworkStatus status);
 
