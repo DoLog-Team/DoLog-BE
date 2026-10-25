@@ -201,6 +201,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 Map<String, String> payload = Map.of(
                         "exhibitionName", exhibitionName,
                         "artworkTitle", artwork.getTitle(),
+                        "artworkId", artwork.getId().toString(),
                         "zoneName", zone.getName()
                 );
 

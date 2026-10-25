@@ -15,6 +15,9 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
+import com.dolog.server.domain.notification.entity.Notification;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.repository.NotificationRepository;
 import com.dolog.server.global.jwt.JwtTokenProvider;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -50,6 +54,7 @@ class FieldSettingsApiTests {
     @Autowired ArtworkRepository artworks;
     @Autowired ExhibitionRepository exhibitions;
     @Autowired ExhibitionFieldSettingsRepository fieldSettings;
+    @Autowired NotificationRepository notifications;
     @Autowired JwtTokenProvider jwt;
     @Autowired EntityManager em;
 
@@ -155,6 +160,39 @@ class FieldSettingsApiTests {
 
         endRequest();
         assertEquals(ArtworkStatus.DRAFT, statusOf(manualDraft));
+    }
+
+    @Test
+    @DisplayName("항목을 새로 숨기면 그 전시에 출품된 작가 전원에게 어떤 항목이 숨겨졌는지 알린다")
+    void hidingFieldsNotifiesSubmittedArtists() throws Exception {
+        Artwork submitted = artwork(exhibition, ArtworkStatus.PUBLISHED, "https://s3/main.webp");
+
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken)
+                        .content(settingsJson(false, false, false, false, true, false, false, false, false)))
+                .andExpect(status().isOk());
+
+        endRequest();
+        List<Notification> hiddenNotifications = fieldsHiddenNotificationsOf(artist);
+        assertEquals(1, hiddenNotifications.size());
+        assertEquals(submitted.getId().toString(), hiddenNotifications.get(0).getPayload().get("artworkId"));
+        assertEquals("작품 사이즈", hiddenNotifications.get(0).getPayload().get("hiddenFieldNames"));
+    }
+
+    @Test
+    @DisplayName("이미 숨긴 항목을 다시 저장해도 중복 알림을 보내지 않는다")
+    void doesNotRenotifyAlreadyHiddenFields() throws Exception {
+        artwork(exhibition, ArtworkStatus.PUBLISHED, "https://s3/main.webp");
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken)
+                        .content(settingsJson(false, false, false, false, true, false, false, false, false)))
+                .andExpect(status().isOk());
+        endRequest();
+
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken)
+                        .content(settingsJson(false, false, false, false, true, false, false, false, false)))
+                .andExpect(status().isOk());
+
+        endRequest();
+        assertEquals(1, fieldsHiddenNotificationsOf(artist).size());
     }
 
     @Test
@@ -293,6 +331,11 @@ class FieldSettingsApiTests {
 
     private ArtworkStatus statusOf(Artwork artwork) {
         return artworks.findById(artwork.getId()).orElseThrow().getStatus();
+    }
+
+    private List<Notification> fieldsHiddenNotificationsOf(Artist artist) {
+        return notifications.findByRecipientIdOrderByCreatedAtDesc(artist.getAccount().getId(), Pageable.unpaged())
+                .stream().filter(n -> n.getType() == NotificationType.ARTWORK_FIELDS_HIDDEN).toList();
     }
 
     private MockHttpServletRequestBuilder put(UUID exhibitionId) {

@@ -74,6 +74,7 @@ public class ArtworkZoneProcessor {
         Map<String, String> payload = Map.of(
                 "exhibitionName", resolveExhibitionName(exhibition),
                 "artworkTitle", artwork.getTitle(),
+                "artworkId", artwork.getId().toString(),
                 "zoneName", zone.getName()
         );
 

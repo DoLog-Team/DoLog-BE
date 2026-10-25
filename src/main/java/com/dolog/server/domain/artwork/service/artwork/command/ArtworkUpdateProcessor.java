@@ -157,6 +157,7 @@ public class ArtworkUpdateProcessor {
         Map<String, String> payload = new java.util.HashMap<>();
         payload.put("exhibitionName", resolveExhibitionName(exhibition));
         payload.put("artworkTitle", artwork.getTitle());
+        payload.put("artworkId", artwork.getId().toString());
         if (zoneName != null) {
             payload.put("zoneName", zoneName);
         }
