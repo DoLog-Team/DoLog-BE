@@ -113,7 +113,7 @@ public class ArtworkEditResponse {
             Artist artist = map.getArtist();
             return ArtistInfo.builder()
                     .artistId(artist.getId())
-                    .nameKo(artist.getNameKo())
+                    .nameKo(map.getProfileNameKo())
                     .role(map.getArtistRole())
                     .build();
         }

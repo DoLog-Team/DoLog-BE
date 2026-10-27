@@ -7,6 +7,8 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
@@ -62,6 +64,7 @@ class ArtworkManageApiTests {
     @Autowired AccountRepository accounts;
     @Autowired RefreshTokenRepository tokens;
     @Autowired ArtistRepository artists;
+    @Autowired ArtistProfileRepository profiles;
     @Autowired ArtworkRepository artworks;
     @Autowired ExhibitionRepository exhibitions;
     @Autowired ExhibitionZoneRepository zones;
@@ -482,7 +485,9 @@ class ArtworkManageApiTests {
     }
 
     private Artist artist(String name) {
-        return artists.saveAndFlush(Artist.builder().account(account(Role.ARTIST_ADMIN)).nameKo(name).build());
+        Artist artist = artists.saveAndFlush(Artist.builder().account(account(Role.ARTIST_ADMIN)).nameKo(name).build());
+        artist.linkProfile(profiles.saveAndFlush(ArtistProfile.builder().artist(artist).nameKo(name).build()));
+        return artist;
     }
 
     private String token(Account account) {

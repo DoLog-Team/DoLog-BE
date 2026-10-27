@@ -52,7 +52,7 @@ public class ArtworkCreateProcessor {
 
         Artwork saved = artworkRepository.save(artwork);
 
-        return ArtworkCreateResponse.of(saved, artist.getNameKo());
+        return ArtworkCreateResponse.of(saved, artist.getProfileNameKo());
     }
 
     // 전시/구역/순서는 출품 시점에 정해지므로 미출품(DRAFT) 상태로 만든다.

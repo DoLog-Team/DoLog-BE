@@ -30,6 +30,22 @@ class ArtistProfileRequestValidationTest {
     }
 
     @Test
+    @DisplayName("국문 성명 삭제는 허용하고 기존 문자·길이·공백 검증은 유지한다")
+    void allowsEmptyUpdateNameKoAndPreservesOtherValidation() {
+        ArtistProfileUpdateRequest request = new ArtistProfileUpdateRequest();
+        request.setNameKo("");
+        assertTrue(validator.validate(request).isEmpty());
+
+        for (String invalidName : new String[]{"   ", "김두록!", "가".repeat(11)}) {
+            request.setNameKo(invalidName);
+            assertFalse(validator.validate(request).isEmpty());
+        }
+
+        request.setNameKo("가".repeat(10));
+        assertTrue(validator.validate(request).isEmpty());
+    }
+
+    @Test
     @DisplayName("수정 요청의 영문 성명은 최대 50자의 영문과 띄어쓰기만 허용한다")
     void validatesUpdateNameEn() {
         ArtistProfileUpdateRequest request =

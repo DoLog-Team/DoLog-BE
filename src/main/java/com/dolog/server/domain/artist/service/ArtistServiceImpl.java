@@ -157,8 +157,8 @@ public class ArtistServiceImpl implements ArtistService {
     }
 
     private String normalizeOptionalNameKo(String nameKo) {
-        if (nameKo == null) {
-            return null;
+        if (nameKo == null || nameKo.isEmpty()) {
+            return nameKo;
         }
 
         if (nameKo.isBlank()) {
@@ -255,11 +255,16 @@ public class ArtistServiceImpl implements ArtistService {
             MultipartFile profileImg
     ) throws IOException {
 
+        boolean deleteImage = Boolean.TRUE.equals(request.getDeleteProfileImg());
+        if (deleteImage && profileImg != null && !profileImg.isEmpty()) {
+            throw new ArtistBadRequestException();
+        }
+
         profileImageValidator.validate(profileImg);
         String oldImageUrl = profile.getProfileImg();
         String newImageUrl = null;
 
-        if (profileImg != null && profileImg.isEmpty()) {
+        if (deleteImage || (profileImg != null && profileImg.isEmpty())) {
             profile.clearProfileImg();
             fileService.deleteFile(oldImageUrl);
         } else if (profileImg != null) {
@@ -336,6 +341,12 @@ public class ArtistServiceImpl implements ArtistService {
                 phone
         );
 
+        // 기존 기본정보 수정 API도 표시 이름의 기준인 공통 프로필을 갱신한다.
+        if (requestedNameKo != null || requestedNameEn != null) {
+            ArtistProfile profile = artistProfileProvisionService.ensureProfile(artist);
+            profile.updateProfile(nameKo, requestedNameEn, null, null, null, null);
+        }
+
         return ArtistUpdateResponse.from(artist);
     }
 
@@ -385,7 +396,7 @@ public class ArtistServiceImpl implements ArtistService {
         } else {
             result =
                     artistRepository
-                            .findByNameKoContainingIgnoreCaseOrNameEnContainingIgnoreCaseOrAccount_EmailContainingIgnoreCase(
+                            .findByProfile_NameKoContainingIgnoreCaseOrProfile_NameEnContainingIgnoreCaseOrAccount_EmailContainingIgnoreCase(
                                     keyword,
                                     keyword,
                                     keyword,
@@ -488,8 +499,8 @@ public class ArtistServiceImpl implements ArtistService {
                 .profileId(representativeProfile == null
                         ? null
                         : representativeProfile.getId())
-                .nameKo(artist.getNameKo())
-                .nameEn(artist.getNameEn())
+                .nameKo(representativeProfile == null ? null : representativeProfile.getNameKo())
+                .nameEn(representativeProfile == null ? null : representativeProfile.getNameEn())
                 .bio(representativeProfile == null
                         ? null
                         : representativeProfile.getBio())

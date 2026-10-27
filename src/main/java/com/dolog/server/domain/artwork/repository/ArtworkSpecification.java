@@ -35,7 +35,8 @@ public class ArtworkSpecification {
             Root<ArtworkArtistMap> aamRoot = artworkIdSubquery.from(ArtworkArtistMap.class);
             artworkIdSubquery.select(aamRoot.<Artwork>get("artwork").<UUID>get("id"))
                     .where(cb.like(
-                            aamRoot.join("artist", JoinType.INNER).<String>get("nameKo"),
+                            aamRoot.join("artist", JoinType.INNER)
+                                    .join("profile", JoinType.INNER).<String>get("nameKo"),
                             pattern
                     ));
 

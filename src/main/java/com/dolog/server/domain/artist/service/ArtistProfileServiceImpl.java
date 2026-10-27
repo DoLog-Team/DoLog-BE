@@ -122,6 +122,7 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
 
         profile.fillDefaultInfoFromArtist();
         ArtistProfile savedProfile = profileRepository.save(profile);
+        artist.linkProfile(savedProfile);
 
         // 3. 응답 반환
         return new ArtistProfileCreateResponse(savedProfile.getId());

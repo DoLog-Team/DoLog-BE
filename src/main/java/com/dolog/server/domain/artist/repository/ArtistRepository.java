@@ -41,12 +41,12 @@ public interface ArtistRepository extends JpaRepository<Artist, UUID> {
     Optional<Artist> findByIdAndAccountId(UUID artistId, UUID accountId);
     boolean existsByPhoneAndIdNot(String phone, UUID artistId);
 
-    @EntityGraph(attributePaths = "account")
+    @EntityGraph(attributePaths = {"account", "profile"})
     Page<Artist> findAll(Pageable pageable);
 
-    @EntityGraph(attributePaths = "account")
+    @EntityGraph(attributePaths = {"account", "profile"})
     Page<Artist>
-    findByNameKoContainingIgnoreCaseOrNameEnContainingIgnoreCaseOrAccount_EmailContainingIgnoreCase(
+    findByProfile_NameKoContainingIgnoreCaseOrProfile_NameEnContainingIgnoreCaseOrAccount_EmailContainingIgnoreCase(
             String nameKo,
             String nameEn,
             String accountEmail,

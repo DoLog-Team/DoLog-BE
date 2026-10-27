@@ -18,8 +18,8 @@ public class ArtistResponse {
     public static ArtistResponse from(Artist artist) {
         return ArtistResponse.builder()
                 .id(artist.getId())
-                .nameKo(artist.getNameKo())
-                .nameEn(artist.getNameEn())
+                .nameKo(artist.getProfileNameKo())
+                .nameEn(artist.getProfileNameEn())
                 //.email(artist.getAccount().getEmail()) // 카카오 로그인 시 이메일 연동
                 .phone(artist.getPhone())
                 .build();

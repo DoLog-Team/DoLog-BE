@@ -23,6 +23,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapReposito
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
 import com.dolog.server.global.util.FileService;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.exhibition.repository.projection.ArtistArtworkCountProjection;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistManageItemResponse;
 import org.springframework.data.domain.PageImpl;
@@ -52,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -383,6 +385,7 @@ class ExhibitionArtistServiceImplTest {
                 .artist(artist)
                 .nameKo("유지할 프로필")
                 .build();
+        artist.linkProfile(profile);
         Artwork artwork = artwork(exhibition, artist);
         artwork.getArtworkArtistMaps().get(0).linkProfile(profile);
 
@@ -440,6 +443,8 @@ class ExhibitionArtistServiceImplTest {
         verify(artworkSubmissionCanceller).cancel(artwork);
         verify(exhibitionArtistMapRepository, never()).delete(any());
         verifyNoInteractions(accountRepository);
+        verify(notificationService).send(eq(exhibition.getAccount()), eq(NotificationType.ARTIST_WITHDRAWN),
+                argThat(payload -> "유지할 프로필".equals(payload.get("artistName"))), eq(exhibition.getId()));
     }
 
     @Test
@@ -1056,7 +1061,8 @@ class ExhibitionArtistServiceImplTest {
     @DisplayName("신규 작가는 PENDING 상태로 전시 참여를 신청한다")
     void appliesToExhibitionAsPending() {
         UUID accountId = UUID.randomUUID();
-        Artist artist = artist(null, "join-new@test.com");
+        Artist artist = artist("기본이름", "join-new@test.com");
+        artist.getProfile().updateProfile("프로필이름", null, null, null, null, null);
         Exhibition exhibition = joinableExhibition(
                 "2345ABCD",
                 null
@@ -1090,6 +1096,8 @@ class ExhibitionArtistServiceImplTest {
         assertSame(artist, savedMap.getArtist());
         assertEquals(exhibition.getId(), response.exhibitionId());
         assertEquals(ExhibitionArtistStatus.PENDING, response.status());
+        verify(notificationService).send(eq(exhibition.getAccount()), eq(NotificationType.ARTIST_JOIN_REQUESTED),
+                argThat(payload -> "프로필이름".equals(payload.get("artistName"))), eq(exhibition.getId()));
     }
 
     @Test
@@ -1496,11 +1504,13 @@ class ExhibitionArtistServiceImplTest {
                 .accountStatus(AccountStatus.ACTIVE)
                 .build();
 
-        return Artist.builder()
+        Artist artist = Artist.builder()
                 .id(UUID.randomUUID())
                 .account(account)
                 .nameKo(name)
                 .build();
+        artist.linkProfile(ArtistProfile.builder().artist(artist).nameKo(name).build());
+        return artist;
     }
 
     private ExhibitionArtistMap map(

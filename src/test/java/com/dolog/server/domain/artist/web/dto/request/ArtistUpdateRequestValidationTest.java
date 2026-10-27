@@ -28,8 +28,8 @@ class ArtistUpdateRequestValidationTest {
     }
 
     @Test
-    @DisplayName("nameKo가 빈 문자열이나 공백이면 검증에 실패한다")
-    void rejectsBlankNameKo() throws Exception {
+    @DisplayName("nameKo의 빈 문자열은 삭제 요청으로 허용하고 공백만 있는 값은 거절한다")
+    void allowsEmptyNameKoButRejectsWhitespace() throws Exception {
         ArtistUpdateRequest emptyName = objectMapper.readValue(
                 "{\"nameKo\":\"\"}",
                 ArtistUpdateRequest.class
@@ -39,7 +39,7 @@ class ArtistUpdateRequestValidationTest {
                 ArtistUpdateRequest.class
         );
 
-        assertFalse(validator.validate(emptyName).isEmpty());
+        assertTrue(validator.validate(emptyName).isEmpty());
         assertFalse(validator.validate(whitespaceName).isEmpty());
     }
 

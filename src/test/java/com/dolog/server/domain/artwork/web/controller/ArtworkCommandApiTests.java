@@ -7,6 +7,8 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
@@ -59,6 +61,7 @@ class ArtworkCommandApiTests {
     @Autowired AccountRepository accounts;
     @Autowired RefreshTokenRepository tokens;
     @Autowired ArtistRepository artists;
+    @Autowired ArtistProfileRepository profiles;
     @Autowired ArtworkRepository artworks;
     @Autowired ExhibitionRepository exhibitions;
     @Autowired BtsRepository btsRepository;
@@ -85,6 +88,7 @@ class ArtworkCommandApiTests {
     @Test
     @DisplayName("작가 어드민이 작품을 등록하면 본인 작품으로 전시 미소속 DRAFT 상태로 생성된다")
     void createsDraftArtworkForLoginArtist() throws Exception {
+        me.getProfile().updateProfile("공통이름", null, null, null, null, null);
         String id = json(mvc.perform(withToken(multipart("/api/artworks"), myToken)
                         .param("title", " 파도의 그릇 ")
                         .param("description", "첫 줄\\n둘째 줄")
@@ -111,7 +115,7 @@ class ArtworkCommandApiTests {
                 .andExpect(jsonPath("$.data.exhibitionId").value(nullValue()))
                 .andExpect(jsonPath("$.data.zoneId").value(nullValue()))
                 .andExpect(jsonPath("$.data.mainImage").value(nullValue()))
-                .andExpect(jsonPath("$.data.artistName").value("나작가")), "$.data.id");
+                .andExpect(jsonPath("$.data.artistName").value("공통이름")), "$.data.id");
 
         em.flush();
         em.clear();
@@ -462,7 +466,9 @@ class ArtworkCommandApiTests {
     private Artist artist(String name) {
         Account account = accounts.saveAndFlush(Account.builder().role(Role.ARTIST_ADMIN)
                 .accountStatus(AccountStatus.ACTIVE).build());
-        return artists.saveAndFlush(Artist.builder().account(account).nameKo(name).build());
+        Artist artist = artists.saveAndFlush(Artist.builder().account(account).nameKo(name).build());
+        artist.linkProfile(profiles.saveAndFlush(ArtistProfile.builder().artist(artist).nameKo(name).build()));
+        return artist;
     }
 
     private String token(Account account) {

@@ -84,13 +84,10 @@ public class ArtworkArtistServiceImpl implements ArtworkArtistService {
         return artistMaps.stream()
                 .collect(Collectors.groupingBy(
                         aam -> aam.getArtwork().getId(),
-                        Collectors.mapping(aam -> {
-                            // 1순위: ArtistProfile의 이름, 2순위: Artist 엔티티의 기본 이름
-                            if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null) {
-                                return aam.getArtistProfile().getNameKo();
-                            }
-                            return java.util.Objects.toString(aam.getArtist().getNameKo(), "이름 미등록");
-                        }, Collectors.joining(", "))
+                        Collectors.mapping(
+                                aam -> java.util.Objects.toString(aam.getProfileNameKo(), "이름 미등록"),
+                                Collectors.joining(", ")
+                        )
                 ));
     }
 

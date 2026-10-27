@@ -180,7 +180,7 @@ class ArtworkCoArtistApiTests {
                         .content("{\"artistRole\":\"총괄 기획\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.artistProfileId").doesNotExist())
-                .andExpect(jsonPath("$.data.artistName").value("프로필 없는 작가"))
+                .andExpect(jsonPath("$.data.artistName").doesNotExist())
                 .andExpect(jsonPath("$.data.artwork.artists", hasSize(2)));
     }
 

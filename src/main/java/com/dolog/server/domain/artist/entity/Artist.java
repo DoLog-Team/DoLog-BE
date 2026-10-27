@@ -42,8 +42,21 @@ public class Artist extends BaseEntity {
     @OneToOne(mappedBy = "artist", cascade = CascadeType.ALL, orphanRemoval = true)
     private ArtistProfile profile;
 
+    // 표시 이름은 공통 프로필만 사용한다. null도 기본정보 이름으로 대체하지 않는다.
+    public String getProfileNameKo() {
+        return profile == null ? null : profile.getNameKo();
+    }
+
+    public String getProfileNameEn() {
+        return profile == null ? null : profile.getNameEn();
+    }
+
+    public void linkProfile(ArtistProfile profile) {
+        this.profile = profile;
+    }
+
     public void updateArtistInfo(String nameKo, String nameEn, String phone) {
-        if (nameKo != null) this.nameKo = nameKo;
+        if (nameKo != null) this.nameKo = nameKo.isEmpty() ? null : nameKo;
         if (nameEn != null) this.nameEn = nameEn;
         if (phone != null) this.phone = phone;
     }

@@ -330,16 +330,7 @@ public class ArtworkDetailQueryService {
 
         String artistNames =
                 artwork.getArtworkArtistMaps().stream()
-                        .map(aam -> {
-
-                            if (aam.getArtistProfile() != null &&
-                                    aam.getArtistProfile().getNameKo() != null) {
-
-                                return aam.getArtistProfile().getNameKo();
-                            }
-
-                            return aam.getArtist().getNameKo();
-                        })
+                        .map(map -> map.getProfileNameKo())
                         .filter(java.util.Objects::nonNull)
                 .collect(Collectors.joining(", "));
 
@@ -362,16 +353,8 @@ public class ArtworkDetailQueryService {
         return ArtworkDetailResponse.ParticipantInfo.builder()
                 .artistId(map.getArtist().getId())
                 .profileId(showProfile ? profile.getId() : null)
-                .nameKo(
-                        profile != null
-                                ? profile.getNameKo()
-                                : map.getArtist().getNameKo()
-                )
-                .nameEn(
-                        profile != null
-                                ? profile.getNameEn()
-                                : map.getArtist().getNameEn()
-                )
+                .nameKo(map.getProfileNameKo())
+                .nameEn(map.getProfileNameEn())
                 .profileImg(showProfile ? profile.getProfileImg() : null)
                 .role(map.getArtistRole())
                 .bio(showProfile ? profile.getBio() : null)

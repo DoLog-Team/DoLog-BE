@@ -131,17 +131,9 @@ public class ArtworkResponseMapper {
                                 : null
                 )
 
-                .nameKo(
-                        profile != null
-                                ? profile.getNameKo()
-                                : map.getArtist().getNameKo()
-                )
+                .nameKo(map.getProfileNameKo())
 
-                .nameEn(
-                        profile != null
-                                ? profile.getNameEn()
-                                : map.getArtist().getNameEn()
-                )
+                .nameEn(map.getProfileNameEn())
 
                 .profileImg(
                         profile != null
@@ -188,17 +180,7 @@ public class ArtworkResponseMapper {
     private String getArtistNames(Artwork artwork) {
 
         return artwork.getArtworkArtistMaps().stream()
-                .map(map -> {
-
-                    if (
-                            map.getArtistProfile() != null &&
-                                    map.getArtistProfile().getNameKo() != null
-                    ) {
-                        return map.getArtistProfile().getNameKo();
-                    }
-
-                    return map.getArtist().getNameKo();
-                })
+                .map(map -> map.getProfileNameKo())
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.joining(", "));
     }

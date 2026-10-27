@@ -42,6 +42,14 @@ public class ArtworkArtistMap extends BaseEntity {
     @Column(name = "artist_role", length = 100, nullable = false)
     private String artistRole;
 
+    public String getProfileNameKo() {
+        return artistProfile != null ? artistProfile.getNameKo() : artist.getProfileNameKo();
+    }
+
+    public String getProfileNameEn() {
+        return artistProfile != null ? artistProfile.getNameEn() : artist.getProfileNameEn();
+    }
+
     public void updateRole(String artistRole) {
         if (artistRole != null) {
             this.artistRole = artistRole;
