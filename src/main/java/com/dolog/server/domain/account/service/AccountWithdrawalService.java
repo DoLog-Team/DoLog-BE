@@ -83,7 +83,7 @@ public class AccountWithdrawalService {
             // 알림은 탈퇴 처리로 상태가 바뀌기 전에, 소속 중이던 전시를 미리 조회해둔다.
             List<ExhibitionArtistMap> exhibitionsToNotify = exhibitionMaps.findAllByArtistIdAndStatusIn(
                     artistUuid, List.of(ExhibitionArtistStatus.PENDING, ExhibitionArtistStatus.JOINED));
-            String artistName = artists.findById(artistUuid).map(Artist::getProfileNameKo).orElse("");
+            String artistName = artists.findById(artistUuid).map(Artist::getNameKo).orElse("");
 
             artworkMaps.hideByArtistId(artistUuid, now);
             bts.hideByArtistId(artistUuid, now);
