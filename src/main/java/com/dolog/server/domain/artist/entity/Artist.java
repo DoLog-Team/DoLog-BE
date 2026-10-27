@@ -56,7 +56,7 @@ public class Artist extends BaseEntity {
     }
 
     public void updateArtistInfo(String nameKo, String nameEn, String phone) {
-        if (nameKo != null) this.nameKo = nameKo;
+        if (nameKo != null) this.nameKo = nameKo.isEmpty() ? null : nameKo;
         if (nameEn != null) this.nameEn = nameEn;
         if (phone != null) this.phone = phone;
     }

@@ -75,7 +75,9 @@ public class ArtistProfile extends BaseEntity {
             String profileImg
     ) {
         // 값이 존재할 때만 업데이트 (기존 값 유지)
-        if (nameKo != null && !nameKo.isBlank()) {
+        if ("".equals(nameKo)) {
+            this.nameKo = null;
+        } else if (nameKo != null && !nameKo.isBlank()) {
             this.nameKo = nameKo.trim();
         }
         if (nameEn != null) {

@@ -157,8 +157,8 @@ public class ArtistServiceImpl implements ArtistService {
     }
 
     private String normalizeOptionalNameKo(String nameKo) {
-        if (nameKo == null) {
-            return null;
+        if (nameKo == null || nameKo.isEmpty()) {
+            return nameKo;
         }
 
         if (nameKo.isBlank()) {

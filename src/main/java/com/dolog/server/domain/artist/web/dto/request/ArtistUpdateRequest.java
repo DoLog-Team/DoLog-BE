@@ -8,7 +8,7 @@ import lombok.Getter;
 public class ArtistUpdateRequest {
 
     @Pattern(
-            regexp = ".*\\S.*",
+            regexp = "^$|.*\\S.*",
             message = "국문 성명은 공백일 수 없습니다."
     )
     @Size(max = 100)

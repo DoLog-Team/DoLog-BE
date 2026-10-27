@@ -14,7 +14,8 @@
 - 인증: `Authorization: Bearer <accessToken>`, ARTIST_ADMIN 전용
 - 요청 계정은 JWT에서 결정한다. accountId/artistId를 받지 않는다.
 - nameKo/nameEn/phone 모두 선택. 생략 또는 null은 기존 값을 유지한다.
-- nameKo는 공백 불가/최대 100자, nameEn 최대 100자, phone 최대 30자.
+- nameKo는 빈 문자열이면 국문 성명을 삭제(null 저장)하며, 공백만 있는 문자열은 허용하지 않는다. 최대 100자.
+- nameEn 최대 100자, phone 최대 30자.
 - 전화번호는 기존 관리자 수정과 동일하게 공백/하이픈 제거 및 숫자/중복 검증.
 
 ```json
@@ -25,6 +26,7 @@
 - 잘못된 입력: 400, 비로그인/유효하지 않은 토큰: 401, 다른 역할: 403.
 - Artist 없음 또는 소프트 삭제 상태: 404, 중복 전화번호: 409.
 - 이름을 수정하면 공통 ArtistProfile의 이름도 같은 트랜잭션에서 갱신한다.
+- `nameKo: ""`이면 기본정보와 공통 프로필의 국문 성명을 모두 null로 저장한다.
 - 이름을 생략하고 전화번호만 수정하면 공통 프로필의 이름은 유지한다.
 - 두록 관리자의 작가 기본정보 수정 API에도 같은 이름 갱신 규칙이 적용된다.
 
@@ -57,6 +59,8 @@
 - `multipart/form-data`의 `request` JSON part와 선택적 `profileImg` file part를 사용한다.
 - `nameKo`, `nameEn`, `bio`, `email`, `purchaseContactUrl`은 모두 선택값이며, 생략 또는 `null`이면 기존 값을 유지한다.
 - `nameKo`는 한글·영문·숫자·띄어쓰기만 허용하고 최대 10자, `nameEn`은 영문·띄어쓰기만 허용하고 최대 50자다.
+- `nameKo: ""`이면 공통 프로필의 국문 성명을 null로 저장한다. 공백만 있는 문자열은 허용하지 않는다.
+- 국문 성명을 삭제한 뒤 `GET /api/artists/{artistId}`에서도 `nameKo: null`을 반환한다.
 - `bio`는 최대 200자다.
 - 이미지는 JPG/JPEG/PNG, 5MB 이하만 허용한다.
 
