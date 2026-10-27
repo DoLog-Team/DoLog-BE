@@ -2,6 +2,10 @@ package com.dolog.server.domain.account;
 
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.entity.ArtistProfile;
+import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artist.service.ArtistProfileProvisionService;
 import com.dolog.server.domain.account.entity.RefreshToken;
@@ -29,6 +33,9 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -404,6 +411,36 @@ class SocialLoginTests {
         verify(withdrawalMaps).hideByArtistId(eq(new UUID(0, 0)), any(LocalDateTime.class));
         verify(withdrawalTokens).deleteAllByAccountId(id);
         assertThrows(BaseException.class, () -> service.withdraw(id));
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = "프로필이름")
+    void withdrawalNotificationUsesProfileNameInsteadOfBasicName(String profileName) {
+        var accounts = mock(AccountRepository.class);
+        var jdbc = mock(org.springframework.jdbc.core.JdbcTemplate.class);
+        UUID accountId = UUID.randomUUID();
+        UUID artistId = new UUID(0, 0);
+        Account account = Account.builder().id(accountId).role(Role.ARTIST_ADMIN)
+                .accountStatus(AccountStatus.ACTIVE).build();
+        Artist artist = Artist.builder().id(artistId).account(account).nameKo("기본이름").build();
+        artist.linkProfile(ArtistProfile.builder().artist(artist).nameKo(profileName).build());
+        Account recipient = Account.builder().id(UUID.randomUUID()).role(Role.EXHIBITION_ADMIN).build();
+        Exhibition exhibition = Exhibition.builder().id(UUID.randomUUID()).account(recipient).slug("test").build();
+        ExhibitionArtistMap participation = ExhibitionArtistMap.builder().artist(artist).exhibition(exhibition).build();
+        when(accounts.findForWithdrawal(accountId)).thenReturn(Optional.of(account));
+        when(jdbc.queryForList(contains("FROM artists"), eq(byte[].class), any(byte[].class)))
+                .thenReturn(java.util.List.of(new byte[16]));
+        when(withdrawalArtists.findById(artistId)).thenReturn(Optional.of(artist));
+        when(withdrawalExhibitions.findAllByArtistIdAndStatusIn(eq(artistId), anyCollection()))
+                .thenReturn(java.util.List.of(participation));
+
+        withdrawalService(accounts, jdbc).withdraw(accountId);
+
+        String expectedName = profileName == null ? "" : profileName;
+        verify(withdrawalNotifications).send(eq(recipient), eq(NotificationType.ARTIST_ACCOUNT_DELETED),
+                argThat(payload -> expectedName.equals(payload.get("artistName"))), eq(exhibition.getId()));
+        assertEquals(AccountStatus.WITHDRAWN, account.getAccountStatus());
     }
 
     @Test

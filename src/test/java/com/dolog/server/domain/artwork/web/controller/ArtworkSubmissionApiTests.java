@@ -7,6 +7,9 @@ import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.repository.NotificationRepository;
+import org.springframework.data.domain.PageRequest;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
@@ -74,6 +77,7 @@ class ArtworkSubmissionApiTests {
     @Autowired ExhibitionFieldSettingsRepository fieldSettings;
     @Autowired JwtTokenProvider jwt;
     @Autowired EntityManager em;
+    @Autowired NotificationRepository notifications;
     @MockitoBean FileService fileService;
 
     private Artist me;
@@ -251,11 +255,13 @@ class ArtworkSubmissionApiTests {
     @Test
     @DisplayName("출품을 취소하면 전시에 묶인 정보가 모두 비워지고 공개 상태는 그대로다")
     void cancelClearsExhibitionData() throws Exception {
+        myProfile.updateProfile("변경프로필", null, null, null, null, null);
         Artwork artwork = submitted(artworkOf(me, "작품"));
         artwork.updateLocationMap("https://s3/map.webp");
         artwork.changeStatus(ArtworkStatus.PUBLISHED);
         artwork.hide(LocalDateTime.of(2026, 10, 5, 12, 0));
         em.flush();
+        em.clear();
 
         mvc.perform(withToken(delete("/api/artworks/{id}/exhibition", artwork.getId()), myToken))
                 .andExpect(status().isOk())
@@ -271,6 +277,12 @@ class ArtworkSubmissionApiTests {
         assertNull(found.getArtworkArtistMaps().get(0).getArtistProfile());
         assertEquals(me.getId(), found.getArtworkArtistMaps().get(0).getArtist().getId());
         assertEquals(ArtworkStatus.PUBLISHED, found.getStatus());
+        var notice = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                        exhibition.getAccount().getId(), PageRequest.of(0, 20)).stream()
+                .filter(item -> item.getType() == NotificationType.ARTWORK_CANCELLED).findFirst().orElseThrow();
+        assertEquals("변경프로필", notice.getPayload().get("artistName"));
+        assertEquals("작품", notice.getPayload().get("artworkTitle"));
+        assertEquals(exhibition.getId(), notice.getReferenceId());
         // 커밋 전이라 위치 지도 파일은 아직 지우지 않는다
         verify(fileService, never()).deleteFile(any());
     }
