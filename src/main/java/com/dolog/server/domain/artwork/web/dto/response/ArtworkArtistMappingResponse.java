@@ -96,7 +96,7 @@ public class ArtworkArtistMappingResponse {
     }
 
     private static String nameOf(ArtworkArtistMap map) {
-        return map.getArtistProfile() != null ? map.getArtistProfile().getNameKo() : map.getArtist().getNameKo();
+        return map.getProfileNameKo();
     }
 
     // 기존의 from 메서드는 of로 대체하여 풍부한 정보를 제공하는 것을 권장합니다.

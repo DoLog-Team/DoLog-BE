@@ -100,15 +100,9 @@ public class ArtworkExhibitionServiceImpl implements ArtworkExhibitionService {
     }
 
     private CategoryArtworkResponse.SimpleArtworkResponse mapToSimpleArtwork(Artwork a) {
-        // 작가가 여러 명일 수 있으므로 쉼표로 연결 (1순위: ArtistProfile 이름, 2순위: Artist 기본 이름)
+        // 공통 프로필의 작가명을 쉼표로 연결한다.
         String artistNames = a.getArtworkArtistMaps().stream()
-                .map(aam -> {
-                    if (aam.getArtistProfile() != null && aam.getArtistProfile().getNameKo() != null
-                            && !aam.getArtistProfile().getNameKo().isBlank()) {
-                        return aam.getArtistProfile().getNameKo();
-                    }
-                    return aam.getArtist().getNameKo();
-                })
+                .map(aam -> aam.getProfileNameKo())
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.joining(", "));
 

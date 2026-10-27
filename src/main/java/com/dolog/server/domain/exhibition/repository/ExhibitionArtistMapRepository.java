@@ -46,8 +46,8 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
         SELECT new com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse(
             p.id,
             a.id,
-            a.nameKo,
-            a.nameEn,
+            p.nameKo,
+            p.nameEn,
             p.profileImg
         )
         FROM ExhibitionArtistMap m
@@ -88,19 +88,20 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             @Param("artistId") UUID artistId
     );
 
-    @EntityGraph(attributePaths = {"artist", "artist.account"})
+    @EntityGraph(attributePaths = {"artist", "artist.account", "artist.profile"})
     @Query(
             value = """
             SELECT m
             FROM ExhibitionArtistMap m
             JOIN m.artist a
+            LEFT JOIN a.profile p
             LEFT JOIN a.account acc
             WHERE m.exhibition.id = :exhibitionId
               AND m.status = :status
               AND (
                   :search IS NULL
-                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
-                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
                   OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
               )
             ORDER BY m.createdAt DESC, m.id DESC
@@ -109,13 +110,14 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             SELECT COUNT(m)
             FROM ExhibitionArtistMap m
             JOIN m.artist a
+            LEFT JOIN a.profile p
             LEFT JOIN a.account acc
             WHERE m.exhibition.id = :exhibitionId
               AND m.status = :status
               AND (
                   :search IS NULL
-                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
-                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
                   OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
               )
             """
@@ -157,19 +159,20 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
     );
 
     // 두록 어드민 전용. 전시를 가로질러 참여 신청/참여 작가를 한 번에 조회한다. exhibitionId는 선택.
-    @EntityGraph(attributePaths = {"artist", "artist.account", "exhibition", "exhibition.exhibitionDetail"})
+    @EntityGraph(attributePaths = {"artist", "artist.account", "artist.profile", "exhibition", "exhibition.exhibitionDetail"})
     @Query(
             value = """
             SELECT m
             FROM ExhibitionArtistMap m
             JOIN m.artist a
+            LEFT JOIN a.profile p
             LEFT JOIN a.account acc
             WHERE m.status = :status
               AND (:exhibitionId IS NULL OR m.exhibition.id = :exhibitionId)
               AND (
                   :search IS NULL
-                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
-                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
                   OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
               )
             ORDER BY m.createdAt DESC, m.id DESC
@@ -178,13 +181,14 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             SELECT COUNT(m)
             FROM ExhibitionArtistMap m
             JOIN m.artist a
+            LEFT JOIN a.profile p
             LEFT JOIN a.account acc
             WHERE m.status = :status
               AND (:exhibitionId IS NULL OR m.exhibition.id = :exhibitionId)
               AND (
                   :search IS NULL
-                  OR LOWER(a.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
-                  OR LOWER(a.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameKo) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
+                  OR LOWER(p.nameEn) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
                   OR LOWER(acc.email) LIKE LOWER(CONCAT('%', :search, '%')) ESCAPE '\\'
               )
             """

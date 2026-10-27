@@ -27,7 +27,7 @@ public class ExhibitionArtistGlobalItemResponse {
                 .exhibitionId(map.getExhibition().getId())
                 .exhibitionName(exhibitionName)
                 .artistId(map.getArtist().getId())
-                .nameKo(map.getArtist().getNameKo())
+                .nameKo(map.getArtist().getProfileNameKo())
                 .email(map.getArtist().getAccount() != null ? map.getArtist().getAccount().getEmail() : null)
                 .greeting(map.getGreeting())
                 .status(map.getStatus())

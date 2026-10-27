@@ -1496,11 +1496,13 @@ class ExhibitionArtistServiceImplTest {
                 .accountStatus(AccountStatus.ACTIVE)
                 .build();
 
-        return Artist.builder()
+        Artist artist = Artist.builder()
                 .id(UUID.randomUUID())
                 .account(account)
                 .nameKo(name)
                 .build();
+        artist.linkProfile(ArtistProfile.builder().artist(artist).nameKo(name).build());
+        return artist;
     }
 
     private ExhibitionArtistMap map(

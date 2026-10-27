@@ -71,7 +71,7 @@ public class ArtworkUpdateProcessor {
 
         artworkFieldRequirement.requireIfPublished(artwork);
 
-        return ArtworkCreateResponse.of(artwork, artist.getNameKo());
+        return ArtworkCreateResponse.of(artwork, artist.getProfileNameKo());
     }
 
     // 두록 어드민의 통합 수정. path 의 전시에 출품된 작품만 다룬다.

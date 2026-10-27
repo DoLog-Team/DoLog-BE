@@ -775,8 +775,8 @@ class ArtistServiceImplTest {
 
         assertEquals(artistId, response.getArtistId());
         assertEquals(profileId, response.getProfileId());
-        assertEquals("김두록", response.getNameKo());
-        assertEquals("Dolog Kim", response.getNameEn());
+        assertEquals("전시용 이름", response.getNameKo());
+        assertNull(response.getNameEn());
         assertEquals("대표 프로필 소개", response.getBio());
         assertEquals("https://cdn.test/profile.webp", response.getProfileImg());
         assertEquals("artist@test.com", response.getEmail());
@@ -829,6 +829,20 @@ class ArtistServiceImplTest {
         verifyNoInteractions(artistSnsRepository);
         verify(artistProfileLikeRepository, never())
                 .existsByArtistIdAndVisitorId(any(), any());
+    }
+
+    @Test
+    void artistDetailDoesNotFallBackToBasicNameWhenProfileNameIsNull() {
+        Artist artist = Artist.builder().id(UUID.randomUUID())
+                .nameKo("과거 이름").nameEn("Old Name").build();
+        ArtistProfile profile = ArtistProfile.builder().artist(artist).build();
+        when(artistRepository.findById(artist.getId())).thenReturn(Optional.of(artist));
+        when(artistProfileRepository.findByArtistId(artist.getId())).thenReturn(Optional.of(profile));
+
+        var response = artistService.getArtist(artist.getId(), null);
+
+        assertNull(response.getNameKo());
+        assertNull(response.getNameEn());
     }
 
     @Test

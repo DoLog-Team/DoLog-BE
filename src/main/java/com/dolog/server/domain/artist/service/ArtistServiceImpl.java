@@ -385,7 +385,7 @@ public class ArtistServiceImpl implements ArtistService {
         } else {
             result =
                     artistRepository
-                            .findByNameKoContainingIgnoreCaseOrNameEnContainingIgnoreCaseOrAccount_EmailContainingIgnoreCase(
+                            .findByProfile_NameKoContainingIgnoreCaseOrProfile_NameEnContainingIgnoreCaseOrAccount_EmailContainingIgnoreCase(
                                     keyword,
                                     keyword,
                                     keyword,
@@ -488,8 +488,8 @@ public class ArtistServiceImpl implements ArtistService {
                 .profileId(representativeProfile == null
                         ? null
                         : representativeProfile.getId())
-                .nameKo(artist.getNameKo())
-                .nameEn(artist.getNameEn())
+                .nameKo(representativeProfile == null ? null : representativeProfile.getNameKo())
+                .nameEn(representativeProfile == null ? null : representativeProfile.getNameEn())
                 .bio(representativeProfile == null
                         ? null
                         : representativeProfile.getBio())

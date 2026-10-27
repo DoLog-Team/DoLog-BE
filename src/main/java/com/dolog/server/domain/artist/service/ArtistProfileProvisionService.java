@@ -15,13 +15,15 @@ public class ArtistProfileProvisionService {
 
     @Transactional
     public ArtistProfile ensureProfile(Artist artist) {
-        return artistProfileRepository.findByArtistId(artist.getId())
+        ArtistProfile profile = artistProfileRepository.findByArtistId(artist.getId())
                 .orElseGet(() -> {
-                    ArtistProfile profile = ArtistProfile.builder()
+                    ArtistProfile created = ArtistProfile.builder()
                             .artist(artist)
                             .build();
-                    profile.fillDefaultInfoFromArtist();
-                    return artistProfileRepository.save(profile);
+                    created.fillDefaultInfoFromArtist();
+                    return artistProfileRepository.save(created);
                 });
+        artist.linkProfile(profile);
+        return profile;
     }
 }

@@ -23,8 +23,8 @@ public class ArtistListItemResponse {
     public static ArtistListItemResponse from(Artist artist) {
         return ArtistListItemResponse.builder()
                 .artistId(artist.getId())
-                .nameKo(artist.getNameKo())
-                .nameEn(artist.getNameEn())
+                .nameKo(artist.getProfileNameKo())
+                .nameEn(artist.getProfileNameEn())
                 .phone(artist.getPhone())
                 .accountEmail(
                         artist.getAccount() != null

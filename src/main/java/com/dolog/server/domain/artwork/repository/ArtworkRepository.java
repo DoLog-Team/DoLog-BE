@@ -104,7 +104,8 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             "LEFT JOIN FETCH a.artworkArtistMaps am " +
             "LEFT JOIN FETCH am.artist art " +
             "LEFT JOIN FETCH am.artistProfile " +
-            "WHERE (a.title LIKE %:search% OR art.nameKo LIKE %:search%) " +
+            "LEFT JOIN art.profile p " +
+            "WHERE (a.title LIKE %:search% OR p.nameKo LIKE %:search%) " +
             "AND a.exhibition.id = :exhibitionId" + EXHIBITION_VISIBLE)
     List<Artwork> findArtworksBySearch(@Param("exhibitionId") UUID exhibitionId,
                                        @Param("search") String search);

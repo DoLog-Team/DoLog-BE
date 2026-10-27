@@ -58,6 +58,7 @@ class ArtistProfileProvisionServiceTest {
         ArtistProfile savedProfile = captor.getValue();
         assertSame(savedProfile, result);
         assertSame(artist, savedProfile.getArtist());
+        assertSame(savedProfile, artist.getProfile());
         assertEquals("김두록", savedProfile.getNameKo());
         assertEquals("Dolog Kim", savedProfile.getNameEn());
         assertEquals("artist@example.com", savedProfile.getEmail());
@@ -80,6 +81,7 @@ class ArtistProfileProvisionServiceTest {
         ArtistProfile result = service.ensureProfile(artist);
 
         assertSame(existingProfile, result);
+        assertSame(existingProfile, artist.getProfile());
         verify(artistProfileRepository, never()).save(any());
     }
 }
