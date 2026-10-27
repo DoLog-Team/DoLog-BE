@@ -58,6 +58,8 @@
 - 인증: `Authorization: Bearer <accessToken>`, ARTIST_ADMIN 전용
 - `multipart/form-data`의 `request` JSON part와 선택적 `profileImg` file part를 사용한다.
 - `nameKo`, `nameEn`, `bio`, `email`, `purchaseContactUrl`은 모두 선택값이며, 생략 또는 `null`이면 기존 값을 유지한다.
+- `email: ""`이면 프로필 이메일을 null로 저장한다. `accounts.email`은 변경하지 않는다.
+- 빈 문자열을 제외한 이메일은 기존 이메일 형식 검증을 적용한다.
 - `nameKo`는 한글·영문·숫자·띄어쓰기만 허용하고 최대 10자, `nameEn`은 영문·띄어쓰기만 허용하고 최대 50자다.
 - `nameKo: ""`이면 공통 프로필의 국문 성명을 null로 저장한다. 공백만 있는 문자열은 허용하지 않는다.
 - 국문 성명을 삭제한 뒤 `GET /api/artists/{artistId}`에서도 `nameKo: null`을 반환한다.
@@ -74,9 +76,19 @@
 }
 ```
 
-- `profileImg` part 생략: 기존 이미지 유지.
+- `request` JSON part의 `deleteProfileImg: true`: 이미지 파일 전송 없이 기존 이미지 삭제.
+- `deleteProfileImg` 생략, null 또는 false이고 `profileImg` part도 생략: 기존 이미지 유지.
 - 빈 `profileImg` part: 기존 이미지 삭제.
 - 파일이 있는 `profileImg` part: 새 이미지로 교체.
+- `deleteProfileImg: true`와 새 이미지 파일을 동시에 전송하면 400이며, 변경하지 않는다.
+- 삭제할 이미지가 없어도 삭제 요청은 성공한다. 삭제 시 프로필 이미지 값을 null로 저장하고 기존 파일 삭제를 요청한다.
+
+프로필 이메일과 이미지를 함께 삭제하는 예시 (`multipart/form-data`의 `request` JSON part):
+
+```json
+{"email":"","deleteProfileImg":true}
+```
+
 - 성공: HTTP 200, 응답 data는 `{ "profileId": "UUID" }`.
 - 잘못된 입력: 400, 비로그인/유효하지 않은 토큰: 401, 다른 역할: 403.
 - Artist 또는 공통 ArtistProfile이 없으면 404.

@@ -255,11 +255,16 @@ public class ArtistServiceImpl implements ArtistService {
             MultipartFile profileImg
     ) throws IOException {
 
+        boolean deleteImage = Boolean.TRUE.equals(request.getDeleteProfileImg());
+        if (deleteImage && profileImg != null && !profileImg.isEmpty()) {
+            throw new ArtistBadRequestException();
+        }
+
         profileImageValidator.validate(profileImg);
         String oldImageUrl = profile.getProfileImg();
         String newImageUrl = null;
 
-        if (profileImg != null && profileImg.isEmpty()) {
+        if (deleteImage || (profileImg != null && profileImg.isEmpty())) {
             profile.clearProfileImg();
             fileService.deleteFile(oldImageUrl);
         } else if (profileImg != null) {
