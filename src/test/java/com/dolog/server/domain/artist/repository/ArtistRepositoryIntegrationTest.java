@@ -7,6 +7,12 @@ import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artist.entity.ArtistProfile;
 import com.dolog.server.domain.artist.web.dto.response.ArtistListItemResponse;
+import com.dolog.server.domain.artist.service.ArtistService;
+import com.dolog.server.domain.artist.service.ArtistServiceImpl;
+import com.dolog.server.domain.artist.service.ArtistProfileProvisionService;
+import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
+import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest;
+import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
@@ -25,6 +31,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.dolog.server.global.util.FileService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
@@ -42,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
         "spring.flyway.enabled=true"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import({ArtistServiceImpl.class, ArtistProfileProvisionService.class})
 @Testcontainers(disabledWithoutDocker = true)
 class ArtistRepositoryIntegrationTest {
 
@@ -74,6 +85,74 @@ class ArtistRepositoryIntegrationTest {
 
     @Autowired
     private ArtworkRepository artworkRepository;
+
+    @Autowired
+    private ArtistService artistService;
+
+    @MockitoBean
+    private FileService fileService;
+
+    @MockitoBean
+    private ArtistProfileImageValidator profileImageValidator;
+
+    @Test
+    void eitherUpdateApiChangesNamesReturnedByBothArtistAndProfileReads() throws Exception {
+        Exhibition exhibition = nameSearchFixture("이전프로필");
+        entityManager.flush();
+        entityManager.clear();
+        Artist artist = participationRepository.findByExhibitionId(exhibition.getId()).get(0).getArtist();
+        UUID artistId = artist.getId();
+        UUID accountId = artist.getAccount().getId();
+        ArtistProfileUpdateRequest profileRequest = new ArtistProfileUpdateRequest();
+        profileRequest.setNameKo("수정프로필");
+        profileRequest.setNameEn("Updated Profile");
+
+        artistService.updateMyArtistProfile(accountId, profileRequest, null);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals("수정프로필", artistService.getArtist(artistId, null).getNameKo());
+        assertEquals("Updated Profile", artistService.getArtist(artistId, null).getNameEn());
+        assertEquals("수정프로필", artistService.getMyArtistProfile(accountId).nameKo());
+
+        ArtistUpdateRequest basicRequest = new ObjectMapper().readValue(
+                "{\"nameKo\":\" 기본수정 \",\"nameEn\":\"Basic Update\"}", ArtistUpdateRequest.class);
+        artistService.updateMyArtist(accountId, basicRequest);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals("기본수정", artistService.getArtist(artistId, null).getNameKo());
+        assertEquals("Basic Update", artistService.getMyArtistProfile(accountId).nameEn());
+        assertEquals("기본수정", artistService.getMyArtistProfile(accountId).nameKo());
+
+        Account admin = accountRepository.save(Account.builder().email("admin-" + UUID.randomUUID() + "@test.com")
+                .role(Role.DOLOG_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        ArtistUpdateRequest adminRequest = new ObjectMapper().readValue(
+                "{\"nameEn\":\"Admin Update\"}", ArtistUpdateRequest.class);
+        artistService.updateArtist(admin.getId(), artistId, adminRequest);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals("기본수정", artistService.getMyArtistProfile(accountId).nameKo());
+        assertEquals("Admin Update", artistService.getArtist(artistId, null).getNameEn());
+    }
+
+    @Test
+    void basicNameUpdateAlsoProvisionsMissingCommonProfile() throws Exception {
+        Account owner = accountRepository.save(Account.builder().email("missing-" + UUID.randomUUID() + "@test.com")
+                .role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Artist artist = artistRepository.save(Artist.builder().account(owner).nameKo("기존이름").build());
+        ArtistUpdateRequest request = new ObjectMapper().readValue(
+                "{\"nameKo\":\"새이름\"}", ArtistUpdateRequest.class);
+
+        artistService.updateMyArtist(owner.getId(), request);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertEquals("새이름", artistService.getMyArtistProfile(owner.getId()).nameKo());
+        assertEquals(owner.getEmail(), artistService.getMyArtistProfile(owner.getId()).email());
+        assertEquals("새이름", artistService.getArtist(artist.getId(), null).getNameKo());
+    }
 
     @Test
     void nameSearchesAndExhibitionListUseCommonProfileInsteadOfBasicName() {

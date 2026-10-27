@@ -336,6 +336,12 @@ public class ArtistServiceImpl implements ArtistService {
                 phone
         );
 
+        // 기존 기본정보 수정 API도 표시 이름의 기준인 공통 프로필을 갱신한다.
+        if (requestedNameKo != null || requestedNameEn != null) {
+            ArtistProfile profile = artistProfileProvisionService.ensureProfile(artist);
+            profile.updateProfile(nameKo, requestedNameEn, null, null, null, null);
+        }
+
         return ArtistUpdateResponse.from(artist);
     }
 

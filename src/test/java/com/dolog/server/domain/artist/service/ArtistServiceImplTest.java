@@ -249,7 +249,7 @@ class ArtistServiceImplTest {
     }
 
     @Test
-    void ownArtistCanUpdateBasicInformationIndependently() {
+    void ownArtistBasicUpdateAlsoUpdatesCommonProfile() {
         UUID accountId = UUID.randomUUID();
         UUID artistId = UUID.randomUUID();
         Account owner = account(
@@ -264,6 +264,9 @@ class ArtistServiceImplTest {
                 .nameEn("Old Name")
                 .phone("01011112222")
                 .build();
+        ArtistProfile profile = ArtistProfile.builder().artist(artist)
+                .nameKo("기존 표시명").nameEn("Old Profile").bio("기존 소개").build();
+        when(artistProfileProvisionService.ensureProfile(artist)).thenReturn(profile);
         ArtistUpdateRequest request = new ArtistUpdateRequest();
         ReflectionTestUtils.setField(request, "nameKo", " 새 기본 이름 ");
         ReflectionTestUtils.setField(request, "nameEn", "New Name");
@@ -286,7 +289,26 @@ class ArtistServiceImplTest {
         assertEquals("새 기본 이름", artist.getNameKo());
         assertEquals("New Name", artist.getNameEn());
         assertEquals("01033334444", artist.getPhone());
-        verifyNoInteractions(artistProfileRepository);
+        assertEquals("새 기본 이름", profile.getNameKo());
+        assertEquals("New Name", profile.getNameEn());
+        assertEquals("기존 소개", profile.getBio());
+        verify(artistProfileProvisionService).ensureProfile(artist);
+    }
+
+    @Test
+    void phoneOnlyUpdateDoesNotTouchProfileNames() {
+        UUID accountId = UUID.randomUUID();
+        Account owner = account(accountId, Role.ARTIST_ADMIN, AccountStatus.ACTIVE);
+        Artist artist = Artist.builder().id(UUID.randomUUID()).account(owner).build();
+        when(accountRepository.findByIdForUpdate(accountId)).thenReturn(Optional.of(owner));
+        when(artistRepository.findByAccountId(accountId)).thenReturn(Optional.of(artist));
+        ArtistUpdateRequest request = new ArtistUpdateRequest();
+        ReflectionTestUtils.setField(request, "phone", "010-1111-2222");
+
+        artistService.updateMyArtist(accountId, request);
+
+        assertEquals("01011112222", artist.getPhone());
+        verifyNoInteractions(artistProfileProvisionService, artistProfileRepository);
     }
 
     @Test
@@ -647,6 +669,9 @@ class ArtistServiceImplTest {
                 .nameKo("기존 이름")
                 .phone("01000000000")
                 .build();
+        ArtistProfile profile = ArtistProfile.builder().artist(artist)
+                .nameKo("기존 표시명").nameEn("Keep English").build();
+        when(artistProfileProvisionService.ensureProfile(artist)).thenReturn(profile);
         ArtistUpdateRequest request = new ArtistUpdateRequest();
         ReflectionTestUtils.setField(request, "nameKo", " 변경 이름 ");
         ReflectionTestUtils.setField(request, "phone", "010-1111-2222");
@@ -664,6 +689,8 @@ class ArtistServiceImplTest {
         assertEquals("변경 이름", artist.getNameKo());
         assertEquals("01011112222", artist.getPhone());
         assertSame(target, artist.getAccount());
+        assertEquals("변경 이름", profile.getNameKo());
+        assertEquals("Keep English", profile.getNameEn());
     }
 
     @Test
