@@ -37,6 +37,7 @@ import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequ
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -444,6 +445,24 @@ class ArtworkCommandApiTests {
         mvc.perform(withToken(get("/api/artworks/{id}/me", artwork.getId()), myToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.locationMap").value("https://s3/map.webp"));
+    }
+
+    @Test
+    @DisplayName("내 작품 목록 응답에 플랜 한도 초과 여부가 담긴다")
+    void myArtworkListIncludesPlanLimitExceeded() throws Exception {
+        Artwork exceeded = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("초과 작품").description("설명").build(), me));
+        exceeded.markPlanLimitExceeded(LocalDateTime.now());
+        Artwork normal = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("정상 작품").description("설명").build(), me));
+        em.flush();
+
+        mvc.perform(withToken(get("/api/artworks/me"), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.artworks[?(@.artworkId=='" + exceeded.getId() + "')].planLimitExceeded",
+                        contains(true)))
+                .andExpect(jsonPath("$.data.artworks[?(@.artworkId=='" + normal.getId() + "')].planLimitExceeded",
+                        contains(false)));
     }
 
     @Test
