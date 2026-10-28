@@ -8,12 +8,14 @@ import com.dolog.server.domain.artwork.entity.enums.ArtworkVisibilityOption;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.service.order.ArtworkOrderAdapter;
 import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkHiddenResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkHiddenResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkVisibilityUpdateResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -35,13 +37,16 @@ public class ArtworkVisibilityProcessor {
     private final ArtworkFieldRequirement artworkFieldRequirement;
     private final NotificationService notificationService;
     private final ArtworkPlanLimitService artworkPlanLimitService;
+    private final ArtworkOrderAdapter artworkOrderAdapter;
 
     // 작가 본인의 공개 상태 전환. PUBLIC/PRIVATE/EXHIBITION_ONLY 중 하나로 설정한다.
     // 전시 어드민의 숨김(hidden_at)은 건드리지 않는다.
+    // zoneId를 같이 보내면 그룹을 처음 정하거나 바꾼다 (출품 시 그룹 없이 임시저장한 경우 등).
     public ArtworkVisibilityUpdateResponse changeVisibility(
             UUID accountId,
             UUID artworkId,
-            ArtworkVisibilityOption visibility
+            ArtworkVisibilityOption visibility,
+            UUID zoneId
     ) {
 
         Artist artist = artworkValidator.getLoginArtist(accountId);
@@ -49,6 +54,10 @@ public class ArtworkVisibilityProcessor {
 
         if (visibility == ArtworkVisibilityOption.EXHIBITION_ONLY && artwork.getExhibition() == null) {
             throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
+        }
+
+        if (zoneId != null) {
+            changeZone(artwork, zoneId);
         }
 
         ArtworkStatus status = visibility == ArtworkVisibilityOption.PRIVATE
@@ -63,6 +72,23 @@ public class ArtworkVisibilityProcessor {
         artwork.updateExhibitionOnly(visibility == ArtworkVisibilityOption.EXHIBITION_ONLY);
 
         return new ArtworkVisibilityUpdateResponse(artwork.getId(), visibility);
+    }
+
+    // 출품된 그 전시 소속 구역인지 검증하고, 실제로 바뀐 경우에만 순서를 새로 배정하고 플랜 한도를 다시 센다.
+    private void changeZone(Artwork artwork, UUID zoneId) {
+        if (artwork.getExhibition() == null) {
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_SUBMITTED);
+        }
+
+        ExhibitionZone currentZone = artwork.getExhibitionZone();
+        if (currentZone != null && currentZone.getId().equals(zoneId)) {
+            return;
+        }
+
+        ExhibitionZone zone = artworkValidator.validateZone(zoneId, artwork.getExhibition().getId());
+        artwork.updateZone(zone);
+        artworkOrderAdapter.assign(artwork);
+        artworkPlanLimitService.recompute(artwork.getExhibition().getId());
     }
 
     // 전시 어드민의 숨김/재공개. 공개 상태(status)는 건드리지 않는다.

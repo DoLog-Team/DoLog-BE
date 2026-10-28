@@ -61,7 +61,9 @@ public class ArtworkSubmissionProcessor {
         }
 
         Exhibition exhibition = getJoinedExhibition(request.getExhibitionId(), artist);
-        ExhibitionZone zone = artworkValidator.validateZone(request.getZoneId(), exhibition.getId());
+        ExhibitionZone zone = request.getZoneId() != null
+                ? artworkValidator.validateZone(request.getZoneId(), exhibition.getId())
+                : null;
 
         // 출품하는 작가는 공통 프로필이 꼭 있어야 하고,
         // 다른 연결 작가는 해당 전시에 참여 중일 때 공통 프로필을 연결한다.
@@ -86,7 +88,9 @@ public class ArtworkSubmissionProcessor {
         artwork.updateLocationMap(
                 artworkFileHandler.uploadLocationMap(request.getLocationMapFile())
         );
-        artworkOrderAdapter.assign(artwork);
+        if (zone != null) {
+            artworkOrderAdapter.assign(artwork);
+        }
         artworkFieldRequirement.draftIfUnsatisfied(artwork);
         artworkPlanLimitService.recompute(exhibition.getId());
 

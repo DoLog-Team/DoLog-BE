@@ -147,7 +147,8 @@ public class ArtworkController {
 
     /* ---------------- [ 출품 / 공개 상태 API ] ---------------- */
 
-    @Operation(summary = "작품 전시회에 출품하기", description = "참여 중(JOINED)인 전시의 구역에 출품합니다. 순서는 구역 마지막으로 정해집니다.")
+    @Operation(summary = "작품 전시회에 출품하기", description = "참여 중(JOINED)인 전시에 출품합니다. zoneId는 선택값이며, 보내면 그 구역 마지막 순서로 정해집니다. " +
+            "zoneId 없이도 임시저장 가능하고, 구역이 1개 이상 있는 전시라면 공개로 바꾸기 전에 반드시 지정해야 합니다.")
     @PutMapping(value = "/artworks/{artworkId}/exhibition", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtworkSubmitResponse> submitArtwork(
@@ -179,7 +180,8 @@ public class ArtworkController {
     }
 
     @Operation(summary = "작품 공개 상태 설정 (작가 어드민)", description = "PUBLIC(공개)/PRIVATE(비공개)/EXHIBITION_ONLY(전시에서만 공개) 중 하나로 설정합니다. " +
-            "공개 또는 전시에서만 공개로 바꾸려면 전시의 필수 항목을 채워야 하고, 출품되지 않은 작품은 전시에서만 공개를 선택할 수 없습니다.")
+            "공개 또는 전시에서만 공개로 바꾸려면 전시의 필수 항목을 채워야 하고, 출품되지 않은 작품은 전시에서만 공개를 선택할 수 없습니다. " +
+            "zoneId를 같이 보내면 그룹을 정하거나 바꿉니다 (그룹이 1개 이상 있는 전시에 출품됐다면 공개로 바꾸기 전에 반드시 지정해야 합니다).")
     @PatchMapping("/artworks/{artworkId}/exhibition")
     @PreAuthorize("hasRole('ARTIST_ADMIN')")
     public SuccessResponse<ArtworkVisibilityUpdateResponse> changeArtworkVisibility(

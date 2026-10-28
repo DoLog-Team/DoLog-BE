@@ -6,6 +6,7 @@ import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +19,7 @@ import java.util.List;
 public class ArtworkFieldRequirement {
 
     private final ExhibitionFieldSettingsRepository fieldSettingsRepository;
+    private final ExhibitionZoneRepository exhibitionZoneRepository;
 
     public boolean isSatisfied(Artwork artwork) {
 
@@ -27,6 +29,12 @@ public class ArtworkFieldRequirement {
 
         if (artwork.getExhibition() == null) {
             return true;
+        }
+
+        // 그룹이 하나도 없는 전시는 작가가 고를 UI 자체가 없으므로 체크하지 않는다.
+        if (artwork.getExhibitionZone() == null
+                && exhibitionZoneRepository.existsByExhibitionId(artwork.getExhibition().getId())) {
+            return false;
         }
 
         return fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId())

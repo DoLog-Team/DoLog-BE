@@ -16,7 +16,7 @@ public class ArtworkSubmitRequest {
     @NotNull
     private UUID exhibitionId;
 
-    @NotNull
+    // 그룹 없이 임시저장 가능 (피그마 확정) — 공개 전환 시 그룹이 있는 전시라면 필수로 체크한다.
     private UUID zoneId;
 
     private MultipartFile locationMapFile;

@@ -11,6 +11,8 @@ public interface ExhibitionZoneRepository extends JpaRepository<ExhibitionZone, 
 
     List<ExhibitionZone> findByExhibitionId(UUID exhibitionId);
 
+    boolean existsByExhibitionId(UUID exhibitionId);
+
     Optional<ExhibitionZone> findByIdAndExhibitionId(UUID id, UUID exhibitionId);
 
 
