@@ -46,7 +46,7 @@ public class ArtworkResponseMapper {
             Map<UUID, String> exhibitionDetailMap
     ) {
 
-        UUID exhibitionId = artwork.getExhibition().getId();
+        UUID exhibitionId = artwork.getExhibition() != null ? artwork.getExhibition().getId() : null;
 
         return ArtworkListResponse.builder()
                 .id(artwork.getId())
@@ -58,9 +58,9 @@ public class ArtworkResponseMapper {
                 .imageUrl(artwork.getMainImg())
 
                 .exhibitionId(exhibitionId)
-                .exhibitionTitle(exhibitionDetailMap.get(exhibitionId))
-                .deptName(artwork.getExhibition().getDeptName())
-                .slug(artwork.getExhibition().getSlug())
+                .exhibitionTitle(exhibitionId != null ? exhibitionDetailMap.get(exhibitionId) : null)
+                .deptName(artwork.getExhibition() != null ? artwork.getExhibition().getDeptName() : null)
+                .slug(artwork.getExhibition() != null ? artwork.getExhibition().getSlug() : null)
 
                 .zoneId(
                         artwork.getExhibitionZone() != null
