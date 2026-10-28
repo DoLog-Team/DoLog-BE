@@ -159,7 +159,7 @@ public class ArtworkServiceImpl implements ArtworkService {
             ArtworkVisibilityUpdateRequest request
     ) {
 
-        return artworkVisibilityProcessor.changeVisibility(accountId, artworkId, request.visibility());
+        return artworkVisibilityProcessor.changeVisibility(accountId, artworkId, request.visibility(), request.zoneId());
     }
 
     @Override

@@ -17,7 +17,7 @@ public record ArtworkSubmitResponse(
         return new ArtworkSubmitResponse(
                 artwork.getId(),
                 artwork.getExhibition().getId(),
-                artwork.getExhibitionZone().getId(),
+                artwork.getExhibitionZone() != null ? artwork.getExhibitionZone().getId() : null,
                 artwork.getLocationMap(),
                 artwork.getOrderIndex(),
                 artwork.getStatus()

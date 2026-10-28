@@ -136,6 +136,24 @@ class ArtworkSubmissionApiTests {
     }
 
     @Test
+    @DisplayName("구역 없이도 임시저장되고, 구역/순서는 비어 있다 (피그마 확정: 그룹 없이 임시저장)")
+    void submitsWithoutZone() throws Exception {
+        Artwork artwork = artworkOf(me, "새 작품");
+
+        mvc.perform(withToken(submit(artwork.getId()), myToken)
+                        .param("exhibitionId", exhibition.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.zoneId").value(nullValue()))
+                .andExpect(jsonPath("$.data.orderIndex").value(nullValue()));
+
+        endRequest();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertEquals(exhibition.getId(), found.getExhibition().getId());
+        assertNull(found.getExhibitionZone());
+        assertNull(found.getOrderIndex());
+    }
+
+    @Test
     @DisplayName("위치 지도를 보내면 artworks/maps 에 올리고 URL 을 저장한다")
     void uploadsLocationMap() throws Exception {
         Artwork artwork = artworkOf(me, "작품");
@@ -417,6 +435,79 @@ class ArtworkSubmissionApiTests {
     }
 
     @Test
+    @DisplayName("구역이 있는 전시인데 구역 없이 출품했으면 공개할 수 없고, 구역을 지정하면 공개된다")
+    void requiresZoneToPublishWhenExhibitionHasZones() throws Exception {
+        Artwork artwork = artworkOf(me, "작품");
+        mvc.perform(withToken(submit(artwork.getId()), myToken)
+                        .param("exhibitionId", exhibition.getId().toString()))
+                .andExpect(status().isOk());
+        endRequest();
+
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ARTWORK_013"));
+
+        mvc.perform(withToken(changeVisibilityWithZone(artwork.getId(), "PUBLIC", zone.getId()), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.visibility").value("PUBLIC"));
+
+        endRequest();
+        assertEquals(zone.getId(), artworks.findById(artwork.getId()).orElseThrow().getExhibitionZone().getId());
+    }
+
+    @Test
+    @DisplayName("구역이 하나도 없는 전시라면 구역 없이도 공개할 수 있다")
+    void publishesWithoutZoneWhenExhibitionHasNoZones() throws Exception {
+        Exhibition noZoneExhibition = exhibition(account(Role.EXHIBITION_ADMIN));
+        join(me, noZoneExhibition, ExhibitionArtistStatus.JOINED);
+        Artwork artwork = artworkOf(me, "작품");
+
+        mvc.perform(withToken(submit(artwork.getId()), myToken)
+                        .param("exhibitionId", noZoneExhibition.getId().toString()))
+                .andExpect(status().isOk());
+        endRequest();
+
+        mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.visibility").value("PUBLIC"));
+    }
+
+    @Test
+    @DisplayName("구역 없이 출품한 작품에 zoneId를 보내면 구역이 정해지고 그 구역 마지막 순서가 된다")
+    void setsZoneViaVisibilityEndpoint() throws Exception {
+        Artwork existing = submitted(artworkOf(me, "먼저 낸 작품"));
+        Artwork artwork = artworkOf(me, "작품");
+        mvc.perform(withToken(submit(artwork.getId()), myToken)
+                        .param("exhibitionId", exhibition.getId().toString()))
+                .andExpect(status().isOk());
+        endRequest();
+
+        mvc.perform(withToken(changeVisibilityWithZone(artwork.getId(), "PRIVATE", zone.getId()), myToken))
+                .andExpect(status().isOk());
+
+        endRequest();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertEquals(zone.getId(), found.getExhibitionZone().getId());
+        assertTrue(found.getOrderIndex() > artworks.findById(existing.getId()).orElseThrow().getOrderIndex());
+    }
+
+    @Test
+    @DisplayName("다른 전시의 구역으로 바꾸려 하면 400, 출품하지 않은 작품은 구역을 지정할 수 없다")
+    void rejectsInvalidZoneChange() throws Exception {
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+        ExhibitionZone otherZone = zone(exhibition(account(Role.EXHIBITION_ADMIN)), "다른 구역");
+
+        mvc.perform(withToken(changeVisibilityWithZone(artwork.getId(), "PRIVATE", otherZone.getId()), myToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ARTWORK_012"));
+
+        Artwork notSubmitted = artworkOf(me, "출품 전 작품");
+        mvc.perform(withToken(changeVisibilityWithZone(notSubmitted.getId(), "PRIVATE", zone.getId()), myToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ARTWORK_010"));
+    }
+
+    @Test
     @DisplayName("전시 소유 어드민이 숨기면 숨김 시각이 기록되고, 재공개하면 비워진다. 공개 상태는 그대로다")
     void ownerHidesAndUnhides() throws Exception {
         Artwork artwork = submitted(artworkOf(me, "작품"));
@@ -693,6 +784,12 @@ class ArtworkSubmissionApiTests {
     private MockHttpServletRequestBuilder changeVisibility(UUID artworkId, String visibility) {
         return patch("/api/artworks/{id}/exhibition", artworkId)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"visibility\":\"" + visibility + "\"}");
+    }
+
+    private MockHttpServletRequestBuilder changeVisibilityWithZone(UUID artworkId, String visibility, UUID zoneId) {
+        return patch("/api/artworks/{id}/exhibition", artworkId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"visibility\":\"" + visibility + "\",\"zoneId\":\"" + zoneId + "\"}");
     }
 
     private MockHttpServletRequestBuilder changeHidden(UUID artworkId, boolean hidden) {
