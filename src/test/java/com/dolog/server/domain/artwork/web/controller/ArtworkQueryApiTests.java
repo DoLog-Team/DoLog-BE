@@ -362,24 +362,26 @@ class ArtworkQueryApiTests {
     // ---------------- 작품 전체 목록 (C-01) ----------------
 
     @Test
-    @DisplayName("작품 전체 목록과 메인 랜덤 목록에는 공개 작품만 나온다 (숨김은 상관없음)")
+    @DisplayName("작품 전체 목록과 메인 랜덤 목록에는 공개 작품만 나온다 (숨김은 상관없음, 전시 미출품 단독 공개 작품도 포함)")
     void allArtworksShowsOnlyPublished() throws Exception {
         String keyword = "전체목록-" + UUID.randomUUID();
         Artwork published = submitted(artworkOf(me, keyword + "-공개"), zone, ArtworkStatus.PUBLISHED);
         Artwork hidden = submitted(artworkOf(me, keyword + "-숨김"), zone, ArtworkStatus.PUBLISHED);
         hidden.hide(LocalDateTime.now());
         submitted(artworkOf(me, keyword + "-비공개"), zone, ArtworkStatus.DRAFT);
+        Artwork standalone = artworkOf(me, keyword + "-단독공개");
+        standalone.changeStatus(ArtworkStatus.PUBLISHED);
         endRequest();
 
         mvc.perform(api(get("/api/artworks").param("search", keyword).param("sort", "title")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[*].id",
-                        containsInAnyOrder(published.getId().toString(), hidden.getId().toString())));
+                .andExpect(jsonPath("$.data[*].id", containsInAnyOrder(
+                        published.getId().toString(), hidden.getId().toString(), standalone.getId().toString())));
 
         mvc.perform(api(get("/api/artworks").param("main", "true").param("search", keyword)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[*].id",
-                        containsInAnyOrder(published.getId().toString(), hidden.getId().toString())));
+                .andExpect(jsonPath("$.data[*].id", containsInAnyOrder(
+                        published.getId().toString(), hidden.getId().toString(), standalone.getId().toString())));
     }
 
     // ---------------- helpers ----------------

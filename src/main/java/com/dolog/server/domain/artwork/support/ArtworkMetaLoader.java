@@ -24,6 +24,7 @@ public class ArtworkMetaLoader {
                 .toList();
 
         List<UUID> exhibitionIds = artworks.stream()
+                .filter(a -> a.getExhibition() != null)
                 .map(a -> a.getExhibition().getId())
                 .distinct()
                 .toList();

@@ -57,16 +57,24 @@ public class ArtworkSpecification {
         };
     }
 
-    // 두록 URL 노출 조건 (작품 숨김, 구역 숨김은 전시 URL 에서만 본다)
-    public static Specification<Artwork> isPublished() {
-        return (root, query, cb) ->
-                cb.equal(root.get("status"), ArtworkStatus.PUBLISHED);
+    // 전시 소속이 아닌 단독 작품도 포함해야 할 때 (두록 전체/메인 목록). exhibition이 없어도 걸러지지 않는다.
+    public static Specification<Artwork> withExhibitionLeftFetch() {
+        return (root, query, cb) -> {
+            if (!Long.class.equals(query.getResultType())) {
+                root.fetch("exhibition", JoinType.LEFT);
+                query.distinct(true);
+            }
+            return cb.conjunction();
+        };
     }
 
-    // 게시 전 전시의 작품은 이용자에게 보이지 않는다
-    public static Specification<Artwork> hasExhibition() {
+    // 두록 URL 노출 조건. Artwork.isVisibleOnDolog()과 일치한다 (전시 소속 여부와 무관).
+    public static Specification<Artwork> visibleOnDolog() {
         return (root, query, cb) ->
-                cb.isNotNull(root.get("exhibition"));
+                cb.and(
+                        cb.equal(root.get("status"), ArtworkStatus.PUBLISHED),
+                        cb.isFalse(root.get("exhibitionOnly"))
+                );
     }
 
     // 두록 어드민 전체 조회용. 공개 여부/노출 상태와 무관하게 조건만 건다.
