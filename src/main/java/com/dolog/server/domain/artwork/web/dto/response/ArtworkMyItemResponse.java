@@ -18,6 +18,7 @@ public class ArtworkMyItemResponse {
     private String mainImg;
     private ArtworkStatus status;
     private boolean hidden;
+    private boolean planLimitExceeded;
     private UUID exhibitionId;
     private String exhibitionName;
     private long viewCount;
@@ -35,6 +36,7 @@ public class ArtworkMyItemResponse {
                 .mainImg(artwork.getMainImg())
                 .status(artwork.getStatus())
                 .hidden(artwork.isHidden())
+                .planLimitExceeded(artwork.exceedsPlanLimit())
                 .exhibitionId(artwork.getExhibition() != null ? artwork.getExhibition().getId() : null)
                 .exhibitionName(exhibitionName)
                 .viewCount(artwork.getViewCount())
