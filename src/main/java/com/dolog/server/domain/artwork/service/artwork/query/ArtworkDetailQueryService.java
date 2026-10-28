@@ -91,6 +91,8 @@ public class ArtworkDetailQueryService {
         return ArtworkDetailResponse.builder()
                 .title(artwork.getTitle())
                 .category(artwork.getCategory())
+                .zoneId(artwork.getExhibitionZone() != null ? artwork.getExhibitionZone().getId() : null)
+                .zoneName(artwork.getExhibitionZone() != null ? artwork.getExhibitionZone().getName() : null)
                 .description(artwork.getDescription())
                 .shortIntro(artwork.getShortIntro())
                 .materials(hideMaterials

@@ -154,6 +154,8 @@ class ArtworkQueryApiTests {
         mvc.perform(api(dologDetail(unsubmitted)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.participants[0].nameKo").value("나작가"))
+                .andExpect(jsonPath("$.data.zoneId").value(nullValue()))
+                .andExpect(jsonPath("$.data.zoneName").value(nullValue()))
                 .andExpect(jsonPath("$.data.sameCategoryArtworks", hasSize(0)))
                 .andExpect(jsonPath("$.data.alphabeticalArtworks", hasSize(0)));
 
@@ -179,6 +181,8 @@ class ArtworkQueryApiTests {
 
         mvc.perform(api(exhibitionDetail(artwork)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.zoneId").value(zone.getId().toString()))
+                .andExpect(jsonPath("$.data.zoneName").value("1구역"))
                 .andExpect(jsonPath("$.data.shortIntro").value("물결 그릇"))
                 .andExpect(jsonPath("$.data.materials", contains("백자토", "청화안료")))
                 .andExpect(jsonPath("$.data.width").value(32.0))
