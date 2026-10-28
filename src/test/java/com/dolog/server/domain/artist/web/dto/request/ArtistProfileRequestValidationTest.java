@@ -74,6 +74,20 @@ class ArtistProfileRequestValidationTest {
     }
 
     @Test
+    @DisplayName("구매 문의 주소(purchaseContactUrl)는 http(s) 스킴이 없는 자유 형식도 허용한다")
+    void allowsFreeFormPurchaseContactUrl() {
+        ArtistProfileUpdateRequest updateRequest = new ArtistProfileUpdateRequest();
+        updateRequest.setPurchaseContactUrl("kakao.com/abc");
+
+        assertTrue(validator.validate(updateRequest).isEmpty());
+
+        ArtistProfileCreateRequest createRequest = validCreateRequest();
+        createRequest.setPurchaseContactUrl("kakao.com/abc");
+
+        assertTrue(validator.validate(createRequest).isEmpty());
+    }
+
+    @Test
     @DisplayName("PATCH 요청은 모든 수정 필드를 생략할 수 있다")
     void allowsPartialUpdateRequest() {
         ArtistProfileUpdateRequest request =
