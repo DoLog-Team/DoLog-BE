@@ -14,6 +14,8 @@ import java.util.UUID;
 public class ArtworkDetailResponse {
     private String title;
     private String category;
+    private UUID zoneId;
+    private String zoneName;
     private String description;
     private String shortIntro;
     // 전시 항목 설정에서 숨긴 값은 null(목록은 빈 배열)로 내려간다.
