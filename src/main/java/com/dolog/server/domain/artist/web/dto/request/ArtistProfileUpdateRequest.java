@@ -34,10 +34,6 @@ public class ArtistProfileUpdateRequest {
     private String email;
 
     @Size(max = 255, message = "구매 문의 주소는 최대 255자까지 입력할 수 있습니다.")
-    @Pattern(
-            regexp = "^https?://.+$|^$",
-            message = "구매 문의 주소는 http 또는 https URL이어야 합니다."
-    )
     private String purchaseContactUrl;
 
     @Schema(description = "true이면 프로필 이미지 삭제. 새 이미지 파일과 함께 전송하면 400")
