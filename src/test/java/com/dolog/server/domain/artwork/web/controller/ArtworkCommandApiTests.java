@@ -237,6 +237,47 @@ class ArtworkCommandApiTests {
     }
 
     @Test
+    @DisplayName("clearProductionStartDate를 true로 보내면 시작 날짜 3개가 지워진다 (시작 날짜 체크 해제)")
+    void clearsProductionStartDate() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder().title("작품")
+                .description("설명").category("카테고리").productionEndYear(2024)
+                .productionStartYear(2020).productionStartMonth(5).productionStartDay(10)
+                .build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken)
+                        .param("clearProductionStartDate", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productionStartYear").value(nullValue()))
+                .andExpect(jsonPath("$.data.productionStartMonth").value(nullValue()))
+                .andExpect(jsonPath("$.data.productionStartDay").value(nullValue()));
+
+        em.flush();
+        em.clear();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertNull(found.getProductionStartYear());
+        assertNull(found.getProductionStartMonth());
+        assertNull(found.getProductionStartDay());
+    }
+
+    @Test
+    @DisplayName("clearProductionStartDate를 안 보내면 기존 시작 날짜가 그대로 유지된다")
+    void keepsProductionStartDateWhenClearFlagNotSent() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder().title("작품")
+                .description("설명").category("카테고리").productionEndYear(2024)
+                .productionStartYear(2020).productionStartMonth(5).productionStartDay(10)
+                .build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("title", "새 제목"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productionStartYear").value(2020));
+
+        em.flush();
+        em.clear();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertEquals(2020, found.getProductionStartYear());
+    }
+
+    @Test
     @DisplayName("재료를 보내면 교체되고, 빈 값 하나만 보내면 모두 지워진다")
     void replacesAndClearsMaterials() throws Exception {
         Artwork artwork = artworkOf(me, "작품");

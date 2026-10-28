@@ -186,6 +186,13 @@ public class Artwork extends BaseEntity implements Orderable {
         if (endDay != null) this.productionEndDay = endDay;
     }
 
+    // 시작 날짜 입력 체크를 해제했을 때: updateProductionPeriod는 null을 "값 유지"로 보기 때문에 따로 명시적으로 지운다
+    public void clearProductionStartDate() {
+        this.productionStartYear = null;
+        this.productionStartMonth = null;
+        this.productionStartDay = null;
+    }
+
     public void updatePurchaseInfo(String purchaseUrl, String purchaseChatUrl,
                                    Boolean showPurchaseButton, String youtubeUrl) {
         if (purchaseUrl != null) this.purchaseUrl = TextUtils.blankToNull(purchaseUrl);

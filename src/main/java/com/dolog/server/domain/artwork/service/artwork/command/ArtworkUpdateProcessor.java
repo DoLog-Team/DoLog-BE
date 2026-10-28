@@ -56,6 +56,10 @@ public class ArtworkUpdateProcessor {
 
         applyInfo(artwork, request);
 
+        if (Boolean.TRUE.equals(request.getClearProductionStartDate())) {
+            artwork.clearProductionStartDate();
+        }
+
         if (request.getArtistRole() != null) {
             artwork.getArtworkArtistMaps().stream()
                     .filter(map -> map.getArtist().getId().equals(artist.getId()))
