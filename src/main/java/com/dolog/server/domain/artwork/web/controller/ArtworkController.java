@@ -10,6 +10,7 @@ import com.dolog.server.domain.artwork.service.artwork.query.ArtworkAdminQuerySe
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkManageQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkMyQueryService;
+import com.dolog.server.domain.artwork.service.ArtworkCategoryService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.service.view.ArtworkViewService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
@@ -29,6 +30,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @SecurityRequirement(name = "bearerAuth")
@@ -45,6 +47,7 @@ public class ArtworkController {
     private final ArtworkAdminQueryService artworkAdminQueryService;
     private final ArtworkMyQueryService artworkMyQueryService;
     private final ArtworkManageQueryService artworkManageQueryService;
+    private final ArtworkCategoryService artworkCategoryService;
 
     // 1. 작품 전체 목록 조회
     @Operation(summary = "작품 전체 목록 조회")
@@ -57,6 +60,13 @@ public class ArtworkController {
     ) {
         Object data = artworkService.getArtworks(main, category, search, sort);
         return SuccessResponse.ok(data);
+    }
+
+    // 1-1. 작품 카테고리 목록 조회 (공개): 작가 어드민 폼 드롭다운, 두록 공개 필터용
+    @Operation(summary = "작품 카테고리 목록 조회")
+    @GetMapping("/artworks/categories")
+    public SuccessResponse<List<ArtworkCategoryResponse>> getArtworkCategories() {
+        return SuccessResponse.ok(artworkCategoryService.getCategories());
     }
 
     // 두록 어드민 전용. 공개/비공개/숨김/플랜 한도 초과와 무관하게 전부 조회한다.

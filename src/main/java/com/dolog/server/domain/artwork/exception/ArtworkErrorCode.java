@@ -28,7 +28,10 @@ public enum ArtworkErrorCode implements BaseResponseCode { // 인터페이스 �
     IMAGE_FILE_REQUIRED(400, "ARTWORK_019", "등록할 이미지 파일을 하나 이상 보내야 합니다."),
     NOT_IN_EXHIBITION(400, "ARTWORK_020", "이 전시에 출품된 작품이 아닙니다."),
     INVALID_ZONE_FILTER(400, "ARTWORK_021", "그룹과 그룹 미지정 필터는 함께 쓸 수 없습니다."),
-    INVALID_PAGE_REQUEST(400, "ARTWORK_022", "page는 0 이상, size는 1 이상 100 이하여야 합니다.");
+    INVALID_PAGE_REQUEST(400, "ARTWORK_022", "page는 0 이상, size는 1 이상 100 이하여야 합니다."),
+    ARTWORK_CATEGORY_NOT_FOUND(404, "ARTWORK_023", "카테고리 정보를 찾을 수 없습니다."),
+    ARTWORK_CATEGORY_DUPLICATE_NAME(409, "ARTWORK_024", "이미 존재하는 카테고리 이름입니다."),
+    ARTWORK_CATEGORY_REORDER_INVALID(400, "ARTWORK_025", "존재하지 않는 카테고리가 포함되어 있거나 순서 값이 올바르지 않습니다.");
 
     private final int httpStatus;
     private final String code;
