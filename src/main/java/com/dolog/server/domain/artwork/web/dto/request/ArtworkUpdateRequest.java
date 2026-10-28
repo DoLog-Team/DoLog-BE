@@ -52,6 +52,9 @@ public class ArtworkUpdateRequest implements ArtworkInfoFields {
     @Min(1) @Max(31)
     private Integer productionStartDay;
 
+    // true면 위 시작 날짜 3개를 null로 지운다. 안 보내면 그대로 둔다 (시작 날짜 체크 해제용).
+    private Boolean clearProductionStartDate;
+
     @Min(1000) @Max(9999)
     private Integer productionEndYear;
 
