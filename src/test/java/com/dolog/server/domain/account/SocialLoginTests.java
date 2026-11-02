@@ -200,6 +200,9 @@ class SocialLoginTests {
         auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", null, null));
         verify(artists, times(2)).save(any());
         verify(profileProvisionService, times(2)).ensureProfile(any(Artist.class));
+        // 소셜 이름은 앞뒤 공백을 제거해 국문 성명 초기값으로 저장한다.
+        auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", "  홍길동 ", null));
+        verify(artists).save(argThat(created -> "홍길동".equals(created.getNameKo())));
 
         when(accountRepo.findBySocialProviderAndSocialProviderId("GOOGLE", "999")).thenReturn(Optional.empty());
         when(accountRepo.existsByEmail("verified@example.com")).thenReturn(true);
