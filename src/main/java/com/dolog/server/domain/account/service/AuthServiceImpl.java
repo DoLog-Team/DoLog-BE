@@ -116,7 +116,10 @@ public class AuthServiceImpl implements AuthService {
         Account lockedAccount = accountRepository.findByIdForUpdate(account.getId())
                 .orElseThrow(JwtInvalidException::new);
         if (artistRepository.findByAccountIdIncludingDeleted(account.getId()).isEmpty()) {
-            Artist artist = Artist.builder().account(lockedAccount).build();
+            // 소셜 이름을 국문 성명 초기값으로 쓴다. ensureProfile이 공통 프로필로 복사한다.
+            String socialName = profile.name() == null || profile.name().isBlank() ? null : profile.name().trim();
+            if (socialName != null && socialName.length() > 100) socialName = socialName.substring(0, 100);
+            Artist artist = Artist.builder().account(lockedAccount).nameKo(socialName).build();
             artistRepository.save(artist);
             artistProfileProvisionService.ensureProfile(artist);
         }
