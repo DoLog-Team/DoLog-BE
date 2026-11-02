@@ -18,6 +18,7 @@ import com.dolog.server.domain.account.repository.AccountRepository;
 import com.dolog.server.domain.account.repository.RefreshTokenRepository;
 import com.dolog.server.domain.account.repository.TermsAgreementRepository;
 import com.dolog.server.domain.account.service.AuthServiceImpl;
+import com.dolog.server.domain.account.service.ExhibitionLoginAttemptLimiter;
 import com.dolog.server.domain.account.service.GoogleClient;
 import com.dolog.server.domain.account.service.KakaoClient;
 import com.dolog.server.domain.account.service.SocialProfile;
@@ -167,7 +168,8 @@ class SocialLoginTests {
         var profileProvisionService = mock(ArtistProfileProvisionService.class);
         when(accountRepo.findByIdForUpdate(accountId)).thenReturn(Optional.of(account));
         var auth = new AuthServiceImpl(accountRepo, artists, profileProvisionService, tokenRepo, mock(PasswordEncoder.class),
-                jwtProvider, mock(ExhibitionRepository.class), mock(JwtUserDetailsService.class), terms);
+                jwtProvider, mock(ExhibitionRepository.class), mock(JwtUserDetailsService.class), terms,
+                mock(ExhibitionLoginAttemptLimiter.class));
 
         var result = auth.socialLogin(SocialProvider.KAKAO, new SocialProfile("12345", null, "verified@example.com"));
         assertTrue(result.isFirstLogin());

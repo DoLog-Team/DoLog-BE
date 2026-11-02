@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface AuthService {
     LoginResponse login(String email, String password);
-    ExhibitionLoginResponse loginExhibition(String entryCode);
+    ExhibitionLoginResponse loginExhibition(String entryCode, String clientIp);
     SocialLoginResponse socialLogin(SocialProvider provider, SocialProfile profile);
     TokenResponse refresh(String refreshToken);
     void logout(UUID accountId, long sessionId);
