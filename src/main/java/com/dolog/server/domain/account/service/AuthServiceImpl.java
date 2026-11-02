@@ -29,6 +29,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.Locale;
 
@@ -45,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final ExhibitionRepository exhibitionRepository;
     private final JwtUserDetailsService userDetailsService;
     private final TermsAgreementService termsAgreementService;
+    private final ExhibitionLoginAttemptLimiter exhibitionLoginAttemptLimiter;
 
     @Override
     @Transactional
@@ -64,17 +66,21 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public ExhibitionLoginResponse loginExhibition(String entryCode) {
-        if (entryCode == null || !entryCode.matches("[2-9A-HJ-KM-NP-Za-hj-km-np-z]{8}")) {
+    public ExhibitionLoginResponse loginExhibition(String entryCode, String clientIp) {
+        exhibitionLoginAttemptLimiter.requireNotLocked(clientIp);
+        var exhibition = Optional.ofNullable(entryCode)
+                .filter(code -> code.matches("[2-9A-HJ-KM-NP-Za-hj-km-np-z]{8}"))
+                .flatMap(code -> exhibitionRepository.findByEntryCode(code.toUpperCase(Locale.ROOT)))
+                .filter(found -> found.getAccount().getRole() == Role.EXHIBITION_ADMIN)
+                .orElse(null);
+        if (exhibition == null) {
+            // 5번째 실패에서는 제한 오류를 던진다.
+            exhibitionLoginAttemptLimiter.recordFailure(clientIp);
             throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_INVALID);
         }
-        var exhibition = exhibitionRepository.findByEntryCode(entryCode.toUpperCase(Locale.ROOT))
-                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_INVALID));
         exhibition.requireEntryCodeValid();
+        exhibitionLoginAttemptLimiter.reset(clientIp);
         Account account = exhibition.getAccount();
-        if (account.getRole() != Role.EXHIBITION_ADMIN) {
-            throw new ExhibitionException(ExhibitionErrorCode.ENTRY_CODE_INVALID);
-        }
         var tokens = issueTokens(account);
         return new ExhibitionLoginResponse(exhibition.getId(),
                 termsAgreementService.needsAgreement(account.getId()), account.getRole(),

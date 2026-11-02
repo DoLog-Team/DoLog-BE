@@ -12,6 +12,7 @@ public enum AccountErrorCode implements BaseResponseCode {
     DUPLICATE_EMAIL("ACCOUNT_409_1", StaticValue.CONFLICT, "이미 존재하는 이메일입니다."),
     ACCOUNT_INACTIVE("ACCOUNT_403_INACTIVE", StaticValue.FORBIDDEN, "이용할 수 없는 계정입니다."),
     INVALID_LOGIN("ACCOUNT_401_INVALID_LOGIN", StaticValue.UNAUTHORIZED, "이메일 또는 비밀번호가 잘못되었습니다."),
+    EXHIBITION_LOGIN_LOCKED("ACCOUNT_429_EXHIBITION_LOGIN_LOCKED", StaticValue.TOO_MANY_REQUESTS, "로그인 코드를 5회 잘못 입력하여 로그인이 10분간 일시적으로 제한되었어요."),
     INVALID_PASSWORD("ACCOUNT_401_PASSWORD", StaticValue.UNAUTHORIZED, "현재 비밀번호가 일치하지 않습니다."),
     TERMS_NOT_FOUND("ACCOUNT_404_TERMS", StaticValue.NOT_FOUND, "약관 동의 내역이 없습니다."),
     TERMS_VERSION_MISMATCH("ACCOUNT_400_TERMS_VERSION", StaticValue.BAD_REQUEST, "약관 버전이 최신이 아닙니다. 약관을 다시 확인해 주세요."),
