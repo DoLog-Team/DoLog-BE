@@ -16,9 +16,11 @@ import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
+import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.like.entity.ArtworkLike;
@@ -59,6 +61,7 @@ class ArtworkQueryApiTests {
     @Autowired ArtworkRepository artworks;
     @Autowired ExhibitionRepository exhibitions;
     @Autowired ExhibitionZoneRepository zones;
+    @Autowired ExhibitionDetailRepository exhibitionDetails;
     @Autowired ExhibitionArtistMapRepository participations;
     @Autowired ExhibitionFieldSettingsRepository fieldSettings;
     @Autowired ArtworkLikeRepository likes;
@@ -154,6 +157,9 @@ class ArtworkQueryApiTests {
         mvc.perform(api(dologDetail(unsubmitted)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.participants[0].nameKo").value("나작가"))
+                .andExpect(jsonPath("$.data.exhibitionId").value(nullValue()))
+                .andExpect(jsonPath("$.data.exhibitionTitle").value(nullValue()))
+                .andExpect(jsonPath("$.data.slug").value(nullValue()))
                 .andExpect(jsonPath("$.data.zoneId").value(nullValue()))
                 .andExpect(jsonPath("$.data.zoneName").value(nullValue()))
                 .andExpect(jsonPath("$.data.sameCategoryArtworks", hasSize(0)))
@@ -161,6 +167,25 @@ class ArtworkQueryApiTests {
 
         mvc.perform(api(dologDetail(deleted))).andExpect(status().isNotFound());
         mvc.perform(api(exhibitionDetail(deleted))).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("작품 상세 응답에 출품 전시 정보(exhibitionTitle 포함)가 담긴다 (관련 전시 보러가기용)")
+    void detailIncludesExhibitionTitleForRelatedExhibitionLink() throws Exception {
+        exhibitionDetails.saveAndFlush(ExhibitionDetail.builder()
+                .exhibition(exhibition).title("두록 전시").build());
+        Artwork artwork = submitted(artworkOf(me, "작품"), zone, ArtworkStatus.PUBLISHED);
+        endRequest();
+
+        mvc.perform(api(exhibitionDetail(artwork)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.exhibitionId").value(exhibition.getId().toString()))
+                .andExpect(jsonPath("$.data.exhibitionTitle").value("두록 전시"))
+                .andExpect(jsonPath("$.data.slug").value(exhibition.getSlug()));
+
+        mvc.perform(api(dologDetail(artwork)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.exhibitionTitle").value("두록 전시"));
     }
 
     @Test
@@ -181,6 +206,8 @@ class ArtworkQueryApiTests {
 
         mvc.perform(api(exhibitionDetail(artwork)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.exhibitionId").value(exhibition.getId().toString()))
+                .andExpect(jsonPath("$.data.slug").value(exhibition.getSlug()))
                 .andExpect(jsonPath("$.data.zoneId").value(zone.getId().toString()))
                 .andExpect(jsonPath("$.data.zoneName").value("1구역"))
                 .andExpect(jsonPath("$.data.shortIntro").value("물결 그릇"))

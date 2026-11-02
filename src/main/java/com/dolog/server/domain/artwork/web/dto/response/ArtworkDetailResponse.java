@@ -14,6 +14,10 @@ import java.util.UUID;
 public class ArtworkDetailResponse {
     private String title;
     private String category;
+    // "관련 전시 보러가기" FAB용. 단독(미출품) 작품이면 셋 다 null.
+    private UUID exhibitionId;
+    private String exhibitionTitle;
+    private String slug;
     private UUID zoneId;
     private String zoneName;
     private String description;
