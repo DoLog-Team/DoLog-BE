@@ -1,6 +1,7 @@
 package com.dolog.server.domain.artwork.service.fieldsetting;
 
 import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ExhibitionFieldSettings;
@@ -13,8 +14,10 @@ import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.web.dto.request.FieldSettingsRequest;
 import com.dolog.server.domain.artwork.web.dto.response.FieldSettingsResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.notification.service.NotificationService;
@@ -36,17 +39,35 @@ public class FieldSettingsService {
     private final ArtworkRepository artworkRepository;
     private final ArtworkFieldRequirement artworkFieldRequirement;
     private final NotificationService notificationService;
+    private final ArtistRepository artistRepository;
+    private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
 
     // 설정 행이 없는 전시는 모든 항목이 선택/노출인 기본값으로 응답한다 (행은 만들지 않음).
+    // 전시 어드민 본인이거나, 그 전시에 참여 중인(JOINED) 작가만 조회할 수 있다 (출품 전 필수 항목 확인용).
     @Transactional(readOnly = true)
     public FieldSettingsResponse get(UUID accountId, UUID exhibitionId) {
 
-        Exhibition exhibition = getOwnedExhibition(accountId, exhibitionId);
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
+
+        if (!exhibition.getAccount().getId().equals(accountId)) {
+            requireJoinedArtist(accountId, exhibitionId);
+        }
 
         return FieldSettingsResponse.from(
                 fieldSettingsRepository.findByExhibitionId(exhibitionId)
                         .orElseGet(() -> ExhibitionFieldSettings.defaultsFor(exhibition))
         );
+    }
+
+    private void requireJoinedArtist(UUID accountId, UUID exhibitionId) {
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.NOT_EXHIBITION_OWNER));
+
+        if (!exhibitionArtistMapRepository.existsByExhibitionIdAndArtistIdAndStatus(
+                exhibitionId, artist.getId(), ExhibitionArtistStatus.JOINED)) {
+            throw new ArtworkException(ArtworkErrorCode.NOT_EXHIBITION_OWNER);
+        }
     }
 
     // 저장 후 필수 항목을 못 채운 공개 작품은 비공개로 내린다 (명세: 필수값 강화 시 자동 DRAFT).

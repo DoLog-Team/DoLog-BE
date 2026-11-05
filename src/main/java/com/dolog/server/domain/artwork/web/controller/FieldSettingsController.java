@@ -24,9 +24,9 @@ public class FieldSettingsController {
 
     private final FieldSettingsService fieldSettingsService;
 
-    @Operation(summary = "작품 항목 설정 조회", description = "설정이 없으면 모든 항목이 선택/노출인 기본값을 돌려줍니다.")
+    @Operation(summary = "작품 항목 설정 조회", description = "설정이 없으면 모든 항목이 선택/노출인 기본값을 돌려줍니다. 전시 어드민 본인이거나, 그 전시에 참여 중인(JOINED) 작가만 조회할 수 있습니다.")
     @GetMapping("/exhibitions/{exhibitionId}/field-settings")
-    @PreAuthorize("hasRole('EXHIBITION_ADMIN')")
+    @PreAuthorize("hasAnyRole('EXHIBITION_ADMIN','ARTIST_ADMIN')")
     public SuccessResponse<FieldSettingsResponse> getFieldSettings(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID exhibitionId) {
