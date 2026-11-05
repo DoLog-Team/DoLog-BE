@@ -62,6 +62,8 @@ public class SecurityConfig {
                         // 작품 항목 설정, 작품 관리 목록은 전시 어드민 전용이라 아래 GET /exhibitions/** 공개보다 먼저 막는다 (미로그인 401)
                         .requestMatchers(HttpMethod.GET, "/exhibitions/*/field-settings", "/exhibitions/*/artworks/manage").authenticated()
                         .requestMatchers(HttpMethod.GET, "/exhibitions/**").permitAll()
+                        // 작가 본인 미리보기는 아래 GET /artworks/** 공개보다 먼저 막는다 (미로그인 401)
+                        .requestMatchers(HttpMethod.GET, "/artworks/*/preview").authenticated()
                         .requestMatchers(HttpMethod.GET, "/artworks/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/artist-profiles", "/artist-profiles/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/artist-profiles/**").permitAll()
