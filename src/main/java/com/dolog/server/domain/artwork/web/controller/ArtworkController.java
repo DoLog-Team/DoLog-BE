@@ -399,6 +399,19 @@ public class ArtworkController {
                 "작품 상세 조회 성공");
     }
 
+    @Operation(summary = "작품 미리보기 조회 (작가 본인)",
+            description = "공개 상태와 무관하게, 본인 작품이면서 필수 항목을 모두 채운 경우에만 조회합니다. "
+                    + "임시저장(필수값 미충족)은 본인도 조회할 수 없습니다.")
+    @GetMapping("/artworks/{artworkId}/preview")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<ArtworkDetailResponse> getArtworkPreview(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable UUID artworkId) {
+        return SuccessResponse.ok(
+                artworkDetailService.getArtworkPreview(user.getId(), artworkId),
+                "작품 미리보기 조회 성공");
+    }
+
     @Operation(summary = "작품 조회수 기록",
             description = "비로그인 가능. 이용자가 작품 상세 페이지에 일정 시간 머문 뒤 브라우저에서 한 번 호출합니다. "
                     + "같은 방문자(visitor_id)는 작품마다 한 번만 셉니다. "

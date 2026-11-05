@@ -9,6 +9,8 @@ import com.dolog.server.domain.artwork.exception.ArtworkErrorCode;
 import com.dolog.server.domain.artwork.exception.ArtworkException;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
+import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkDetailResponse;
 import com.dolog.server.domain.bts.repository.BtsRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
@@ -31,6 +33,8 @@ public class ArtworkDetailQueryService {
     private final ArtworkLikeRepository artworkLikeRepository;
     private final ExhibitionFieldSettingsRepository fieldSettingsRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
+    private final ArtworkValidator artworkValidator;
+    private final ArtworkFieldRequirement artworkFieldRequirement;
 
     // 전시 URL: 공개 + 작품 숨김 아님 + 구역 숨김 아님
     public ArtworkDetailResponse getArtworkDetail(
@@ -57,6 +61,22 @@ public class ArtworkDetailQueryService {
                 .orElseThrow(() -> new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_FOUND));
 
         return toDetail(artwork, false, visitorId);
+    }
+
+    // 작가 본인 미리보기: 공개 상태(status/exhibitionOnly)와 무관하게, 필수 항목을 다 채운 본인 작품만 본다.
+    // "임시저장(미충족)"은 본인도 못 보고, "비공개(충족)"/"전시에만 공개(충족)"는 본인만 볼 수 있다.
+    public ArtworkDetailResponse getArtworkPreview(
+            UUID accountId,
+            UUID artworkId
+    ) {
+
+        Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artworkValidator.getLoginArtist(accountId));
+
+        if (!artworkFieldRequirement.isSatisfied(artwork)) {
+            throw new ArtworkException(ArtworkErrorCode.ARTWORK_NOT_READY_FOR_PREVIEW);
+        }
+
+        return toDetail(artwork, false, null);
     }
 
     private ArtworkDetailResponse toDetail(

@@ -633,6 +633,65 @@ class ArtworkSubmissionApiTests {
                 .andExpect(status().isOk());
     }
 
+    // ---------------- 작가 본인 미리보기 ----------------
+
+    @Test
+    @DisplayName("필수 항목을 못 채운 임시저장 작품은 본인도 미리보기를 볼 수 없다")
+    void previewBlockedWhenRequiredFieldsMissing() throws Exception {
+        fieldSettings.saveAndFlush(ExhibitionFieldSettings.builder()
+                .exhibition(exhibition).requiredMaterials(true).build());
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+        em.flush();
+
+        mvc.perform(withToken(get("/api/artworks/{id}/preview", artwork.getId()), myToken))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ARTWORK_026"));
+    }
+
+    @Test
+    @DisplayName("필수 항목을 다 채운 비공개 작품은 본인이 미리보기로 볼 수 있다")
+    void previewAllowedWhenPrivateAndSatisfied() throws Exception {
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+        em.flush();
+
+        mvc.perform(withToken(get("/api/artworks/{id}/preview", artwork.getId()), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("작품"));
+
+        // 비공개(DRAFT)라 공개 URL(두록)에서는 안 보이는 것과 대비
+        mvc.perform(get("/api/artworks/{id}", artwork.getId()).contextPath("/api"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("필수 항목을 다 채운 전시에만 공개 작품도 본인이 미리보기로 볼 수 있다")
+    void previewAllowedWhenExhibitionOnlyAndSatisfied() throws Exception {
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        artwork.updateExhibitionOnly(true);
+        em.flush();
+
+        mvc.perform(withToken(get("/api/artworks/{id}/preview", artwork.getId()), myToken))
+                .andExpect(status().isOk());
+
+        // exhibitionOnly 라 공개 URL(두록)에서는 안 보이는 것과 대비
+        mvc.perform(get("/api/artworks/{id}", artwork.getId()).contextPath("/api"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("다른 작가의 작품은 미리보기에서 404, 미로그인은 401")
+    void previewAccessRules() throws Exception {
+        Artwork artwork = submitted(artworkOf(me, "작품"));
+        String otherToken = token(artist("다른작가").getAccount());
+        em.flush();
+
+        mvc.perform(withToken(get("/api/artworks/{id}/preview", artwork.getId()), otherToken))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/artworks/{id}/preview", artwork.getId()).contextPath("/api"))
+                .andExpect(status().isUnauthorized());
+    }
+
     @Test
     @DisplayName("출품 취소 후 다른 전시에 다시 출품하면 이전 전시의 숨김, 프로필, 순서가 따라오지 않는다")
     void resubmitToOtherExhibitionStartsClean() throws Exception {
