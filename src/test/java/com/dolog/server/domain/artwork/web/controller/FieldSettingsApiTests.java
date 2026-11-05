@@ -14,6 +14,9 @@ import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
+import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
+import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.notification.entity.Notification;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
@@ -53,6 +56,7 @@ class FieldSettingsApiTests {
     @Autowired ArtistRepository artists;
     @Autowired ArtworkRepository artworks;
     @Autowired ExhibitionRepository exhibitions;
+    @Autowired ExhibitionArtistMapRepository exhibitionArtistMaps;
     @Autowired ExhibitionFieldSettingsRepository fieldSettings;
     @Autowired NotificationRepository notifications;
     @Autowired JwtTokenProvider jwt;
@@ -226,7 +230,7 @@ class FieldSettingsApiTests {
     }
 
     @Test
-    @DisplayName("다른 전시 어드민은 403, 작가 어드민은 403, 미로그인은 401, 없는 전시는 404")
+    @DisplayName("다른 전시 어드민은 403, 참여 안 한 작가는 403, 미로그인은 401, 없는 전시는 404")
     void accessRules() throws Exception {
         Account otherOwnerAccount = account(Role.EXHIBITION_ADMIN);
         exhibition(otherOwnerAccount);
@@ -237,7 +241,11 @@ class FieldSettingsApiTests {
                 .andExpect(jsonPath("$.code").value("ARTWORK_014"));
         mvc.perform(withToken(put(exhibition.getId()), otherOwner).content(ALL_FALSE))
                 .andExpect(status().isForbidden());
+        // 이 전시에 참여(JOINED) 중이 아닌 작가는 여전히 403
         mvc.perform(withToken(get("/api/exhibitions/{id}/field-settings", exhibition.getId()), token(artist.getAccount())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ARTWORK_014"));
+        mvc.perform(withToken(put(exhibition.getId()), token(artist.getAccount())).content(ALL_FALSE))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/exhibitions/{id}/field-settings", exhibition.getId()).contextPath("/api"))
                 .andExpect(status().isUnauthorized());
@@ -246,6 +254,26 @@ class FieldSettingsApiTests {
         mvc.perform(withToken(get("/api/exhibitions/{id}/field-settings", UUID.randomUUID()), ownerToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("EXHIBITION_404_1"));
+    }
+
+    @Test
+    @DisplayName("그 전시에 참여(JOINED) 중인 작가는 출품 전에도 필수 항목 설정을 조회할 수 있다")
+    void joinedArtistCanReadSettings() throws Exception {
+        exhibitionArtistMaps.saveAndFlush(ExhibitionArtistMap.builder()
+                .exhibition(exhibition).artist(artist).status(ExhibitionArtistStatus.JOINED).build());
+
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken)
+                        .content(settingsJson(true, false, false, false, false, false, false, false, false)))
+                .andExpect(status().isOk());
+        endRequest();
+
+        mvc.perform(withToken(get("/api/exhibitions/{id}/field-settings", exhibition.getId()), token(artist.getAccount())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.required.mainImg").value(true));
+
+        // 작가는 여전히 PUT은 못 한다 (EXHIBITION_ADMIN 전용)
+        mvc.perform(withToken(put(exhibition.getId()), token(artist.getAccount())).content(ALL_FALSE))
+                .andExpect(status().isForbidden());
     }
 
     @Test
