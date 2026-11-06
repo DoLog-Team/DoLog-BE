@@ -319,6 +319,7 @@ public class Artwork extends BaseEntity implements Orderable {
     }
 
     // 전시에 묶인 정보(구역, 순서, 위치 지도, 전시별 프로필, 전시 숨김)는 출품 취소와 함께 비운다.
+    // exhibitionOnly도 같이 꺼야 한다 — 전시가 없는데 "전시에만 공개"로 남으면 두록 어디에도 노출되지 않는 상태로 고정된다.
     public void cancelExhibitionSubmission() {
         this.exhibition = null;
         this.exhibitionZone = null;
@@ -326,6 +327,7 @@ public class Artwork extends BaseEntity implements Orderable {
         this.locationMap = null;
         this.hiddenAt = null;
         this.planLimitExceededAt = null;
+        this.exhibitionOnly = false;
         this.artworkArtistMaps.forEach(map -> map.linkProfile(null));
     }
     public void markDeleted(java.time.LocalDateTime at) {

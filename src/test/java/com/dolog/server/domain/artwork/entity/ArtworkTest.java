@@ -126,6 +126,22 @@ class ArtworkTest {
     }
 
     @Test
+    @DisplayName("전시에만 공개였던 작품은 출품 취소하면 exhibitionOnly도 같이 꺼져서 두록에 노출된다")
+    void cancelExhibitionSubmissionClearsExhibitionOnly() {
+        Exhibition exhibition = Exhibition.builder().isPublic(true).build();
+        Artwork artwork = Artwork.builder().exhibition(exhibition).build();
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        artwork.updateExhibitionOnly(true);
+        assertFalse(artwork.isVisibleOnDolog()); // 전시에만 공개 상태에서는 두록에 안 보임
+
+        artwork.cancelExhibitionSubmission();
+
+        assertNull(artwork.getExhibition());
+        assertFalse(artwork.isExhibitionOnly());
+        assertTrue(artwork.isVisibleOnDolog());
+    }
+
+    @Test
     @DisplayName("PATCH 용 update 메서드는 null 인 값은 건드리지 않는다")
     void updateMethodsIgnoreNull() {
         Artwork artwork = Artwork.builder().title("제목").category("분류").description("설명")
