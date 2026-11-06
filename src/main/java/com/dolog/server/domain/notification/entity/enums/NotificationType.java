@@ -16,6 +16,7 @@ public enum NotificationType {
     ARTWORK_UNPUBLISHED,        // 전시 필수 항목 설정 변경으로 자동 비공개 처리
     ARTWORK_REPUBLISHED,        // 전시 필수 항목 설정 완화로 자동 재공개 처리
     ARTWORK_FIELDS_HIDDEN,      // 전시 항목 설정 변경으로 출품 정보 항목이 새로 숨겨짐
+    ARTWORK_EXHIBITION_DELETED, // 소속 전시가 삭제되어 작품이 비공개 처리됨
 
     // 전시 어드민 알림
     ARTIST_JOIN_REQUESTED,      // 작가 참여 신청

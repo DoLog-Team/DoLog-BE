@@ -1,5 +1,8 @@
 package com.dolog.server.domain.exhibition.service;
 
+import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -23,6 +26,8 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.host.HostRepository;
 import com.dolog.server.domain.exhibition.support.ExhibitionPublishRequirement;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionCreateRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionDetailUpsertRequest;
 import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
@@ -45,6 +50,7 @@ import java.security.SecureRandom;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -64,6 +70,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ArtworkRepository artworkRepository;
     private final ExhibitionPublishRequirement exhibitionPublishRequirement;
     private final HostRepository hostRepository;
+    private final NotificationService notificationService;
     private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final String CODE_CHARACTERS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -370,11 +377,39 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
 
+        // 소속 작품이 남아있으면 FK 제약으로 삭제 자체가 막히므로, 삭제 전에 먼저 정리한다.
+        // 작가 의사와 무관하게 전시가 통째로 없어지는 것이므로 비공개(DRAFT)로 내린다.
+        artworkRepository.findByExhibitionId(exhibitionId).forEach(artwork -> {
+            notifyArtworkExhibitionDeleted(exhibition, artwork);
+            artwork.removeFromDeletedExhibition();
+        });
+
         exhibitionRepository.delete(exhibition);
 
         return ExhibitionMessageResponse.builder()
                 .message("전시회가 성공적으로 삭제되었습니다.")
                 .build();
+    }
+
+    // 작품에 연결된 작가 전원에게 알린다 (계정 없는 작가는 건너뜀)
+    private void notifyArtworkExhibitionDeleted(Exhibition exhibition, Artwork artwork) {
+        Map<String, String> payload = Map.of(
+                "exhibitionName", resolveExhibitionName(exhibition),
+                "artworkTitle", artwork.getTitle(),
+                "artworkId", artwork.getId().toString()
+        );
+        for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+            Artist artist = map.getArtist();
+            if (artist.getAccount() != null) {
+                notificationService.send(artist.getAccount(), NotificationType.ARTWORK_EXHIBITION_DELETED, payload, exhibition.getId());
+            }
+        }
+    }
+
+    private String resolveExhibitionName(Exhibition exhibition) {
+        return exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
+                .map(ExhibitionDetail::getTitle)
+                .orElse(exhibition.getSlug());
     }
 
 

@@ -2,9 +2,14 @@ package com.dolog.server.domain.exhibition.service;
 
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.repository.AccountRepository;
+import com.dolog.server.domain.artist.entity.Artist;
+import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.service.NotificationService;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
@@ -31,6 +36,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -75,6 +82,9 @@ class ExhibitionServiceImplTest {
 
     @Mock
     private HostRepository hostRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private ExhibitionServiceImpl service;
@@ -233,5 +243,31 @@ class ExhibitionServiceImplTest {
         );
 
         assertEquals(ExhibitionErrorCode.EXHIBITION_NOT_PUBLISHED, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("전시를 삭제하면 소속 작품은 FK 위반 없이 비공개(DRAFT)로 내려가고 작가에게 알림이 간다")
+    void deletingExhibitionDraftsArtworksAndNotifiesArtists() {
+        UUID exhibitionId = UUID.randomUUID();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).slug("diag-exhibition").build();
+
+        Account artistAccount = Account.builder().id(UUID.randomUUID()).build();
+        Artist artist = Artist.builder().account(artistAccount).build();
+        Artwork artwork = Artwork.builder().id(UUID.randomUUID()).title("작품").exhibition(exhibition).build();
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        artwork.updateExhibitionOnly(true);
+        artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder().artwork(artwork).artist(artist).build());
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+        when(artworkRepository.findByExhibitionId(exhibitionId)).thenReturn(java.util.List.of(artwork));
+        when(exhibitionDetailRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+
+        service.deleteExhibition(exhibitionId);
+
+        assertNull(artwork.getExhibition());
+        assertFalse(artwork.isExhibitionOnly());
+        assertEquals(ArtworkStatus.DRAFT, artwork.getStatus());
+        verify(notificationService).send(eq(artistAccount), eq(NotificationType.ARTWORK_EXHIBITION_DELETED), any(), eq(exhibitionId));
+        verify(exhibitionRepository).delete(exhibition);
     }
 }
