@@ -32,7 +32,10 @@ public enum ArtworkErrorCode implements BaseResponseCode { // 인터페이스 �
     ARTWORK_CATEGORY_NOT_FOUND(404, "ARTWORK_023", "카테고리 정보를 찾을 수 없습니다."),
     ARTWORK_CATEGORY_DUPLICATE_NAME(409, "ARTWORK_024", "이미 존재하는 카테고리 이름입니다."),
     ARTWORK_CATEGORY_REORDER_INVALID(400, "ARTWORK_025", "존재하지 않는 카테고리가 포함되어 있거나 순서 값이 올바르지 않습니다."),
-    ARTWORK_NOT_READY_FOR_PREVIEW(400, "ARTWORK_026", "필수 항목을 모두 채워야 미리보기를 볼 수 있습니다.");
+    ARTWORK_NOT_READY_FOR_PREVIEW(400, "ARTWORK_026", "필수 항목을 모두 채워야 미리보기를 볼 수 있습니다."),
+    ARTWORK_MATERIAL_OPTION_NOT_FOUND(404, "ARTWORK_027", "재료 정보를 찾을 수 없습니다."),
+    ARTWORK_MATERIAL_OPTION_DUPLICATE_NAME(409, "ARTWORK_028", "이미 존재하는 재료 이름입니다."),
+    ARTWORK_MATERIAL_OPTION_REORDER_INVALID(400, "ARTWORK_029", "존재하지 않는 재료가 포함되어 있거나 순서 값이 올바르지 않습니다.");
 
     private final int httpStatus;
     private final String code;

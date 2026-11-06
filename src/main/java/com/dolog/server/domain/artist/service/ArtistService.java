@@ -12,6 +12,7 @@ import com.dolog.server.domain.artist.web.dto.response.MyArtistProfileResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 public interface ArtistService {
@@ -45,4 +46,7 @@ public interface ArtistService {
     ArtistListResponse getArtists(String search, int page, int size);
 
     ArtistPublicResponse getArtist(UUID artistId, String visitorId);
+
+    // 작가 등록 폼 "재료 및 기법" 자동완성용. 본인이 지금까지 등록한 작품에 실제로 입력했던 재료 이름 목록(중복 제거).
+    List<String> getMyMaterials(UUID accountId);
 }
