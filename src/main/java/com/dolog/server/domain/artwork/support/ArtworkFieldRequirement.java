@@ -11,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 // "출품된 PUBLISHED 작품은 그 전시의 필수 항목을 채운다" 규칙을 한곳에서 판단한다.
 @Component
@@ -22,59 +24,59 @@ public class ArtworkFieldRequirement {
     private final ExhibitionZoneRepository exhibitionZoneRepository;
 
     public boolean isSatisfied(Artwork artwork) {
+        Context context = resolveContext(artwork);
+        return requirementChecks(artwork, context.settings(), context.exhibitionHasZones())
+                .stream().allMatch(Boolean::booleanValue);
+    }
 
-        if (isBlank(artwork.getCategory()) || artwork.getProductionEndYear() == null) {
-            return false;
-        }
+    // 작품 작성 완료율(%). 작품 기본/상세 필수값 + 그룹(구역이 있는 전시인 경우) + 출품 정보 필수값(전시에 출품한 경우)을 합산한다.
+    public int completionRate(Artwork artwork) {
+        Context context = resolveContext(artwork);
+        return completionRate(artwork, context.settings(), context.exhibitionHasZones());
+    }
 
-        if (artwork.getExhibition() == null) {
-            return true;
-        }
+    // 목록 조회처럼 전시별 설정/구역 존재 여부를 미리 한 번만 조회해둔 경우, 매 작품마다 다시 조회하지 않도록 직접 받는다.
+    public int completionRate(Artwork artwork, ExhibitionFieldSettings settings, boolean exhibitionHasZones) {
+        List<Boolean> checks = requirementChecks(artwork, settings, exhibitionHasZones);
+        long filled = checks.stream().filter(Boolean::booleanValue).count();
+        return Math.round(filled * 100f / checks.size());
+    }
+
+    // 이 작품에 적용되는 "충족 여부" 체크 목록. isSatisfied/completionRate 둘 다 이 목록만 본다 —
+    // 필수 항목이 새로 생기면 여기 한 줄만 추가하면 둘 다 자동으로 반영된다.
+    private List<Boolean> requirementChecks(Artwork artwork, ExhibitionFieldSettings settings, boolean exhibitionHasZones) {
+        List<Boolean> checks = new ArrayList<>();
+        checks.add(!isBlank(artwork.getCategory()));
+        checks.add(artwork.getProductionEndYear() != null);
 
         // 그룹이 하나도 없는 전시는 작가가 고를 UI 자체가 없으므로 체크하지 않는다.
-        if (artwork.getExhibitionZone() == null
-                && exhibitionZoneRepository.existsByExhibitionId(artwork.getExhibition().getId())) {
-            return false;
+        if (exhibitionHasZones) {
+            checks.add(artwork.getExhibitionZone() != null);
         }
-
-        return fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId())
-                .map(settings -> settings.isSatisfiedBy(artwork))
-                .orElse(true);
-    }
-
-    // 작품 기본/상세 쪽 고정 필수값 (전시 설정과 무관하게 항상 본다)
-    private static final int BASE_REQUIRED_COUNT = 2; // category, productionEndYear
-
-    // 작품 작성 완료율(%). 작품 기본/상세 필수값 + 출품 정보 필수값(전시에 출품한 경우)을 합산한다.
-    public int completionRate(Artwork artwork) {
-
-        ExhibitionFieldSettings settings = artwork.getExhibition() != null
-                ? fieldSettingsRepository.findByExhibitionId(artwork.getExhibition().getId()).orElse(null)
-                : null;
-
-        return completionRate(artwork, settings);
-    }
-
-    // 목록 조회처럼 전시별 설정을 미리 한 번만 조회해둔 경우, 매 작품마다 다시 조회하지 않도록 settings 를 직접 받는다.
-    public int completionRate(Artwork artwork, ExhibitionFieldSettings settings) {
-
-        int required = BASE_REQUIRED_COUNT;
-        int filled = baseFilledCount(artwork);
 
         if (settings != null) {
-            required += settings.requiredFieldCount();
-            filled += settings.filledRequiredFieldCount(artwork);
+            if (settings.isRequiredMainImg()) checks.add(!isBlank(artwork.getMainImg()));
+            // 사이즈는 가로/세로만 본다. 높이는 부피가 있는 작품만 입력한다.
+            if (settings.isRequiredSize()) checks.add(artwork.getWidth() != null && artwork.getHeight() != null);
+            if (settings.isRequiredMaterials()) checks.add(!artwork.getMaterials().isEmpty());
+            if (settings.isRequiredLocationMap()) checks.add(!isBlank(artwork.getLocationMap()));
         }
 
-        return Math.round(filled * 100f / required);
+        return checks;
     }
 
-    private int baseFilledCount(Artwork artwork) {
-        int filled = 0;
-        if (!isBlank(artwork.getCategory())) filled++;
-        if (artwork.getProductionEndYear() != null) filled++;
-        return filled;
+    private Context resolveContext(Artwork artwork) {
+        if (artwork.getExhibition() == null) {
+            return new Context(null, false);
+        }
+        UUID exhibitionId = artwork.getExhibition().getId();
+        return new Context(
+                fieldSettingsRepository.findByExhibitionId(exhibitionId).orElse(null),
+                exhibitionZoneRepository.existsByExhibitionId(exhibitionId)
+        );
     }
+
+    private record Context(ExhibitionFieldSettings settings, boolean exhibitionHasZones) {}
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();

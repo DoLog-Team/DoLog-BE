@@ -158,8 +158,8 @@ class ArtworkManageApiTests {
         mvc.perform(withToken(list(), ownerToken).param("hidden", "false").param("visibility", "DRAFT"))
                 .andExpect(jsonPath("$.data.artworks[*].artworkId").value(contains(draftArtwork.getId().toString())))
                 .andExpect(jsonPath("$.data.artworks[0].visibility").value("DRAFT"))
-                // 기본/상세(카테고리, 제작종료년도)는 채워져 있고 대표 이미지만 없어서 2/3
-                .andExpect(jsonPath("$.data.artworks[0].completionRate").value(67));
+                // 기본/상세(카테고리, 제작종료년도)와 그룹(zoneA)은 채워져 있고 대표 이미지만 없어서 3/4
+                .andExpect(jsonPath("$.data.artworks[0].completionRate").value(75));
     }
 
     @Test

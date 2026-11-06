@@ -13,6 +13,7 @@ import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkManageItemResponse;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkManageListResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,6 +33,7 @@ public class ArtworkManageQueryService {
     private final ExhibitionFieldSettingsRepository fieldSettingsRepository;
     private final ArtworkValidator artworkValidator;
     private final ArtworkFieldRequirement artworkFieldRequirement;
+    private final ExhibitionZoneRepository exhibitionZoneRepository;
 
     public ArtworkManageListResponse getArtworks(
             UUID accountId,
@@ -58,6 +60,7 @@ public class ArtworkManageQueryService {
 
         ExhibitionFieldSettings settings = fieldSettingsRepository.findByExhibitionId(exhibitionId)
                 .orElseGet(() -> ExhibitionFieldSettings.defaultsFor(exhibition));
+        boolean exhibitionHasZones = exhibitionZoneRepository.existsByExhibitionId(exhibitionId);
 
         Specification<Artwork> spec = Specification
                 .where(ArtworkSpecification.withExhibitionId(exhibitionId))
@@ -71,7 +74,8 @@ public class ArtworkManageQueryService {
 
         return new ArtworkManageListResponse(
                 result.getContent().stream()
-                        .map(artwork -> ArtworkManageItemResponse.of(artwork, artworkFieldRequirement.completionRate(artwork, settings)))
+                        .map(artwork -> ArtworkManageItemResponse.of(artwork,
+                                artworkFieldRequirement.completionRate(artwork, settings, exhibitionHasZones)))
                         .toList(),
                 (int) result.getTotalElements(),
                 result.getTotalPages(),
