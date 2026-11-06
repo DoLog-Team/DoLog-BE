@@ -276,6 +276,10 @@ public class Artwork extends BaseEntity implements Orderable {
         this.exhibitionOnly = exhibitionOnly;
     }
 
+    public boolean isVisibleAnywhere() {
+        return isVisibleOnDolog() || isVisibleOnExhibition();
+    }
+
     // 공백 이름은 버린다. multipart 에서 빈 값 하나만 보내면 재료 전체 삭제가 된다.
     public void replaceMaterials(List<String> names) {
         List<String> trimmed = names.stream()
