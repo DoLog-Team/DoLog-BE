@@ -20,6 +20,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.host.HostRepository;
 import com.dolog.server.domain.exhibition.support.ExhibitionPublishRequirement;
+import com.dolog.server.domain.exhibition.web.dto.request.basic.ExhibitionUpdateRequest;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.ArtistJoinCodeResponse;
 import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionAdminHomeResponse;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -85,6 +87,9 @@ class ExhibitionServiceImplTest {
 
     @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private com.dolog.server.domain.exhibition.support.ExhibitionPublicityNotifier exhibitionPublicityNotifier;
 
     @InjectMocks
     private ExhibitionServiceImpl service;
@@ -269,5 +274,38 @@ class ExhibitionServiceImplTest {
         assertEquals(ArtworkStatus.DRAFT, artwork.getStatus());
         verify(notificationService).send(eq(artistAccount), eq(NotificationType.ARTWORK_EXHIBITION_DELETED), any(), eq(exhibitionId));
         verify(exhibitionRepository).delete(exhibition);
+    }
+
+    @Test
+    @DisplayName("전시를 비공개로 전환하면 영향받는 작가에게 알린다")
+    void updatingToPrivateNotifiesAffectedArtists() {
+        UUID exhibitionId = UUID.randomUUID();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).isPublic(true).slug("diag").build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+
+        ExhibitionUpdateRequest request = new ExhibitionUpdateRequest();
+        ReflectionTestUtils.setField(request, "isPublic", false);
+
+        service.updateExhibition(exhibitionId, request);
+
+        assertFalse(exhibition.isPublic());
+        verify(exhibitionPublicityNotifier).notify(exhibition, false);
+    }
+
+    @Test
+    @DisplayName("공개 여부가 바뀌지 않으면 알리지 않는다")
+    void updatingWithoutPublicityChangeDoesNotNotify() {
+        UUID exhibitionId = UUID.randomUUID();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).isPublic(true).slug("diag2").build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+
+        ExhibitionUpdateRequest request = new ExhibitionUpdateRequest();
+        ReflectionTestUtils.setField(request, "isPublic", true);
+
+        service.updateExhibition(exhibitionId, request);
+
+        verifyNoInteractions(exhibitionPublicityNotifier);
     }
 }

@@ -1,5 +1,6 @@
 package com.dolog.server.domain.plan.scheduler;
 
+import com.dolog.server.domain.exhibition.support.ExhibitionPublicityNotifier;
 import com.dolog.server.domain.plan.entity.Subscription;
 import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
@@ -18,6 +19,7 @@ import java.util.List;
 public class SubscriptionExpirationScheduler {
 
     private final SubscriptionRepository subscriptionRepository;
+    private final ExhibitionPublicityNotifier exhibitionPublicityNotifier;
 
     @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
     @Transactional
@@ -29,6 +31,7 @@ public class SubscriptionExpirationScheduler {
             subscription.markAsExpired();
             // 전시는 비공개 전환되지만, 출품된 작품의 두록 개인 페이지 노출은 별개로 유지된다
             subscription.getExhibition().unpublish();
+            exhibitionPublicityNotifier.notify(subscription.getExhibition(), false);
         });
 
         log.info("만료 처리된 구독 {}건", overdue.size());

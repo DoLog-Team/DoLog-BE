@@ -1,6 +1,7 @@
 package com.dolog.server.domain.plan.scheduler;
 
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.support.ExhibitionPublicityNotifier;
 import com.dolog.server.domain.plan.entity.Subscription;
 import com.dolog.server.domain.plan.entity.enums.BillingCycle;
 import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,11 +29,14 @@ class SubscriptionExpirationSchedulerTest {
     @Mock
     private SubscriptionRepository subscriptionRepository;
 
+    @Mock
+    private ExhibitionPublicityNotifier exhibitionPublicityNotifier;
+
     @InjectMocks
     private SubscriptionExpirationScheduler scheduler;
 
     @Test
-    @DisplayName("만료된 구독을 EXPIRED로 바꾸고, 연결된 전시도 비공개로 전환한다")
+    @DisplayName("만료된 구독을 EXPIRED로 바꾸고, 연결된 전시도 비공개로 전환하면서 영향받는 작가에게 알린다")
     void expiresSubscriptionAndUnpublishesExhibition() {
         Exhibition exhibition = Exhibition.builder().isPublic(true).build();
         Subscription subscription = Subscription.builder()
@@ -48,5 +53,6 @@ class SubscriptionExpirationSchedulerTest {
 
         assertEquals(SubscriptionStatus.EXPIRED, subscription.getStatus());
         assertFalse(exhibition.isPublic());
+        verify(exhibitionPublicityNotifier).notify(exhibition, false);
     }
 }
