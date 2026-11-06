@@ -112,10 +112,12 @@ public class ArtworkFieldRequirement {
 
     // 전시의 필수 항목이 완화될 때: 시스템이 자동으로 비공개했던 작품 중 이제 조건을 채운 작품을 다시 공개하고 돌려준다.
     // 작가가 직접 비공개로 둔 작품(autoDraftedAt == null)은 건드리지 않는다.
+    // isSatisfiedBy는 전시 설정(출품 정보) 4항목만 보므로, autoPublish 직전에 isSatisfied로 기본/그룹 조건까지 한 번 더 확인한다
+    // — 그래야 "PUBLISHED는 항상 isSatisfied를 통과한다"는 불변 조건이 이 경로에서도 깨지지 않는다.
     public List<Artwork> republishAutoDrafted(ExhibitionFieldSettings settings, List<Artwork> autoDraftedArtworks) {
 
         List<Artwork> republished = autoDraftedArtworks.stream()
-                .filter(artwork -> settings.isSatisfiedBy(artwork))
+                .filter(artwork -> settings.isSatisfiedBy(artwork) && isSatisfied(artwork))
                 .toList();
 
         republished.forEach(Artwork::autoPublish);
