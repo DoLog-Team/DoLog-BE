@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "artist-기본 정보")
@@ -44,6 +45,19 @@ public class ArtistController {
         return SuccessResponse.ok(
                 artistService.updateMyArtist(user.getId(), request),
                 "작가 수정 성공"
+        );
+    }
+
+    @Operation(summary = "내가 등록한 작품의 재료 및 기법 목록 조회",
+            description = "작가 등록 폼 '재료 및 기법' 자동완성용. 본인이 지금까지 등록한 작품에 실제로 입력했던 재료 이름 목록(중복 제거)을 돌려줍니다.")
+    @GetMapping("/me/materials")
+    @PreAuthorize("hasRole('ARTIST_ADMIN')")
+    public SuccessResponse<List<String>> getMyMaterials(
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        return SuccessResponse.ok(
+                artistService.getMyMaterials(user.getId()),
+                "재료 목록 조회 성공"
         );
     }
 
