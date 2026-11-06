@@ -142,6 +142,21 @@ class ArtworkTest {
     }
 
     @Test
+    @DisplayName("전시에만 공개인 작품은 전시가 비공개로 전환되면 status는 그대로여도 어디에도 안 보인다")
+    void visibleAnywhereFalseWhenExhibitionOnlyExhibitionGoesPrivate() {
+        Exhibition exhibition = Exhibition.builder().isPublic(true).build();
+        Artwork artwork = Artwork.builder().exhibition(exhibition).build();
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        artwork.updateExhibitionOnly(true);
+        assertTrue(artwork.isVisibleAnywhere()); // 전시가 공개인 동안은 전시 경유로 보임
+
+        exhibition.unpublish();
+
+        assertEquals(ArtworkStatus.PUBLISHED, artwork.getStatus()); // status는 그대로
+        assertFalse(artwork.isVisibleAnywhere()); // 하지만 실제로는 어디에도 안 보임
+    }
+
+    @Test
     @DisplayName("전시 자체가 삭제될 때는 출품 취소와 달리 공개로 돌아가지 않고 DRAFT로 내려간다")
     void removeFromDeletedExhibitionDraftsArtwork() {
         Exhibition exhibition = Exhibition.builder().isPublic(true).build();
