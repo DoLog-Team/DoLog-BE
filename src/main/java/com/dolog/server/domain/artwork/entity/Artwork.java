@@ -330,6 +330,14 @@ public class Artwork extends BaseEntity implements Orderable {
         this.exhibitionOnly = false;
         this.artworkArtistMaps.forEach(map -> map.linkProfile(null));
     }
+
+    // 관리자가 전시를 통째로 삭제하는 경우. 작가 의사와 무관하게 발생하므로,
+    // 출품 취소(cancelExhibitionSubmission)와 달리 공개 유지가 아니라 안전하게 비공개(DRAFT)로 내린다.
+    public void removeFromDeletedExhibition() {
+        cancelExhibitionSubmission();
+        changeStatus(ArtworkStatus.DRAFT);
+    }
+
     public void markDeleted(java.time.LocalDateTime at) {
         if (deletedAt == null) deletedAt = at;
     }

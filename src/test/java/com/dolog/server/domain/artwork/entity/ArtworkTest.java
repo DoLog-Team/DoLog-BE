@@ -142,6 +142,22 @@ class ArtworkTest {
     }
 
     @Test
+    @DisplayName("전시 자체가 삭제될 때는 출품 취소와 달리 공개로 돌아가지 않고 DRAFT로 내려간다")
+    void removeFromDeletedExhibitionDraftsArtwork() {
+        Exhibition exhibition = Exhibition.builder().isPublic(true).build();
+        Artwork artwork = Artwork.builder().exhibition(exhibition).build();
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        artwork.updateExhibitionOnly(true);
+
+        artwork.removeFromDeletedExhibition();
+
+        assertNull(artwork.getExhibition());
+        assertFalse(artwork.isExhibitionOnly());
+        assertEquals(ArtworkStatus.DRAFT, artwork.getStatus());
+        assertFalse(artwork.isVisibleOnDolog());
+    }
+
+    @Test
     @DisplayName("PATCH 용 update 메서드는 null 인 값은 건드리지 않는다")
     void updateMethodsIgnoreNull() {
         Artwork artwork = Artwork.builder().title("제목").category("분류").description("설명")
