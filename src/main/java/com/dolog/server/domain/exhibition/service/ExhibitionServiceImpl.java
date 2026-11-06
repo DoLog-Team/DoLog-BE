@@ -25,6 +25,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapReposito
 import com.dolog.server.domain.exhibition.repository.ExhibitionMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.host.HostRepository;
+import com.dolog.server.domain.exhibition.support.ExhibitionPublicityNotifier;
 import com.dolog.server.domain.exhibition.support.ExhibitionPublishRequirement;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.notification.service.NotificationService;
@@ -71,6 +72,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionPublishRequirement exhibitionPublishRequirement;
     private final HostRepository hostRepository;
     private final NotificationService notificationService;
+    private final ExhibitionPublicityNotifier exhibitionPublicityNotifier;
     private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final String CODE_CHARACTERS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -365,7 +367,12 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             }
         }
 
+        boolean wasPublic = exhibition.isPublic();
         exhibition.updateBasicInfo(request.getUnivName(), request.getCollegeName(), request.getDeptName(), request.getExhibitionType(), request.getSlug(), request.getIsPublic());
+
+        if (wasPublic != exhibition.isPublic()) {
+            exhibitionPublicityNotifier.notify(exhibition, exhibition.isPublic());
+        }
 
         return ExhibitionMessageResponse.builder()
                 .message("기본 정보가 성공적으로 수정되었습니다.")
