@@ -38,10 +38,7 @@ public class ArtworkMaterialOptionServiceImpl implements ArtworkMaterialOptionSe
             throw new ArtworkException(ArtworkErrorCode.ARTWORK_MATERIAL_OPTION_DUPLICATE_NAME);
         }
 
-        int nextOrder = artworkMaterialOptionRepository.findAllByOrderByOrderIndexAsc().stream()
-                .mapToInt(ArtworkMaterialOption::getOrderIndex)
-                .max()
-                .orElse(0) + 1;
+        int nextOrder = artworkMaterialOptionRepository.findMaxOrderIndex() + 1;
 
         artworkMaterialOptionRepository.save(ArtworkMaterialOption.builder()
                 .name(request.name())
@@ -75,12 +72,13 @@ public class ArtworkMaterialOptionServiceImpl implements ArtworkMaterialOptionSe
             throw new ArtworkException(ArtworkErrorCode.ARTWORK_MATERIAL_OPTION_REORDER_INVALID);
         }
 
-        List<UUID> ids = requests.stream().map(req -> {
+        for (ArtworkMaterialOptionReorderRequest req : requests) {
             if (req == null || req.materialOptionId() == null || req.order() == null || req.order() < 1) {
                 throw new ArtworkException(ArtworkErrorCode.ARTWORK_MATERIAL_OPTION_REORDER_INVALID);
             }
-            return req.materialOptionId();
-        }).toList();
+        }
+
+        List<UUID> ids = requests.stream().map(ArtworkMaterialOptionReorderRequest::materialOptionId).toList();
 
         if (new HashSet<>(ids).size() != ids.size()) {
             throw new ArtworkException(ArtworkErrorCode.ARTWORK_MATERIAL_OPTION_REORDER_INVALID);
