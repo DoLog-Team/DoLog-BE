@@ -79,26 +79,6 @@ public class ExhibitionFieldSettings extends BaseEntity {
         return true;
     }
 
-    // 출품 정보 쪽에서 필수로 켜둔 항목 수 (최대 4개). 작성률 계산에서 "출품 정보" 분모로 쓴다.
-    public int requiredFieldCount() {
-        int count = 0;
-        if (requiredMainImg) count++;
-        if (requiredSize) count++;
-        if (requiredMaterials) count++;
-        if (requiredLocationMap) count++;
-        return count;
-    }
-
-    // 필수로 켠 항목 중 실제로 채운 개수. 작성률 계산에서 "출품 정보" 분자로 쓴다.
-    public int filledRequiredFieldCount(Artwork artwork) {
-        int filled = 0;
-        if (requiredMainImg && !isBlank(artwork.getMainImg())) filled++;
-        if (requiredSize && artwork.getWidth() != null && artwork.getHeight() != null) filled++;
-        if (requiredMaterials && !artwork.getMaterials().isEmpty()) filled++;
-        if (requiredLocationMap && !isBlank(artwork.getLocationMap())) filled++;
-        return filled;
-    }
-
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }

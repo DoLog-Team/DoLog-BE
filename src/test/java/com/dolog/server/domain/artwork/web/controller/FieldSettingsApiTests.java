@@ -151,6 +151,30 @@ class FieldSettingsApiTests {
     }
 
     @Test
+    @DisplayName("설정 조건은 충족해도 기본 필수값(카테고리 등)이 비어있으면 다시 공개되지 않는다")
+    void relaxingDoesNotRepublishWhenBaseRequirementStillMissing() throws Exception {
+        Artwork missing = Artwork.builder().title("작품").description("설명").exhibition(exhibition)
+                .mainImg(null).width(BigDecimal.ONE).height(BigDecimal.ONE).build(); // category 없음
+        missing.changeStatus(ArtworkStatus.PUBLISHED);
+        missing.replaceMaterials(List.of("재료"));
+        missing.getArtworkArtistMaps().add(ArtworkArtistMap.builder().artwork(missing).artist(artist).artistRole("").build());
+        artworks.saveAndFlush(missing);
+
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken)
+                        .content(settingsJson(true, false, false, false, false, false, false, false, false)))
+                .andExpect(status().isOk());
+        endRequest();
+        assertEquals(ArtworkStatus.DRAFT, statusOf(missing));
+
+        mvc.perform(withToken(put(exhibition.getId()), ownerToken).content(ALL_FALSE))
+                .andExpect(status().isOk());
+
+        endRequest();
+        // 설정(대표 이미지 필수)은 완화됐지만 category가 여전히 없어서 재공개되면 안 됨
+        assertEquals(ArtworkStatus.DRAFT, statusOf(missing));
+    }
+
+    @Test
     @DisplayName("필수 항목을 완화해도 작가가 직접 비공개로 둔 작품은 다시 공개되지 않는다")
     void relaxingDoesNotRepublishManualDraft() throws Exception {
         Artwork manualDraft = artwork(exhibition, ArtworkStatus.DRAFT, null);
@@ -350,6 +374,7 @@ class FieldSettingsApiTests {
 
     private Artwork artwork(Exhibition exhibition, ArtworkStatus status, String mainImg) {
         Artwork artwork = Artwork.builder().title("작품").description("설명").exhibition(exhibition)
+                .category("카테고리").productionEndYear(2024)
                 .mainImg(mainImg).width(BigDecimal.ONE).height(BigDecimal.ONE).build();
         artwork.changeStatus(status);
         artwork.replaceMaterials(List.of("재료"));
