@@ -13,6 +13,7 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ExhibitionFieldSettings;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkSizeType;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
@@ -46,6 +47,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.never;
@@ -160,6 +162,22 @@ class ArtworkManageApiTests {
                 .andExpect(jsonPath("$.data.artworks[0].visibility").value("DRAFT"))
                 // 기본/상세(카테고리, 제작종료년도)와 그룹(zoneA)은 채워져 있고 대표 이미지만 없어서 3/4
                 .andExpect(jsonPath("$.data.artworks[0].completionRate").value(75));
+    }
+
+    @Test
+    @DisplayName("사이즈 필수 전시에서 가변은 숫자 없이, 원형은 지름만으로 비공개(완성)로 필터한다")
+    void filtersRequiredSizeBySizeType() throws Exception {
+        fieldSettings.saveAndFlush(ExhibitionFieldSettings.builder().exhibition(exhibition).requiredSize(true).build());
+        Artwork variable = submitted(sizedArtworkOf("가변", ArtworkSizeType.VARIABLE, null, null), zoneA, 10);
+        Artwork round = submitted(sizedArtworkOf("원형", ArtworkSizeType.ROUND, BigDecimal.TEN, null), zoneA, 20);
+        Artwork widthOnly = submitted(sizedArtworkOf("가로만", ArtworkSizeType.DIMENSIONS, BigDecimal.TEN, null), zoneA, 30);
+        endRequest();
+
+        mvc.perform(withToken(list(), ownerToken).param("hidden", "false").param("visibility", "PRIVATE"))
+                .andExpect(jsonPath("$.data.artworks[*].artworkId").value(containsInAnyOrder(
+                        variable.getId().toString(), round.getId().toString())));
+        mvc.perform(withToken(list(), ownerToken).param("hidden", "false").param("visibility", "DRAFT"))
+                .andExpect(jsonPath("$.data.artworks[*].artworkId").value(contains(widthOnly.getId().toString())));
     }
 
     @Test
@@ -510,6 +528,14 @@ class ArtworkManageApiTests {
                 .category("카테고리").productionEndYear(2024).build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                 .artwork(artwork).artist(artist).artistRole("").build());
+        return artworks.saveAndFlush(artwork);
+    }
+
+    private Artwork sizedArtworkOf(String title, ArtworkSizeType sizeType, BigDecimal width, BigDecimal height) {
+        Artwork artwork = Artwork.builder().title(title).description("설명").category("카테고리").productionEndYear(2024)
+                .sizeType(sizeType).width(width).height(height).build();
+        artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                .artwork(artwork).artist(me).artistRole("").build());
         return artworks.saveAndFlush(artwork);
     }
 
