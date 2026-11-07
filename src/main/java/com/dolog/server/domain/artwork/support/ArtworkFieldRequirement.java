@@ -56,8 +56,7 @@ public class ArtworkFieldRequirement {
 
         if (settings != null) {
             if (settings.isRequiredMainImg()) checks.add(!isBlank(artwork.getMainImg()));
-            // 사이즈는 가로/세로만 본다. 높이는 부피가 있는 작품만 입력한다.
-            if (settings.isRequiredSize()) checks.add(artwork.getWidth() != null && artwork.getHeight() != null);
+            if (settings.isRequiredSize()) checks.add(artwork.hasRequiredSize());
             if (settings.isRequiredMaterials()) checks.add(!artwork.getMaterials().isEmpty());
             if (settings.isRequiredLocationMap()) checks.add(!isBlank(artwork.getLocationMap()));
         }
