@@ -110,6 +110,7 @@ class ArtworkCommandApiTests {
                 .andExpect(jsonPath("$.data.materials", contains("백자토", "청화안료")))
                 .andExpect(jsonPath("$.data.width").value(32.5))
                 .andExpect(jsonPath("$.data.height").value(nullValue()))
+                .andExpect(jsonPath("$.data.sizeType").value("DIMENSIONS"))
                 .andExpect(jsonPath("$.data.productionEndMonth").value(6))
                 .andExpect(jsonPath("$.data.showPurchaseButton").value(true))
                 .andExpect(jsonPath("$.data.status").value("DRAFT"))

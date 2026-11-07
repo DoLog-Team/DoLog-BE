@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.web.dto.response;
 
+import com.dolog.server.domain.artwork.entity.enums.ArtworkSizeType;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkMaterial;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
@@ -24,6 +25,10 @@ public class ArtworkCreateResponse {
     private BigDecimal width;
     private BigDecimal height;
     private BigDecimal depth;
+    // null이면 사이즈 미입력. ROUND는 width가 지름, VARIABLE은 숫자 없이 "가변크기"로 표시한다.
+    private ArtworkSizeType sizeType;
+    // 영상 길이(초)
+    private Integer durationSeconds;
     private Integer productionStartYear;
     private Integer productionStartMonth;
     private Integer productionStartDay;
@@ -52,6 +57,8 @@ public class ArtworkCreateResponse {
                 .width(artwork.getWidth())
                 .height(artwork.getHeight())
                 .depth(artwork.getDepth())
+                .sizeType(artwork.getSizeType())
+                .durationSeconds(artwork.getDurationSeconds())
                 .productionStartYear(artwork.getProductionStartYear())
                 .productionStartMonth(artwork.getProductionStartMonth())
                 .productionStartDay(artwork.getProductionStartDay())

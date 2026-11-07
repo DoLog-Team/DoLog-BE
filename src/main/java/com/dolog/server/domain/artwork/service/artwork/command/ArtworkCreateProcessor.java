@@ -58,14 +58,11 @@ public class ArtworkCreateProcessor {
     // 전시/구역/순서는 출품 시점에 정해지므로 미출품(DRAFT) 상태로 만든다.
     private Artwork buildArtwork(ArtworkCreateRequest request) {
 
-        return Artwork.builder()
+        Artwork artwork = Artwork.builder()
                 .title(request.getTitle().trim())
                 .category(TextUtils.blankToNull(request.getCategory()))
                 .description(TextUtils.normalizeNewlines(request.getDescription()))
                 .shortIntro(TextUtils.blankToNull(request.getShortIntro()))
-                .width(request.getWidth())
-                .height(request.getHeight())
-                .depth(request.getDepth())
                 .productionStartYear(request.getProductionStartYear())
                 .productionStartMonth(request.getProductionStartMonth())
                 .productionStartDay(request.getProductionStartDay())
@@ -77,6 +74,8 @@ public class ArtworkCreateProcessor {
                 .showPurchaseButton(request.getShowPurchaseButton())
                 .youtubeUrl(TextUtils.blankToNull(request.getYoutubeUrl()))
                 .build();
+        artwork.updateSize(request.getWidth(), request.getHeight(), request.getDepth());
+        return artwork;
     }
 
     private void mapArtist(

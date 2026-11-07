@@ -87,17 +87,17 @@ VALUES (@artist_profile, @now, @now, '개발용 작가 ARTIST_1', 'Dev Artist 1'
 
 -- 작품 2개. artwork_2는 QR 발급 확인용 더미다 (artworks.id를 프론트에서 그대로 쓴다).
 INSERT IGNORE INTO artworks (id, created_at, updated_at, title, short_intro, description, category,
-                             material, size, width, height, depth,
+                             material, size, width, height, depth, size_type,
                              production_start_year, production_end_year,
                              main_img, location_map, purchase_url, purchase_chat_url, show_purchase_button,
                              youtube_url, order_index, status, exhibition_id, zone_id)
 VALUES (@artwork_1, @now, @now, '가로 작품', '로컬 데모 작품 1', '로컬 개발용 더미 작품이다.', '회화',
-        '캔버스에 유채', '1200x900mm', 120.00, 90.00, 3.00, 2025, 2026,
+        '캔버스에 유채', '1200x900mm', 120.00, 90.00, 3.00, 'DIMENSIONS', 2025, 2026,
         'https://picsum.photos/seed/dolog-art-1/1200/900', 'A 구역 입구',
         'https://example.com/purchase/1', 'https://open.kakao.com/o/local-demo', 1,
         'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 1, 'PUBLISHED', @exhibition, @zone),
        (@artwork_2, @now, @now, '세로 작품 (QR 더미)', '로컬 데모 작품 2', 'QR 발급 확인용 더미 작품이다.', '사진',
-        '아카이벌 피그먼트 프린트', '900x1200mm', 90.00, 120.00, 3.00, 2026, 2026,
+        '아카이벌 피그먼트 프린트', '900x1200mm', 90.00, 120.00, 3.00, 'DIMENSIONS', 2026, 2026,
         'https://picsum.photos/seed/dolog-art-2/900/1200', 'A 구역 안쪽',
         NULL, NULL, 0,
         NULL, 2, 'PUBLISHED', @exhibition, @zone);

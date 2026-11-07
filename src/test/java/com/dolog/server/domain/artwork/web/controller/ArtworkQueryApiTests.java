@@ -11,6 +11,7 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ExhibitionFieldSettings;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkSizeType;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
@@ -196,6 +197,7 @@ class ArtworkQueryApiTests {
                 .depth(new BigDecimal("7.0")).productionStartYear(2026).productionEndYear(2026)
                 .productionEndMonth(6).productionEndDay(15).purchaseUrl("https://shop")
                 .purchaseChatUrl("https://chat").showPurchaseButton(true)
+                .sizeType(ArtworkSizeType.DIMENSIONS).durationSeconds(260)
                 .locationMap("https://s3/map.webp").build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                 .artwork(artwork).artist(me).artistRole("도예").build());
@@ -214,6 +216,8 @@ class ArtworkQueryApiTests {
                 .andExpect(jsonPath("$.data.materials", contains("백자토", "청화안료")))
                 .andExpect(jsonPath("$.data.width").value(32.0))
                 .andExpect(jsonPath("$.data.depth").value(7.0))
+                .andExpect(jsonPath("$.data.sizeType").value("DIMENSIONS"))
+                .andExpect(jsonPath("$.data.durationSeconds").value(260))
                 .andExpect(jsonPath("$.data.productionStartYear").value(2026))
                 .andExpect(jsonPath("$.data.productionEndMonth").value(6))
                 .andExpect(jsonPath("$.data.purchaseChatUrl").value("https://chat"))
@@ -269,6 +273,8 @@ class ArtworkQueryApiTests {
                 .andExpect(jsonPath("$.data.width").value(nullValue()))
                 .andExpect(jsonPath("$.data.height").value(nullValue()))
                 .andExpect(jsonPath("$.data.depth").value(nullValue()))
+                .andExpect(jsonPath("$.data.sizeType").value(nullValue()))
+                .andExpect(jsonPath("$.data.durationSeconds").value(nullValue()))
                 .andExpect(jsonPath("$.data.materials", hasSize(0)))
                 .andExpect(jsonPath("$.data.locationMap").value(nullValue()))
                 .andExpect(jsonPath("$.data.productionStartYear").value(2025))
@@ -416,6 +422,7 @@ class ArtworkQueryApiTests {
     private Artwork fullArtwork() {
         Artwork artwork = Artwork.builder().title("모든 항목 작품").category("회화").description("설명")
                 .width(new BigDecimal("32.0")).height(new BigDecimal("30.0")).depth(new BigDecimal("5.0"))
+                .sizeType(ArtworkSizeType.DIMENSIONS).durationSeconds(70)
                 .productionStartYear(2025).productionStartMonth(3).productionStartDay(1)
                 .productionEndYear(2026).productionEndMonth(6).productionEndDay(15)
                 .locationMap("https://s3/map.webp").build();

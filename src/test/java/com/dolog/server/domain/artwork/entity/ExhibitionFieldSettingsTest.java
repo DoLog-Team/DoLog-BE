@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.entity;
 
+import com.dolog.server.domain.artwork.entity.enums.ArtworkSizeType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -33,6 +34,27 @@ class ExhibitionFieldSettingsTest {
 
         assertFalse(settings.isSatisfiedBy(Artwork.builder().width(BigDecimal.TEN).build()));
         assertTrue(settings.isSatisfiedBy(Artwork.builder().width(BigDecimal.TEN).height(BigDecimal.ONE).build()));
+    }
+
+    @Test
+    @DisplayName("사이즈 필수여도 가변은 숫자 없이, 원형은 지름만 있으면 충족한다")
+    void requiredSizeAcceptsVariableAndRound() {
+        ExhibitionFieldSettings settings = ExhibitionFieldSettings.builder().requiredSize(true).build();
+
+        assertTrue(settings.isSatisfiedBy(Artwork.builder().sizeType(ArtworkSizeType.VARIABLE).build()));
+        assertFalse(settings.isSatisfiedBy(Artwork.builder().sizeType(ArtworkSizeType.ROUND).build()));
+        assertTrue(settings.isSatisfiedBy(Artwork.builder().sizeType(ArtworkSizeType.ROUND).width(BigDecimal.TEN).build()));
+    }
+
+    @Test
+    @DisplayName("사이즈 숫자를 입력하면 DIMENSIONS가 되고, 숫자 없는 수정은 기존 유형을 유지한다")
+    void updateSizeMarksDimensions() {
+        Artwork variable = Artwork.builder().sizeType(ArtworkSizeType.VARIABLE).build();
+        variable.updateSize(null, null, null);
+        assertEquals(ArtworkSizeType.VARIABLE, variable.getSizeType());
+
+        variable.updateSize(BigDecimal.TEN, BigDecimal.ONE, null);
+        assertEquals(ArtworkSizeType.DIMENSIONS, variable.getSizeType());
     }
 
     @Test

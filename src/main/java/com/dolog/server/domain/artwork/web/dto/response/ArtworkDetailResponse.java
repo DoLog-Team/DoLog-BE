@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.web.dto.response;
 
+import com.dolog.server.domain.artwork.entity.enums.ArtworkSizeType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,6 +28,10 @@ public class ArtworkDetailResponse {
     private BigDecimal width;
     private BigDecimal height;
     private BigDecimal depth;
+    // null이면 사이즈 미입력. ROUND는 width가 지름, VARIABLE은 숫자 없이 "가변크기"로 표시한다.
+    private ArtworkSizeType sizeType;
+    // 영상 길이(초)
+    private Integer durationSeconds;
     private Integer productionStartYear;
     private Integer productionStartMonth;
     private Integer productionStartDay;

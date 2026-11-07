@@ -70,10 +70,9 @@ public class ExhibitionFieldSettings extends BaseEntity {
         this.hiddenProductionYear = hiddenProductionYear;
     }
 
-    // 사이즈는 가로/세로만 본다. 높이는 부피가 있는 작품만 입력한다.
     public boolean isSatisfiedBy(Artwork artwork) {
         if (requiredMainImg && isBlank(artwork.getMainImg())) return false;
-        if (requiredSize && (artwork.getWidth() == null || artwork.getHeight() == null)) return false;
+        if (requiredSize && !artwork.hasRequiredSize()) return false;
         if (requiredMaterials && artwork.getMaterials().isEmpty()) return false;
         if (requiredLocationMap && isBlank(artwork.getLocationMap())) return false;
         return true;
