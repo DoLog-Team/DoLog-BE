@@ -108,7 +108,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             List<Exhibition> list =
                     exhibitionRepository.findDefaultExhibitions(today);
 
-            exhibitions = list.stream()
+            List<Exhibition> ongoingAndUpcoming = list.stream()
                     .sorted((e1, e2) -> {
                         LocalDate s1 = e1.getExhibitionDetail().getStartDate();
                         LocalDate s2 = e2.getExhibitionDetail().getStartDate();
@@ -127,7 +127,16 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                         return s1.compareTo(s2);
                     })
                     .limit(3)
-                    .toList();
+                    .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+
+            // 진행중+예정이 3개 미만이면, 최근에 끝난 전시로 채워서 메인에 항상 3개가 보이게 한다.
+            if (ongoingAndUpcoming.size() < 3) {
+                int needed = 3 - ongoingAndUpcoming.size();
+                ongoingAndUpcoming.addAll(
+                        exhibitionRepository.findEndedExhibitions(today, org.springframework.data.domain.PageRequest.of(0, needed)));
+            }
+
+            exhibitions = ongoingAndUpcoming;
         }
 
         List<ExhibitionListItemResponse> items = exhibitions.stream()

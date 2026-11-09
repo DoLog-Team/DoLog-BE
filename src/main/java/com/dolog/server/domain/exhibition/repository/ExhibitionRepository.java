@@ -47,6 +47,19 @@ public interface ExhibitionRepository extends JpaRepository<Exhibition, UUID> {
             @Param("today") LocalDate today
     );
 
+    // 진행중·예정이 부족할 때 메인 노출을 채우기 위한 종료된 전시 (최근에 끝난 순)
+    @Query("""
+            SELECT e FROM Exhibition e
+            JOIN FETCH e.exhibitionDetail d
+            WHERE e.isPublic = true
+              AND d.endDate < :today
+            ORDER BY d.endDate DESC
+        """)
+    List<Exhibition> findEndedExhibitions(
+            @Param("today") LocalDate today,
+            Pageable pageable
+    );
+
     Optional<Exhibition> findBySlug(String slug);
     boolean existsBySlug(String slug);
 
