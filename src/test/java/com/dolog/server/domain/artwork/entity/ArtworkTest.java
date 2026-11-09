@@ -126,8 +126,8 @@ class ArtworkTest {
     }
 
     @Test
-    @DisplayName("전시에만 공개였던 작품은 출품 취소하면 exhibitionOnly도 같이 꺼져서 두록에 노출된다")
-    void cancelExhibitionSubmissionClearsExhibitionOnly() {
+    @DisplayName("전시에만 공개였던 작품은 출품 취소하면 공개로 넘어가지 않고 비공개(DRAFT)로 내려간다")
+    void cancelExhibitionSubmissionDraftsExhibitionOnlyArtwork() {
         Exhibition exhibition = Exhibition.builder().isPublic(true).build();
         Artwork artwork = Artwork.builder().exhibition(exhibition).build();
         artwork.changeStatus(ArtworkStatus.PUBLISHED);
@@ -138,6 +138,22 @@ class ArtworkTest {
 
         assertNull(artwork.getExhibition());
         assertFalse(artwork.isExhibitionOnly());
+        assertEquals(ArtworkStatus.DRAFT, artwork.getStatus());
+        assertFalse(artwork.isVisibleOnDolog());
+    }
+
+    @Test
+    @DisplayName("원래부터 공개였던(전시에만 공개가 아닌) 작품은 출품 취소해도 공개 상태가 그대로 유지된다")
+    void cancelExhibitionSubmissionKeepsPublishedWhenNotExhibitionOnly() {
+        Exhibition exhibition = Exhibition.builder().isPublic(true).build();
+        Artwork artwork = Artwork.builder().exhibition(exhibition).build();
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+
+        artwork.cancelExhibitionSubmission();
+
+        assertNull(artwork.getExhibition());
+        assertFalse(artwork.isExhibitionOnly());
+        assertEquals(ArtworkStatus.PUBLISHED, artwork.getStatus());
         assertTrue(artwork.isVisibleOnDolog());
     }
 
