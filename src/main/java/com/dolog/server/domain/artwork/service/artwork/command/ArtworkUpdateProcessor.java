@@ -73,6 +73,10 @@ public class ArtworkUpdateProcessor {
                 artworkFileHandler.replaceLocationMap(artwork.getLocationMap(), request.getLocationMapFile())
         );
 
+        if (artwork.isAutoDrafted() && artworkFieldRequirement.isSatisfied(artwork)) {
+            artwork.autoPublish();
+        }
+
         artworkFieldRequirement.requireIfPublished(artwork);
 
         return ArtworkCreateResponse.of(artwork, artist.getProfileNameKo());
@@ -103,6 +107,11 @@ public class ArtworkUpdateProcessor {
         if (request.getStatus() != null) {
             artwork.changeStatus(request.getStatus());
         }
+
+        if (artwork.isAutoDrafted() && artworkFieldRequirement.isSatisfied(artwork)) {
+            artwork.autoPublish();
+        }
+
         // 공개로 바꾸거나 공개 작품의 필수 항목을 지우면 공개/비공개 API 와 같은 400
         artworkFieldRequirement.requireIfPublished(artwork);
 
