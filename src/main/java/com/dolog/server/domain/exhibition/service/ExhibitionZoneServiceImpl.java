@@ -13,6 +13,7 @@ import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
 import com.dolog.server.domain.exhibition.exception.ExhibitionException;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
+import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
 import com.dolog.server.domain.exhibition.web.dto.request.zone.ExhibitionZoneBulkSaveRequest;
@@ -43,6 +44,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final NotificationService notificationService;
     private final ArtworkRepository artworkRepository;
+    private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -94,9 +96,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .filter(zone -> !requestedIds.contains(zone.getId()))
                 .toList();
         if (!removedZones.isEmpty()) {
-            notifyZoneRemoved(exhibition, removedZones);
-            artworkRepository.clearZone(removedZones);
-            exhibitionZoneRepository.deleteAll(removedZones);
+            removeZones(exhibition, removedZones);
         }
 
         for (ExhibitionZoneBulkSaveRequest.ZoneItem item : request.getZones()) {
@@ -153,7 +153,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
         requireOwnerUnlessDologAdmin(zone.getExhibition(), accountId, isDologAdmin);
 
-        exhibitionZoneRepository.delete(zone);
+        removeZones(zone.getExhibition(), List.of(zone));
     }
 
     // 작품 그룹 숨김/재공개. 상태가 실제로 바뀐 경우에만 참여 작가에게 알림을 보낸다
@@ -189,30 +189,38 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .orElse(exhibition.getSlug());
     }
 
-    // 삭제될 그룹에 속해 있던 작품들의 작가 전원에게, zone이 실제로 비워지기 전에 알린다
-    private void notifyZoneRemoved(Exhibition exhibition, List<ExhibitionZone> removedZones) {
+    private void removeZones(Exhibition exhibition, List<ExhibitionZone> zones) {
         String exhibitionName = resolveExhibitionName(exhibition);
 
-        for (ExhibitionZone zone : removedZones) {
+        for (ExhibitionZone zone : zones) {
             List<Artwork> artworks = artworkRepository
                     .findByExhibitionIdAndExhibitionZoneIdOrderByOrderIndexAsc(exhibition.getId(), zone.getId());
+            notifyArtworkGroupRemoved(exhibition, exhibitionName, zone, artworks);
+            artworks.forEach(artwork -> artwork.updateZone(null));
+        }
 
-            for (Artwork artwork : artworks) {
-                Map<String, String> payload = Map.of(
-                        "exhibitionName", exhibitionName,
-                        "artworkTitle", artwork.getTitle(),
-                        "artworkId", artwork.getId().toString(),
-                        "zoneName", zone.getName()
-                );
+        artworkRepository.clearZone(zones);
+        exhibitionGuideMapRepository.clearZone(zones);
+        exhibitionZoneRepository.deleteAll(zones);
+    }
 
-                for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
-                    Artist artist = map.getArtist();
-                    if (artist.getAccount() == null) {
-                        continue;
-                    }
-                    notificationService.send(
-                            artist.getAccount(), NotificationType.ARTWORK_GROUP_REMOVED, payload, exhibition.getId());
+    private void notifyArtworkGroupRemoved(
+            Exhibition exhibition, String exhibitionName, ExhibitionZone zone, List<Artwork> artworks) {
+        for (Artwork artwork : artworks) {
+            Map<String, String> payload = Map.of(
+                    "exhibitionName", exhibitionName,
+                    "artworkTitle", artwork.getTitle(),
+                    "artworkId", artwork.getId().toString(),
+                    "zoneName", zone.getName()
+            );
+
+            for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+                Artist artist = map.getArtist();
+                if (artist.getAccount() == null) {
+                    continue;
                 }
+                notificationService.send(
+                        artist.getAccount(), NotificationType.ARTWORK_GROUP_REMOVED, payload, exhibition.getId());
             }
         }
     }

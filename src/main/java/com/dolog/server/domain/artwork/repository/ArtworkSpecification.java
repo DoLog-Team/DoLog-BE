@@ -3,6 +3,7 @@ package com.dolog.server.domain.artwork.repository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.ExhibitionFieldSettings;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkSizeType;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkVisibility;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
@@ -142,7 +143,13 @@ public class ArtworkSpecification {
             filled.add(notBlank(cb, root.get("mainImg")));
         }
         if (settings.isRequiredSize()) {
-            filled.add(cb.and(cb.isNotNull(root.get("width")), cb.isNotNull(root.get("height"))));
+            // Artwork.hasRequiredSize()와 같은 규칙: 가변은 숫자 없이, 원형은 지름(width)만으로 충족.
+            // size_type이 NULL이면 비교 결과가 NULL이 되어 NOT(complete) 필터에서 빠지므로 isNotNull로 먼저 거른다.
+            Expression<ArtworkSizeType> sizeType = root.get("sizeType");
+            filled.add(cb.or(
+                    cb.and(cb.isNotNull(sizeType), cb.equal(sizeType, ArtworkSizeType.VARIABLE)),
+                    cb.and(cb.isNotNull(sizeType), cb.equal(sizeType, ArtworkSizeType.ROUND), cb.isNotNull(root.get("width"))),
+                    cb.and(cb.isNotNull(root.get("width")), cb.isNotNull(root.get("height")))));
         }
         if (settings.isRequiredMaterials()) {
             filled.add(cb.isNotEmpty(root.get("materials")));

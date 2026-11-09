@@ -9,6 +9,7 @@ import com.dolog.server.domain.account.exception.SocialLoginErrorCode;
 import com.dolog.server.domain.account.web.dto.request.SocialLoginRequest;
 import com.dolog.server.domain.account.web.dto.response.SocialLoginResponse;
 import com.dolog.server.global.exception.BaseException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import com.dolog.server.domain.account.web.dto.request.LoginRequest;
@@ -52,8 +53,10 @@ public class AuthController {
 
     @Operation(summary = "전시 어드민 코드 로그인")
     @PostMapping("/exhibition/login")
-    public SuccessResponse<ExhibitionLoginResponse> loginExhibition(@Valid @RequestBody ExhibitionLoginRequest request) {
-        return SuccessResponse.ok(authService.loginExhibition(request.getEntryCode()), "전시 어드민 로그인 성공");
+    public SuccessResponse<ExhibitionLoginResponse> loginExhibition(@Valid @RequestBody ExhibitionLoginRequest request,
+                                                                 HttpServletRequest httpRequest) {
+        return SuccessResponse.ok(authService.loginExhibition(request.getEntryCode(), httpRequest.getRemoteAddr()),
+                "전시 어드민 로그인 성공");
     }
 
     @Operation(summary = "소셜 로그인/가입")

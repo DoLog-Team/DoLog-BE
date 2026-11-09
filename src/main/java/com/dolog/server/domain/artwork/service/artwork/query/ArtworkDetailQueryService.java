@@ -126,6 +126,8 @@ public class ArtworkDetailQueryService {
                 .width(hideSize ? null : artwork.getWidth())
                 .height(hideSize ? null : artwork.getHeight())
                 .depth(hideSize ? null : artwork.getDepth())
+                .sizeType(hideSize ? null : artwork.getSizeType())
+                .durationSeconds(hideSize ? null : artwork.getDurationSeconds())
                 .productionStartYear(hideYear ? null : artwork.getProductionStartYear())
                 .productionStartMonth(hideMonthDay ? null : artwork.getProductionStartMonth())
                 .productionStartDay(hideMonthDay ? null : artwork.getProductionStartDay())

@@ -11,6 +11,7 @@ import com.dolog.server.domain.artwork.service.artwork.query.ArtworkDetailQueryS
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkManageQueryService;
 import com.dolog.server.domain.artwork.service.artwork.query.ArtworkMyQueryService;
 import com.dolog.server.domain.artwork.service.ArtworkCategoryService;
+import com.dolog.server.domain.artwork.service.ArtworkMaterialOptionService;
 import com.dolog.server.domain.artwork.service.ArtworkService;
 import com.dolog.server.domain.artwork.service.view.ArtworkViewService;
 import com.dolog.server.domain.artwork.web.dto.request.*;
@@ -48,6 +49,7 @@ public class ArtworkController {
     private final ArtworkMyQueryService artworkMyQueryService;
     private final ArtworkManageQueryService artworkManageQueryService;
     private final ArtworkCategoryService artworkCategoryService;
+    private final ArtworkMaterialOptionService artworkMaterialOptionService;
 
     // 1. 작품 전체 목록 조회
     @Operation(summary = "작품 전체 목록 조회")
@@ -67,6 +69,13 @@ public class ArtworkController {
     @GetMapping("/artworks/categories")
     public SuccessResponse<List<ArtworkCategoryResponse>> getArtworkCategories() {
         return SuccessResponse.ok(artworkCategoryService.getCategories());
+    }
+
+    // 1-2. 재료 및 기법 기본 옵션 목록 조회 (공개): 작가 어드민 폼 자동완성용
+    @Operation(summary = "재료 및 기법 기본 옵션 목록 조회")
+    @GetMapping("/artworks/materials")
+    public SuccessResponse<List<ArtworkMaterialOptionResponse>> getArtworkMaterialOptions() {
+        return SuccessResponse.ok(artworkMaterialOptionService.getOptions());
     }
 
     // 두록 어드민 전용. 공개/비공개/숨김/플랜 한도 초과와 무관하게 전부 조회한다.

@@ -22,6 +22,7 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistProfileUpdateRequest
 import com.dolog.server.domain.artist.web.dto.response.*;
 import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artist.support.ArtistProfileImageValidator;
+import com.dolog.server.domain.artwork.repository.ArtworkMaterialRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
@@ -55,6 +56,7 @@ public class ArtistServiceImpl implements ArtistService {
     private final ArtistSnsRepository artistSnsRepository;
     private final ExhibitionArtistMapRepository exhibitionArtistMapRepository;
     private final ArtworkRepository artworkRepository;
+    private final ArtworkMaterialRepository artworkMaterialRepository;
     private final ArtistProfileLikeRepository artistProfileLikeRepository;
     private final FileService fileService;
     private final ArtistProfileImageValidator profileImageValidator;
@@ -519,5 +521,12 @@ public class ArtistServiceImpl implements ArtistService {
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getMyMaterials(UUID accountId) {
+        Artist artist = artistRepository.findByAccountId(accountId)
+                .orElseThrow(ArtistNotFoundException::new);
 
+        return artworkMaterialRepository.findDistinctNamesByArtistId(artist.getId());
+    }
 }

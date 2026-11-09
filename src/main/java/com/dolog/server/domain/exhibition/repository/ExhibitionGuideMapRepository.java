@@ -1,9 +1,12 @@
 package com.dolog.server.domain.exhibition.repository;
 
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,4 +21,8 @@ public interface ExhibitionGuideMapRepository extends JpaRepository<ExhibitionGu
     int findMaxOrderIndexByExhibitionId(@Param("exhibitionId") UUID exhibitionId);
 
     List<ExhibitionGuideMap> findByZoneId(UUID zoneId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("UPDATE ExhibitionGuideMap g SET g.zone = null WHERE g.zone IN :zones")
+    void clearZone(@Param("zones") Collection<ExhibitionZone> zones);
 }

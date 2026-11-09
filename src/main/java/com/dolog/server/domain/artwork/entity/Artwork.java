@@ -1,5 +1,6 @@
 package com.dolog.server.domain.artwork.entity;
 
+import com.dolog.server.domain.artwork.entity.enums.ArtworkSizeType;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
@@ -91,6 +92,15 @@ public class Artwork extends BaseEntity implements Orderable {
     @Column(precision = 10, scale = 2)
     private BigDecimal depth;
 
+    // null이면 사이즈 미입력. 숫자 입력이 들어오면 DIMENSIONS가 된다.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "size_type")
+    private ArtworkSizeType sizeType;
+
+    // 영상 길이(초). 아직 입력은 받지 않고 v1 데이터 정리로만 채운다.
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     @Column(name = "production_start_year")
     private Integer productionStartYear;
 
@@ -170,7 +180,8 @@ public class Artwork extends BaseEntity implements Orderable {
         if (shortIntro != null) this.shortIntro = TextUtils.blankToNull(shortIntro);
     }
 
-    // clear* 가 true면 값을 지운다(null)
+    // clear* 가 true면 값을 지운다(null). 작가 입력은 가로·세로·높이만 받으므로, 지운 뒤에도 숫자가 하나라도
+    // 남아있으면 DIMENSIONS로 보고, 전부 지워지면 사이즈 자체가 없는 것으로 보고 sizeType도 같이 비운다.
     public void updateSize(BigDecimal width, BigDecimal height, BigDecimal depth,
                             boolean clearWidth, boolean clearHeight, boolean clearDepth) {
         if (clearWidth) this.width = null;
@@ -179,6 +190,19 @@ public class Artwork extends BaseEntity implements Orderable {
         else if (height != null) this.height = height;
         if (clearDepth) this.depth = null;
         else if (depth != null) this.depth = depth;
+
+        if (this.width != null || this.height != null || this.depth != null) {
+            this.sizeType = ArtworkSizeType.DIMENSIONS;
+        } else {
+            this.sizeType = null;
+        }
+    }
+
+    // 전시 "사이즈 필수" 충족 여부. 가변은 숫자 없이, 원형은 지름만으로 충족한다. 높이는 부피가 있는 작품만 입력한다.
+    public boolean hasRequiredSize() {
+        if (sizeType == ArtworkSizeType.VARIABLE) return true;
+        if (sizeType == ArtworkSizeType.ROUND) return width != null;
+        return width != null && height != null;
     }
 
     public void updateProductionPeriod(Integer startYear, Integer startMonth, Integer startDay,
