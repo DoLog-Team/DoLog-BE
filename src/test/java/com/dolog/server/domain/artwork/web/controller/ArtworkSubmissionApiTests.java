@@ -337,7 +337,7 @@ class ArtworkSubmissionApiTests {
                 .andExpect(jsonPath("$.code").value("ARTWORK_013"));
 
         artwork.updateMainImg("https://s3/main.webp");
-        artwork.updateSize(new BigDecimal("30"), new BigDecimal("40"), null);
+        artwork.updateSize(new BigDecimal("30"), new BigDecimal("40"), null, false, false, false);
         em.flush();
 
         mvc.perform(withToken(changeVisibility(artwork.getId(), "PUBLIC"), myToken))

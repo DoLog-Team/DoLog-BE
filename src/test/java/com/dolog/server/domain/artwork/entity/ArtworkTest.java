@@ -5,6 +5,7 @@ import com.dolog.server.domain.exhibition.entity.Exhibition;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -206,5 +207,28 @@ class ArtworkTest {
         assertEquals("https://chat", artwork.getPurchaseChatUrl());
         assertTrue(artwork.getShowPurchaseButton());
         assertNull(artwork.getMainImg());
+    }
+
+    @Test
+    @DisplayName("updateSize는 null은 유지하고, clear 플래그가 true인 값만 독립적으로 지운다")
+    void updateSizeClearFlagsClearOnlyFlaggedFields() {
+        Artwork artwork = Artwork.builder()
+                .width(new BigDecimal("10")).height(new BigDecimal("20")).depth(new BigDecimal("30")).build();
+
+        // null만 보내면 (clear 플래그 없음) 기존 값 유지
+        artwork.updateSize(null, null, null, false, false, false);
+        assertEquals(new BigDecimal("10"), artwork.getWidth());
+        assertEquals(new BigDecimal("20"), artwork.getHeight());
+        assertEquals(new BigDecimal("30"), artwork.getDepth());
+
+        // height만 지우면 width/depth는 그대로
+        artwork.updateSize(null, null, null, false, true, false);
+        assertEquals(new BigDecimal("10"), artwork.getWidth());
+        assertNull(artwork.getHeight());
+        assertEquals(new BigDecimal("30"), artwork.getDepth());
+
+        // 새 값과 clear를 같이 보내면 clear가 우선한다
+        artwork.updateSize(new BigDecimal("99"), null, null, true, false, false);
+        assertNull(artwork.getWidth());
     }
 }

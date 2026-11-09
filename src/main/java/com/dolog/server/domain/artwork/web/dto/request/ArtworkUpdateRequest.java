@@ -37,6 +37,11 @@ public class ArtworkUpdateRequest implements ArtworkInfoFields {
     @Digits(integer = 8, fraction = 2)
     private BigDecimal depth;
 
+    // true면 해당 값을 지운다(null)
+    private Boolean clearWidth;
+    private Boolean clearHeight;
+    private Boolean clearDepth;
+
     // 필수값이 아니라서 빈 값으로 지우는 것도 허용한다
     private String description;
 

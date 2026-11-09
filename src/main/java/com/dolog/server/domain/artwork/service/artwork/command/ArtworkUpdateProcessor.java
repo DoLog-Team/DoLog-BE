@@ -200,7 +200,10 @@ public class ArtworkUpdateProcessor {
                 normalize(request.getDescription()),
                 request.getShortIntro()
         );
-        artwork.updateSize(request.getWidth(), request.getHeight(), request.getDepth());
+        artwork.updateSize(request.getWidth(), request.getHeight(), request.getDepth(),
+                Boolean.TRUE.equals(request.getClearWidth()),
+                Boolean.TRUE.equals(request.getClearHeight()),
+                Boolean.TRUE.equals(request.getClearDepth()));
         artwork.updateProductionPeriod(
                 request.getProductionStartYear(),
                 request.getProductionStartMonth(),

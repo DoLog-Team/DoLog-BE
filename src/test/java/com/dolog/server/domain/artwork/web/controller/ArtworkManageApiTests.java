@@ -437,12 +437,12 @@ class ArtworkManageApiTests {
         for (int filled = 0; filled < 16; filled++) {
             Artwork artwork = submitted(artworkOf(me, "작품 " + filled), zoneA, 10 + filled);
             if ((filled & 1) != 0) artwork.updateMainImg("https://s3/main.webp");
-            if ((filled & 2) != 0) artwork.updateSize(BigDecimal.ONE, BigDecimal.ONE, null);
+            if ((filled & 2) != 0) artwork.updateSize(BigDecimal.ONE, BigDecimal.ONE, null, false, false, false);
             if ((filled & 4) != 0) artwork.replaceMaterials(List.of("유화"));
             if ((filled & 8) != 0) artwork.updateLocationMap("https://s3/map.webp");
         }
         // 경계: 가로만 있는 사이즈, 빈 문자열 이미지
-        submitted(artworkOf(me, "가로만"), zoneA, 50).updateSize(BigDecimal.ONE, null, null);
+        submitted(artworkOf(me, "가로만"), zoneA, 50).updateSize(BigDecimal.ONE, null, null, false, false, false);
         submitted(artworkOf(me, "빈 이미지"), zoneA, 60).updateMainImg("");
         int total = 18;
         ExhibitionFieldSettings settings = fieldSettings.saveAndFlush(ExhibitionFieldSettings.defaultsFor(exhibition));

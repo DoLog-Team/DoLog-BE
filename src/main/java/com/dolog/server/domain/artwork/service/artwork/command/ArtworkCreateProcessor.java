@@ -74,7 +74,7 @@ public class ArtworkCreateProcessor {
                 .showPurchaseButton(request.getShowPurchaseButton())
                 .youtubeUrl(TextUtils.blankToNull(request.getYoutubeUrl()))
                 .build();
-        artwork.updateSize(request.getWidth(), request.getHeight(), request.getDepth());
+        artwork.updateSize(request.getWidth(), request.getHeight(), request.getDepth(), false, false, false);
         return artwork;
     }
 

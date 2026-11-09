@@ -180,12 +180,23 @@ public class Artwork extends BaseEntity implements Orderable {
         if (shortIntro != null) this.shortIntro = TextUtils.blankToNull(shortIntro);
     }
 
-    public void updateSize(BigDecimal width, BigDecimal height, BigDecimal depth) {
-        if (width != null) this.width = width;
-        if (height != null) this.height = height;
-        if (depth != null) this.depth = depth;
-        // 작가 입력은 가로·세로·높이만 받으므로 숫자가 들어오면 DIMENSIONS로 본다.
-        if (width != null || height != null || depth != null) this.sizeType = ArtworkSizeType.DIMENSIONS;
+    // clear* 가 true면 값을 지운다(null). 작가 입력은 가로·세로·높이만 받으므로, 숫자가 하나라도 남아있으면
+    // DIMENSIONS로 본다. 실제로 지운(clear) 게 있는데 그 결과 숫자가 하나도 안 남으면 사이즈 자체가 없는
+    // 것으로 보고 sizeType도 같이 비운다 — clear 없이 그냥 숫자 없는 호출(no-op)은 기존 유형(VARIABLE/ROUND)을 유지한다.
+    public void updateSize(BigDecimal width, BigDecimal height, BigDecimal depth,
+                            boolean clearWidth, boolean clearHeight, boolean clearDepth) {
+        if (clearWidth) this.width = null;
+        else if (width != null) this.width = width;
+        if (clearHeight) this.height = null;
+        else if (height != null) this.height = height;
+        if (clearDepth) this.depth = null;
+        else if (depth != null) this.depth = depth;
+
+        if (this.width != null || this.height != null || this.depth != null) {
+            this.sizeType = ArtworkSizeType.DIMENSIONS;
+        } else if (clearWidth || clearHeight || clearDepth) {
+            this.sizeType = null;
+        }
     }
 
     // 전시 "사이즈 필수" 충족 여부. 가변은 숫자 없이, 원형은 지름만으로 충족한다. 높이는 부피가 있는 작품만 입력한다.

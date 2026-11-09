@@ -50,10 +50,10 @@ class ExhibitionFieldSettingsTest {
     @DisplayName("사이즈 숫자를 입력하면 DIMENSIONS가 되고, 숫자 없는 수정은 기존 유형을 유지한다")
     void updateSizeMarksDimensions() {
         Artwork variable = Artwork.builder().sizeType(ArtworkSizeType.VARIABLE).build();
-        variable.updateSize(null, null, null);
+        variable.updateSize(null, null, null, false, false, false);
         assertEquals(ArtworkSizeType.VARIABLE, variable.getSizeType());
 
-        variable.updateSize(BigDecimal.TEN, BigDecimal.ONE, null);
+        variable.updateSize(BigDecimal.TEN, BigDecimal.ONE, null, false, false, false);
         assertEquals(ArtworkSizeType.DIMENSIONS, variable.getSizeType());
     }
 
