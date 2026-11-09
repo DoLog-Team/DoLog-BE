@@ -8,6 +8,8 @@ import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
+import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionMainResponse;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
 import com.dolog.server.domain.notification.service.NotificationService;
 import com.dolog.server.domain.exhibition.entity.enums.ExhibitionArtistStatus;
@@ -33,6 +35,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -307,5 +310,48 @@ class ExhibitionServiceImplTest {
         service.updateExhibition(exhibitionId, request);
 
         verifyNoInteractions(exhibitionPublicityNotifier);
+    }
+
+    @Test
+    @DisplayName("진행중+예정이 3개 미만이면 최근에 끝난 전시로 채워서 항상 3개를 보여준다")
+    void mainExhibitionsFillsUpWithRecentlyEndedWhenNotEnoughOngoing() {
+        LocalDate today = LocalDate.now();
+
+        Exhibition ongoing = exhibitionWithDates(today.minusDays(5), today.plusDays(5), "진행중");
+        Exhibition endedRecent = exhibitionWithDates(today.minusDays(30), today.minusDays(1), "최근종료");
+        Exhibition endedOld = exhibitionWithDates(today.minusDays(60), today.minusDays(20), "오래전종료");
+
+        when(exhibitionRepository.findDefaultExhibitions(today)).thenReturn(java.util.List.of(ongoing));
+        when(exhibitionRepository.findEndedExhibitions(eq(today), any()))
+                .thenReturn(java.util.List.of(endedRecent, endedOld));
+
+        ExhibitionMainResponse response = service.getMainExhibitions(null);
+
+        assertEquals(3, response.getMainExhibitions().size());
+        assertEquals("진행중", response.getMainExhibitions().get(0).getTitle());
+        assertEquals("최근종료", response.getMainExhibitions().get(1).getTitle());
+        assertEquals("오래전종료", response.getMainExhibitions().get(2).getTitle());
+    }
+
+    @Test
+    @DisplayName("진행중+예정만으로 3개가 채워지면 종료된 전시는 조회하지 않는다")
+    void mainExhibitionsDoesNotQueryEndedWhenAlreadyEnough() {
+        LocalDate today = LocalDate.now();
+
+        Exhibition a = exhibitionWithDates(today.minusDays(1), today.plusDays(5), "A");
+        Exhibition b = exhibitionWithDates(today.minusDays(2), today.plusDays(5), "B");
+        Exhibition c = exhibitionWithDates(today.plusDays(1), today.plusDays(10), "C(예정)");
+
+        when(exhibitionRepository.findDefaultExhibitions(today)).thenReturn(java.util.List.of(a, b, c));
+
+        ExhibitionMainResponse response = service.getMainExhibitions(null);
+
+        assertEquals(3, response.getMainExhibitions().size());
+        verify(exhibitionRepository, org.mockito.Mockito.never()).findEndedExhibitions(any(), any());
+    }
+
+    private Exhibition exhibitionWithDates(LocalDate startDate, LocalDate endDate, String title) {
+        ExhibitionDetail detail = ExhibitionDetail.builder().title(title).startDate(startDate).endDate(endDate).build();
+        return Exhibition.builder().id(UUID.randomUUID()).slug(title).exhibitionDetail(detail).build();
     }
 }
