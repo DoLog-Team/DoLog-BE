@@ -1209,6 +1209,7 @@ class ExhibitionArtistServiceImplTest {
         ExhibitionArtistManageItemResponse responseItem =
                 response.artists().get(0);
         assertEquals(pendingArtist.getId(), responseItem.artistId());
+        assertEquals(pendingArtist.getProfile().getId(), responseItem.profileId());
         assertEquals("김지우", responseItem.nameKo());
         assertEquals("jiwoo@test.com", responseItem.email());
         assertEquals(
@@ -1229,6 +1230,47 @@ class ExhibitionArtistServiceImplTest {
                 exhibitionArtistMapRepository,
                 never()
         ).countArtworksByArtistIds(any(), anyCollection());
+    }
+
+    @Test
+    @DisplayName("공통 프로필이 없는 작가는 관리자용 목록에서 profileId 가 null 이다")
+    void returnsNullProfileIdForArtistWithoutProfile() {
+        UUID ownerId = UUID.randomUUID();
+        Account owner = account(ownerId, Role.EXHIBITION_ADMIN);
+        Exhibition exhibition = exhibition(ownerId);
+        Artist artistWithoutProfile = Artist.builder()
+                .id(UUID.randomUUID())
+                .nameKo("프로필없음")
+                .build();
+        ExhibitionArtistMap pendingMap = map(
+                exhibition,
+                artistWithoutProfile,
+                ExhibitionArtistStatus.PENDING
+        );
+        PageRequest pageable = PageRequest.of(0, 10);
+
+        when(accountRepository.findById(ownerId))
+                .thenReturn(Optional.of(owner));
+        when(exhibitionArtistMapRepository.findArtistsForManagement(
+                exhibition.getId(),
+                ExhibitionArtistStatus.PENDING,
+                null,
+                pageable
+        )).thenReturn(new PageImpl<>(List.of(pendingMap), pageable, 1));
+
+        var response = service.getArtistsForManagement(
+                ownerId,
+                exhibition.getId(),
+                ExhibitionArtistStatus.PENDING,
+                null,
+                0,
+                10
+        );
+
+        ExhibitionArtistManageItemResponse responseItem = response.artists().get(0);
+        assertEquals(artistWithoutProfile.getId(), responseItem.artistId());
+        assertNull(responseItem.profileId());
+        assertNull(responseItem.nameKo());
     }
 
     @Test
@@ -1509,7 +1551,7 @@ class ExhibitionArtistServiceImplTest {
                 .account(account)
                 .nameKo(name)
                 .build();
-        artist.linkProfile(ArtistProfile.builder().artist(artist).nameKo(name).build());
+        artist.linkProfile(ArtistProfile.builder().id(UUID.randomUUID()).artist(artist).nameKo(name).build());
         return artist;
     }
 

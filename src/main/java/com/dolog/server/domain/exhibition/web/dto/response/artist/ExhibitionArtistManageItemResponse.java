@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record ExhibitionArtistManageItemResponse(
         UUID artistId,
+        UUID profileId,
         String nameKo,
         String email,
         String greeting,
@@ -12,6 +13,7 @@ public record ExhibitionArtistManageItemResponse(
     // JPQL COUNT 결과(Long)를 API 명세의 int 타입(Integer)으로 변환한다.
     public ExhibitionArtistManageItemResponse(
             UUID artistId,
+            UUID profileId,
             String nameKo,
             String email,
             String greeting,
@@ -19,6 +21,7 @@ public record ExhibitionArtistManageItemResponse(
     ) {
         this(
                 artistId,
+                profileId,
                 nameKo,
                 email,
                 greeting,

@@ -442,6 +442,9 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
 
                             return new ExhibitionArtistManageItemResponse(
                                     artist.getId(),
+                                    artist.getProfile() == null
+                                            ? null
+                                            : artist.getProfile().getId(),
                                     artist.getProfileNameKo(),
                                     artist.getAccount() == null
                                             ? null
