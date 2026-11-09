@@ -44,6 +44,11 @@ public class ArtworkUpdateFullRequest implements ArtworkInfoFields {
     @Digits(integer = 8, fraction = 2)
     private BigDecimal depth;
 
+    // true면 해당 값을 지운다(null)
+    private Boolean clearWidth;
+    private Boolean clearHeight;
+    private Boolean clearDepth;
+
     @Size(max = 255)
     private String shortIntro;
 

@@ -13,6 +13,9 @@ public interface ArtworkInfoFields {
     BigDecimal getWidth();
     BigDecimal getHeight();
     BigDecimal getDepth();
+    Boolean getClearWidth();
+    Boolean getClearHeight();
+    Boolean getClearDepth();
     Integer getProductionStartYear();
     Integer getProductionStartMonth();
     Integer getProductionStartDay();

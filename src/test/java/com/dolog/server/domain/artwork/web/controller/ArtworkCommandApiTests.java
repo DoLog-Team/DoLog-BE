@@ -282,6 +282,43 @@ class ArtworkCommandApiTests {
     }
 
     @Test
+    @DisplayName("clearHeight를 true로 보내면 높이만 지워지고 가로/깊이는 유지된다")
+    void clearsHeightOnly() throws Exception {
+        Artwork artwork = artworkOf(me, "작품");
+        artwork.updateSize(new BigDecimal("30"), new BigDecimal("40"), new BigDecimal("5"), false, false, false);
+        artworks.saveAndFlush(artwork);
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("clearHeight", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.height").value(nullValue()))
+                .andExpect(jsonPath("$.data.width").value(30));
+
+        em.flush();
+        em.clear();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertNull(found.getHeight());
+        assertEquals(0, new BigDecimal("30").compareTo(found.getWidth()));
+        assertEquals(0, new BigDecimal("5").compareTo(found.getDepth()));
+    }
+
+    @Test
+    @DisplayName("height를 그냥 안 보내면(clearHeight 없이) 기존 높이가 그대로 유지된다 — 지우려면 clearHeight가 꼭 필요하다")
+    void keepsHeightWhenOmittedWithoutClearFlag() throws Exception {
+        Artwork artwork = artworkOf(me, "작품");
+        artwork.updateSize(null, new BigDecimal("40"), null, false, false, false);
+        artworks.saveAndFlush(artwork);
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("title", "새 제목"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.height").value(40));
+
+        em.flush();
+        em.clear();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertEquals(0, new BigDecimal("40").compareTo(found.getHeight()));
+    }
+
+    @Test
     @DisplayName("재료를 보내면 교체되고, 빈 값 하나만 보내면 모두 지워진다")
     void replacesAndClearsMaterials() throws Exception {
         Artwork artwork = artworkOf(me, "작품");

@@ -170,10 +170,15 @@ public class Artwork extends BaseEntity implements Orderable {
         if (shortIntro != null) this.shortIntro = TextUtils.blankToNull(shortIntro);
     }
 
-    public void updateSize(BigDecimal width, BigDecimal height, BigDecimal depth) {
-        if (width != null) this.width = width;
-        if (height != null) this.height = height;
-        if (depth != null) this.depth = depth;
+    // clear* 가 true면 값을 지운다(null)
+    public void updateSize(BigDecimal width, BigDecimal height, BigDecimal depth,
+                            boolean clearWidth, boolean clearHeight, boolean clearDepth) {
+        if (clearWidth) this.width = null;
+        else if (width != null) this.width = width;
+        if (clearHeight) this.height = null;
+        else if (height != null) this.height = height;
+        if (clearDepth) this.depth = null;
+        else if (depth != null) this.depth = depth;
     }
 
     public void updateProductionPeriod(Integer startYear, Integer startMonth, Integer startDay,
