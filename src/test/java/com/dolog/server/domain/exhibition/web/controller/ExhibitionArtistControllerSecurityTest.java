@@ -152,10 +152,12 @@ class ExhibitionArtistControllerSecurityTest {
         UUID accountId = UUID.randomUUID();
         UUID exhibitionId = UUID.randomUUID();
         UUID artistId = UUID.randomUUID();
+        UUID profileId = UUID.randomUUID();
         ExhibitionArtistManageListResponse serviceResponse =
                 new ExhibitionArtistManageListResponse(
                         List.of(new ExhibitionArtistManageItemResponse(
                                 artistId,
+                                profileId,
                                 "김두록",
                                 "dolog@gmail.com",
                                 "2021112489 / 김두록입니다.",
@@ -183,6 +185,7 @@ class ExhibitionArtistControllerSecurityTest {
                         .with(user(userDetails(accountId, Role.EXHIBITION_ADMIN))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.artists[0].artistId").value(artistId.toString()))
+                .andExpect(jsonPath("$.data.artists[0].profileId").value(profileId.toString()))
                 .andExpect(jsonPath("$.data.artists[0].nameKo").value("김두록"))
                 .andExpect(jsonPath("$.data.artists[0].email").value("dolog@gmail.com"))
                 .andExpect(jsonPath("$.data.artists[0].greeting").value("2021112489 / 김두록입니다."))
