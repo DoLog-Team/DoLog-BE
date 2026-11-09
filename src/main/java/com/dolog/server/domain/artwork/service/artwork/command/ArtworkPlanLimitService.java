@@ -10,6 +10,7 @@ import com.dolog.server.domain.plan.entity.Subscription;
 import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,8 +21,8 @@ import java.util.Map;
 import java.util.UUID;
 
 // 전시의 작품 노출을 "현재 플랜의 작품 노출 한도"에 맞게 다시 계산한다.
-// 전체 동선 순서(구역 순서 → 구역 안 순서, orderedLikeExhibition) 기준으로 한도 안은 공개, 넘는 분은 자동 미노출(plan_limit_exceeded_at)로 바꾼다.
-// orderIndex는 구역마다 따로 매겨지므로 orderIndex만으로는 전시 전체 순서를 알 수 없다 — 반드시 구역 순서를 먼저 봐야 한다.
+// 출품/등록 순서(createdAt) 기준으로 한도 안은 공개, 넘는 분은 자동 미노출(plan_limit_exceeded_at)로 바꾼다.
+// 전시 동선 순서(구역 순서)는 진열용 순서일 뿐이고, 한도 초과는 "가장 늦게 출품한 작품"이어야 하므로 동선 순서를 쓰지 않는다 (기획 확인).
 // 관리자가 직접 숨긴 작품(hiddenAt)은 애초에 대상에서 빠지므로, 숨기면 뒤 작품이 자동으로 당겨 올라온다.
 @Service
 @RequiredArgsConstructor
@@ -41,10 +42,11 @@ public class ArtworkPlanLimitService {
             return;
         }
 
+        // 노출 순서(동선)가 아니라 출품/등록 순서 기준으로 한도를 판단한다 — 한도를 넘기는 건 "새로 출품한 작품"이어야 한다.
         List<Artwork> candidates = artworkRepository.findAll(
                 Specification.where(ArtworkSpecification.withExhibitionId(exhibitionId))
-                        .and(ArtworkSpecification.withHidden(false))
-                        .and(ArtworkSpecification.orderedLikeExhibition())
+                        .and(ArtworkSpecification.withHidden(false)),
+                Sort.by(Sort.Direction.ASC, "createdAt")
         );
 
         boolean newlyExceeded = false;
