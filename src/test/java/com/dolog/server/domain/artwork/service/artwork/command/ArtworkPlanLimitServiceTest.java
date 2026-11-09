@@ -13,6 +13,9 @@ import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionZoneRepository;
+import com.dolog.server.domain.notification.entity.Notification;
+import com.dolog.server.domain.notification.entity.enums.NotificationType;
+import com.dolog.server.domain.notification.repository.NotificationRepository;
 import com.dolog.server.domain.plan.entity.Plan;
 import com.dolog.server.domain.plan.entity.Subscription;
 import com.dolog.server.domain.plan.entity.enums.BillingCycle;
@@ -28,6 +31,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -48,6 +52,7 @@ class ArtworkPlanLimitServiceTest {
     @Autowired ArtworkRepository artworks;
     @Autowired PlanRepository plans;
     @Autowired SubscriptionRepository subscriptions;
+    @Autowired NotificationRepository notifications;
     @Autowired EntityManager em;
 
     @Test
@@ -88,6 +93,51 @@ class ArtworkPlanLimitServiceTest {
         assertFalse(artworks.findById(a1.getId()).orElseThrow().exceedsPlanLimit());
         assertFalse(artworks.findById(b1.getId()).orElseThrow().exceedsPlanLimit());
         assertTrue(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+    }
+
+    @Test
+    @DisplayName("한도 초과로 미노출됐던 작품이 자리가 확보되면 다시 노출되고, 그 작가에게 알림이 간다")
+    void notifiesArtistWhenPlanLimitClears() {
+        Account owner = accounts.saveAndFlush(Account.builder().role(Role.EXHIBITION_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Exhibition exhibition = exhibitions.saveAndFlush(Exhibition.builder()
+                .account(owner).univName("대학").deptName("학과").slug("plan-limit-" + UUID.randomUUID()).build());
+        ExhibitionZone zone = zones.saveAndFlush(ExhibitionZone.builder().exhibition(exhibition).name("A").orderId(1).build());
+
+        Account artistAccount = accounts.saveAndFlush(Account.builder().role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Artist artist = artists.saveAndFlush(Artist.builder().account(artistAccount).nameKo("작가").build());
+
+        Artwork a1 = submitted(artist, exhibition, zone, 10, "A-1");
+        Artwork a2 = submitted(artist, exhibition, zone, 20, "A-2");
+
+        Plan plan = plans.saveAndFlush(Plan.builder().name("테스트 플랜").maxArtworkCount(1).build());
+        subscriptions.saveAndFlush(Subscription.builder()
+                .exhibition(exhibition).plan(plan).status(SubscriptionStatus.ACTIVE)
+                .billingCycle(BillingCycle.MONTHLY).months(1)
+                .startedAt(LocalDateTime.now()).endedAt(LocalDateTime.now().plusMonths(1))
+                .build());
+        em.flush();
+        em.clear();
+
+        service.recompute(exhibition.getId());
+        em.flush();
+        em.clear();
+
+        assertTrue(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+
+        // a1을 숨겨서 자리를 확보 — 가장 먼저 밀려났던 a2가 다시 노출돼야 한다
+        Artwork a1Managed = artworks.findById(a1.getId()).orElseThrow();
+        a1Managed.hide(LocalDateTime.now());
+        artworks.saveAndFlush(a1Managed);
+
+        service.recompute(exhibition.getId());
+        em.flush();
+        em.clear();
+
+        assertFalse(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+
+        List<Notification> sent = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                artistAccount.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertTrue(sent.stream().anyMatch(n -> n.getType() == NotificationType.ARTWORK_PLAN_LIMIT_CLEARED));
     }
 
     private Artwork submitted(Artist artist, Exhibition exhibition, ExhibitionZone zone, int orderIndex, String title) {

@@ -1,6 +1,8 @@
 package com.dolog.server.domain.artwork.service.artwork.command;
 
+import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.entity.Artwork;
+import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkSpecification;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -50,6 +52,7 @@ public class ArtworkPlanLimitService {
         );
 
         boolean newlyExceeded = false;
+        List<Artwork> newlyCleared = new java.util.ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
         for (int i = 0; i < candidates.size(); i++) {
@@ -58,6 +61,7 @@ public class ArtworkPlanLimitService {
 
             if (withinLimit && artwork.exceedsPlanLimit()) {
                 artwork.clearPlanLimitExceeded();
+                newlyCleared.add(artwork);
             } else if (!withinLimit && !artwork.exceedsPlanLimit()) {
                 artwork.markPlanLimitExceeded(now);
                 newlyExceeded = true;
@@ -67,6 +71,7 @@ public class ArtworkPlanLimitService {
         if (newlyExceeded) {
             notifyExceeded(exhibitionId, candidates.get(0).getExhibition());
         }
+        newlyCleared.forEach(artwork -> notifyCleared(exhibitionId, artwork));
     }
 
     // 활성 구독이 없거나, 플랜에 작품 수 한도가 없으면 null (= 검사 안 함)
@@ -86,6 +91,21 @@ public class ArtworkPlanLimitService {
                 Map.of("exhibitionName", resolveExhibitionName(exhibition)),
                 exhibitionId
         );
+    }
+
+    // 플랜 한도 자리가 확보되어 다시 노출된 작품의 작가들에게 알린다 (계정 없는 작가는 건너뜀)
+    private void notifyCleared(UUID exhibitionId, Artwork artwork) {
+        Map<String, String> payload = Map.of(
+                "exhibitionName", resolveExhibitionName(artwork.getExhibition()),
+                "artworkTitle", artwork.getTitle(),
+                "artworkId", artwork.getId().toString()
+        );
+        for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+            Artist artist = map.getArtist();
+            if (artist.getAccount() != null) {
+                notificationService.send(artist.getAccount(), NotificationType.ARTWORK_PLAN_LIMIT_CLEARED, payload, exhibitionId);
+            }
+        }
     }
 
     private String resolveExhibitionName(Exhibition exhibition) {
