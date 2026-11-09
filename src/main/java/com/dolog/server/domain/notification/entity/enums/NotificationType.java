@@ -19,6 +19,7 @@ public enum NotificationType {
     ARTWORK_EXHIBITION_DELETED, // 소속 전시가 삭제되어 작품이 비공개 처리됨
     EXHIBITION_UNPUBLISHED,     // 소속 전시가 비공개로 전환되어 전시에만 공개였던 작품이 노출되지 않게 됨
     EXHIBITION_REPUBLISHED,     // 소속 전시가 다시 공개되어 작품이 다시 노출됨
+    ARTWORK_PLAN_LIMIT_CLEARED, // 플랜 한도 자리 확보로 미노출이 풀려 작품이 다시 노출됨
 
     // 전시 어드민 알림
     ARTIST_JOIN_REQUESTED,      // 작가 참여 신청
