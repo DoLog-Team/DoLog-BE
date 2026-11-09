@@ -12,8 +12,10 @@ import com.dolog.server.domain.artist.repository.ArtistProfileRepository;
 import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
+import com.dolog.server.domain.artwork.entity.ExhibitionFieldSettings;
 import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
 import com.dolog.server.domain.bts.entity.Bts;
 import com.dolog.server.domain.bts.entity.BtsArtworkMap;
 import com.dolog.server.domain.bts.repository.BtsArtworkMapRepository;
@@ -65,6 +67,7 @@ class ArtworkCommandApiTests {
     @Autowired ArtistProfileRepository profiles;
     @Autowired ArtworkRepository artworks;
     @Autowired ExhibitionRepository exhibitions;
+    @Autowired ExhibitionFieldSettingsRepository fieldSettings;
     @Autowired BtsRepository btsRepository;
     @Autowired BtsArtworkMapRepository btsArtworkMaps;
     @Autowired JwtTokenProvider jwt;
@@ -297,6 +300,31 @@ class ArtworkCommandApiTests {
 
         endRequest();
         assertEquals(0L, materialCount(artwork.getId()));
+    }
+
+    @Test
+    @DisplayName("전시 필수 항목 미충족으로 자동 비공개된 작품은, 작가가 값을 채워 저장하면 자동으로 다시 공개된다")
+    void autoRepublishesWhenArtistFillsMissingRequiredField() throws Exception {
+        Exhibition exhibition = exhibition();
+        fieldSettings.saveAndFlush(ExhibitionFieldSettings.builder().exhibition(exhibition).requiredMaterials(true).build());
+
+        Artwork artwork = artworkOf(me, "작품");
+        artwork.submitTo(exhibition, null);
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        artworks.saveAndFlush(artwork);
+        // 관리자가 재료 필수 설정을 켠 상황을 시뮬레이션: 시스템이 자동으로 비공개 처리
+        artwork.autoDraft(LocalDateTime.now());
+        artworks.saveAndFlush(artwork);
+        endRequest();
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("materials", "백자토"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PUBLISHED"));
+
+        endRequest();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertEquals(ArtworkStatus.PUBLISHED, found.getStatus());
+        assertFalse(found.isAutoDrafted());
     }
 
     @Test
