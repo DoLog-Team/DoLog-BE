@@ -124,6 +124,12 @@ class ArtworkPlanLimitServiceTest {
 
         assertTrue(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
 
+        List<Notification> exceededNotifications = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                owner.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertTrue(exceededNotifications.stream().anyMatch(n ->
+                n.getType() == NotificationType.PLAN_LIMIT_EXCEEDED
+                        && "1".equals(n.getPayload().get("hiddenArtworkCount"))));
+
         // a1을 숨겨서 자리를 확보 — 가장 먼저 밀려났던 a2가 다시 노출돼야 한다
         Artwork a1Managed = artworks.findById(a1.getId()).orElseThrow();
         a1Managed.hide(LocalDateTime.now());

@@ -69,7 +69,8 @@ public class ArtworkPlanLimitService {
         }
 
         if (newlyExceeded) {
-            notifyExceeded(exhibitionId, candidates.get(0).getExhibition());
+            long hiddenCount = candidates.stream().filter(Artwork::exceedsPlanLimit).count();
+            notifyExceeded(exhibitionId, candidates.get(0).getExhibition(), hiddenCount);
         }
         newlyCleared.forEach(artwork -> notifyCleared(exhibitionId, artwork));
     }
@@ -84,11 +85,14 @@ public class ArtworkPlanLimitService {
                 .orElse(null);
     }
 
-    private void notifyExceeded(UUID exhibitionId, Exhibition exhibition) {
+    private void notifyExceeded(UUID exhibitionId, Exhibition exhibition, long hiddenCount) {
         notificationService.send(
                 exhibition.getAccount(),
                 NotificationType.PLAN_LIMIT_EXCEEDED,
-                Map.of("exhibitionName", resolveExhibitionName(exhibition)),
+                Map.of(
+                        "exhibitionName", resolveExhibitionName(exhibition),
+                        "hiddenArtworkCount", String.valueOf(hiddenCount)
+                ),
                 exhibitionId
         );
     }
