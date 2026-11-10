@@ -19,6 +19,7 @@ import com.dolog.server.domain.artwork.repository.ArtworkImgRepository;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
+import com.dolog.server.domain.artwork.service.artwork.command.PlanLimitRecomputeCause;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionArtistMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
@@ -150,7 +151,7 @@ class ArtworkFullUpdateApiTests {
                         .param("artistProfileIds", myProfile.getId().toString()))
                 .andExpect(status().isOk());
 
-        verify(artworkPlanLimitService).recompute(exhibition.getId());
+        verify(artworkPlanLimitService).recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
     }
 
     @Test
@@ -159,7 +160,7 @@ class ArtworkFullUpdateApiTests {
         mvc.perform(full(artwork).params(basic()).param("artistProfileIds", myProfile.getId().toString()))
                 .andExpect(status().isOk());
 
-        verify(artworkPlanLimitService, never()).recompute(any());
+        verify(artworkPlanLimitService, never()).recompute(any(), any());
     }
 
     @Test

@@ -26,6 +26,7 @@ import java.util.UUID;
 // 출품/등록 순서(createdAt) 기준으로 한도 안은 공개, 넘는 분은 자동 미노출(plan_limit_exceeded_at)로 바꾼다.
 // 전시 동선 순서(구역 순서)는 진열용 순서일 뿐이고, 한도 초과는 "가장 늦게 출품한 작품"이어야 하므로 동선 순서를 쓰지 않는다 (기획 확인).
 // 관리자가 직접 숨긴 작품(hiddenAt)은 애초에 대상에서 빠지므로, 숨기면 뒤 작품이 자동으로 당겨 올라온다.
+// cause는 호출 원인(PLAN_CHANGE/ARTWORK_CHANGE)을 표시만 해둔다
 @Service
 @RequiredArgsConstructor
 public class ArtworkPlanLimitService {
@@ -35,7 +36,7 @@ public class ArtworkPlanLimitService {
     private final NotificationService notificationService;
 
     @Transactional
-    public void recompute(UUID exhibitionId) {
+    public void recompute(UUID exhibitionId, PlanLimitRecomputeCause cause) {
         Integer limit = resolveActiveLimit(exhibitionId);
 
         // 활성 구독이 없거나 한도가 없는 플랜이면 검사하지 않는다 (무제한 취급) — 기존에 걸려 있던 미노출은 풀어준다.

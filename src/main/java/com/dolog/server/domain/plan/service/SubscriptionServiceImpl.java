@@ -1,6 +1,7 @@
 package com.dolog.server.domain.plan.service;
 
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
+import com.dolog.server.domain.artwork.service.artwork.command.PlanLimitRecomputeCause;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.exhibition.exception.ExhibitionErrorCode;
@@ -135,7 +136,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         // 플랜이 바뀌면 작품 노출 한도도 바뀌므로 다시 계산한다 (다운그레이드 시 초과분 자동 미노출 / 업그레이드 시 자동 재공개)
-        artworkPlanLimitService.recompute(exhibitionId);
+        artworkPlanLimitService.recompute(exhibitionId, PlanLimitRecomputeCause.PLAN_CHANGE);
 
         return SubscriptionPlanChangeResponse.of(subscription, previousPlanId, previousPlanName, changeType);
     }
@@ -154,7 +155,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         // 결제 전 구독은 환불할 금액이 없고, 전시의 만료일도 건드리지 않는다
         if (subscription.getStatus() != SubscriptionStatus.ACTIVE) {
             subscription.cancelSubscription(now);
-            artworkPlanLimitService.recompute(subscription.getExhibition().getId());
+            artworkPlanLimitService.recompute(subscription.getExhibition().getId(), PlanLimitRecomputeCause.PLAN_CHANGE);
             return SubscriptionCancelResponse.from(subscription, null);
         }
 
@@ -167,7 +168,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         subscription.cancelSubscription(usageEndAt);
         subscription.getExhibition().applySubscriptionEnd(usageEndAt);
-        artworkPlanLimitService.recompute(subscription.getExhibition().getId());
+        artworkPlanLimitService.recompute(subscription.getExhibition().getId(), PlanLimitRecomputeCause.PLAN_CHANGE);
 
         return SubscriptionCancelResponse.from(subscription, refund.getRefundAmount());
     }
@@ -273,7 +274,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         // 구독 상태가 바뀌면(활성화/만료 등) 작품 노출 한도도 바뀔 수 있어 다시 계산한다
-        artworkPlanLimitService.recompute(subscription.getExhibition().getId());
+        artworkPlanLimitService.recompute(subscription.getExhibition().getId(), PlanLimitRecomputeCause.PLAN_CHANGE);
 
         return SubscriptionStatusUpdateResponse.from(subscription);
     }

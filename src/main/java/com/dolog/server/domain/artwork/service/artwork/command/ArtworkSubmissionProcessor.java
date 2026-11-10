@@ -92,7 +92,7 @@ public class ArtworkSubmissionProcessor {
             artworkOrderAdapter.assign(artwork);
         }
         artworkFieldRequirement.draftIfUnsatisfied(artwork);
-        artworkPlanLimitService.recompute(exhibition.getId());
+        artworkPlanLimitService.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
 
         return ArtworkSubmitResponse.from(artwork);
     }
@@ -131,7 +131,7 @@ public class ArtworkSubmissionProcessor {
         String artworkTitle = artwork.getTitle();
 
         artworkSubmissionCanceller.cancel(artwork);
-        artworkPlanLimitService.recompute(exhibition.getId());
+        artworkPlanLimitService.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
 
         notificationService.send(
                 exhibition.getAccount(),

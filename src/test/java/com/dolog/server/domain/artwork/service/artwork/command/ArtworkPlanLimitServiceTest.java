@@ -84,7 +84,7 @@ class ArtworkPlanLimitServiceTest {
         em.flush();
         em.clear();
 
-        service.recompute(exhibition.getId());
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
         em.flush();
         em.clear();
 
@@ -118,7 +118,7 @@ class ArtworkPlanLimitServiceTest {
         em.flush();
         em.clear();
 
-        service.recompute(exhibition.getId());
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
         em.flush();
         em.clear();
 
@@ -135,7 +135,7 @@ class ArtworkPlanLimitServiceTest {
         a1Managed.hide(LocalDateTime.now());
         artworks.saveAndFlush(a1Managed);
 
-        service.recompute(exhibition.getId());
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
         em.flush();
         em.clear();
 

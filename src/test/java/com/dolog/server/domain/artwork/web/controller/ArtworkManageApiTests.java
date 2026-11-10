@@ -18,6 +18,7 @@ import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.artwork.repository.ExhibitionFieldSettingsRepository;
 import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
+import com.dolog.server.domain.artwork.service.artwork.command.PlanLimitRecomputeCause;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
@@ -424,10 +425,10 @@ class ArtworkManageApiTests {
         endRequest();
 
         mvc.perform(withToken(bulkZone(zoneB.getId(), inB), ownerToken)).andExpect(status().isOk());
-        verify(artworkPlanLimitService, never()).recompute(exhibition.getId());
+        verify(artworkPlanLimitService, never()).recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
 
         mvc.perform(withToken(bulkZone(zoneB.getId(), inA), ownerToken)).andExpect(status().isOk());
-        verify(artworkPlanLimitService).recompute(exhibition.getId());
+        verify(artworkPlanLimitService).recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
     }
 
     @Test

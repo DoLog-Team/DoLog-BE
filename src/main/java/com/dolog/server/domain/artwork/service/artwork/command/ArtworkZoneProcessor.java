@@ -54,7 +54,7 @@ public class ArtworkZoneProcessor {
 
         // 순서(orderIndex)가 바뀌면 플랜 한도 안팎이 달라질 수 있다
         if (changedCount > 0) {
-            artworkPlanLimitService.recompute(exhibitionId);
+            artworkPlanLimitService.recompute(exhibitionId, PlanLimitRecomputeCause.ARTWORK_CHANGE);
         }
 
         return new ArtworkBulkZoneResponse(
