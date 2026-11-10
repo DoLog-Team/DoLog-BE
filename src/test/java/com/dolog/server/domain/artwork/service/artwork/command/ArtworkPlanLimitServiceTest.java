@@ -146,6 +146,79 @@ class ArtworkPlanLimitServiceTest {
         assertTrue(sent.stream().anyMatch(n -> n.getType() == NotificationType.ARTWORK_PLAN_LIMIT_CLEARED));
     }
 
+    @Test
+    @DisplayName("작가 본인의 출품으로 한도를 넘기면(ARTWORK_CHANGE), 그 작가에게 작품별로 알림이 간다")
+    void notifiesArtistWhenOwnSubmissionExceedsLimit() {
+        Account owner = accounts.saveAndFlush(Account.builder().role(Role.EXHIBITION_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Exhibition exhibition = exhibitions.saveAndFlush(Exhibition.builder()
+                .account(owner).univName("대학").deptName("학과").slug("plan-limit-" + UUID.randomUUID()).build());
+        ExhibitionZone zone = zones.saveAndFlush(ExhibitionZone.builder().exhibition(exhibition).name("A").orderId(1).build());
+
+        Account artistAccount = accounts.saveAndFlush(Account.builder().role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Artist artist = artists.saveAndFlush(Artist.builder().account(artistAccount).nameKo("작가").build());
+
+        Artwork a1 = submitted(artist, exhibition, zone, 10, "A-1");
+        Artwork a2 = submitted(artist, exhibition, zone, 20, "A-2");
+
+        Plan plan = plans.saveAndFlush(Plan.builder().name("테스트 플랜").maxArtworkCount(1).build());
+        subscriptions.saveAndFlush(Subscription.builder()
+                .exhibition(exhibition).plan(plan).status(SubscriptionStatus.ACTIVE)
+                .billingCycle(BillingCycle.MONTHLY).months(1)
+                .startedAt(LocalDateTime.now()).endedAt(LocalDateTime.now().plusMonths(1))
+                .build());
+        em.flush();
+        em.clear();
+
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
+        em.flush();
+        em.clear();
+
+        List<Notification> sent = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                artistAccount.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertTrue(sent.stream().anyMatch(n ->
+                n.getType() == NotificationType.ARTWORK_PLAN_LIMIT_EXCEEDED
+                        && a2.getId().toString().equals(n.getPayload().get("artworkId"))));
+    }
+
+    @Test
+    @DisplayName("플랜 변경(PLAN_CHANGE)으로 한도를 넘기면, 전시 어드민에게만 가고 작가 개별 알림은 안 간다 (플랜 변경 묶음 알림은 별도)")
+    void doesNotNotifyArtistWhenPlanChangeExceedsLimit() {
+        Account owner = accounts.saveAndFlush(Account.builder().role(Role.EXHIBITION_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Exhibition exhibition = exhibitions.saveAndFlush(Exhibition.builder()
+                .account(owner).univName("대학").deptName("학과").slug("plan-limit-" + UUID.randomUUID()).build());
+        ExhibitionZone zone = zones.saveAndFlush(ExhibitionZone.builder().exhibition(exhibition).name("A").orderId(1).build());
+
+        Account artistAccount = accounts.saveAndFlush(Account.builder().role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Artist artist = artists.saveAndFlush(Artist.builder().account(artistAccount).nameKo("작가").build());
+
+        Artwork a1 = submitted(artist, exhibition, zone, 10, "A-1");
+        Artwork a2 = submitted(artist, exhibition, zone, 20, "A-2");
+
+        Plan plan = plans.saveAndFlush(Plan.builder().name("테스트 플랜").maxArtworkCount(1).build());
+        subscriptions.saveAndFlush(Subscription.builder()
+                .exhibition(exhibition).plan(plan).status(SubscriptionStatus.ACTIVE)
+                .billingCycle(BillingCycle.MONTHLY).months(1)
+                .startedAt(LocalDateTime.now()).endedAt(LocalDateTime.now().plusMonths(1))
+                .build());
+        em.flush();
+        em.clear();
+
+        // 플랜 다운그레이드 등으로 recompute가 호출된 상황을 시뮬레이션
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.PLAN_CHANGE);
+        em.flush();
+        em.clear();
+
+        assertTrue(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+
+        List<Notification> artistNotifications = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                artistAccount.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertTrue(artistNotifications.stream().noneMatch(n -> n.getType() == NotificationType.ARTWORK_PLAN_LIMIT_EXCEEDED));
+
+        List<Notification> ownerNotifications = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                owner.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        assertTrue(ownerNotifications.stream().anyMatch(n -> n.getType() == NotificationType.PLAN_LIMIT_EXCEEDED));
+    }
+
     private Artwork submitted(Artist artist, Exhibition exhibition, ExhibitionZone zone, int orderIndex, String title) {
         Artwork artwork = Artwork.builder().title(title).description("설명").build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder().artwork(artwork).artist(artist).artistRole("").build());

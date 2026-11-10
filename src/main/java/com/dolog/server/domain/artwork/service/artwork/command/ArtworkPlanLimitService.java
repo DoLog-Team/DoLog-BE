@@ -52,7 +52,7 @@ public class ArtworkPlanLimitService {
                 Sort.by(Sort.Direction.ASC, "createdAt")
         );
 
-        boolean newlyExceeded = false;
+        List<Artwork> newlyExceeded = new java.util.ArrayList<>();
         List<Artwork> newlyCleared = new java.util.ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
@@ -65,13 +65,18 @@ public class ArtworkPlanLimitService {
                 newlyCleared.add(artwork);
             } else if (!withinLimit && !artwork.exceedsPlanLimit()) {
                 artwork.markPlanLimitExceeded(now);
-                newlyExceeded = true;
+                newlyExceeded.add(artwork);
             }
         }
 
-        if (newlyExceeded) {
+        if (!newlyExceeded.isEmpty()) {
             long hiddenCount = candidates.stream().filter(Artwork::exceedsPlanLimit).count();
             notifyExceeded(exhibitionId, candidates.get(0).getExhibition(), hiddenCount);
+
+            // 작가 본인의 출품으로 한도를 넘긴 경우에만 작가에게 개별 알린다 
+            if (cause == PlanLimitRecomputeCause.ARTWORK_CHANGE) {
+                newlyExceeded.forEach(artwork -> notifyArtistExceeded(exhibitionId, artwork));
+            }
         }
         newlyCleared.forEach(artwork -> notifyCleared(exhibitionId, artwork));
     }
@@ -109,6 +114,21 @@ public class ArtworkPlanLimitService {
             Artist artist = map.getArtist();
             if (artist.getAccount() != null) {
                 notificationService.send(artist.getAccount(), NotificationType.ARTWORK_PLAN_LIMIT_CLEARED, payload, exhibitionId);
+            }
+        }
+    }
+
+    // 작가가 작품을 출품했는데 플랜 한도를 넘겨 미노출된 경우, 그 작가들에게 알린다 (계정 없는 작가는 건너뜀)
+    private void notifyArtistExceeded(UUID exhibitionId, Artwork artwork) {
+        Map<String, String> payload = Map.of(
+                "exhibitionName", resolveExhibitionName(artwork.getExhibition()),
+                "artworkTitle", artwork.getTitle(),
+                "artworkId", artwork.getId().toString()
+        );
+        for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+            Artist artist = map.getArtist();
+            if (artist.getAccount() != null) {
+                notificationService.send(artist.getAccount(), NotificationType.ARTWORK_PLAN_LIMIT_EXCEEDED, payload, exhibitionId);
             }
         }
     }
