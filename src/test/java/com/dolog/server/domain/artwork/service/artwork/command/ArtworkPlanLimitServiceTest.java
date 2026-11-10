@@ -34,11 +34,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 // 플랜 한도는 "출품/등록 순서(createdAt)" 기준으로 센다 — 전시 동선 순서(구역 순서)는 진열용일 뿐,
-// 한도를 넘기는 건 항상 "가장 늦게 출품한 작품"이어야 한다 (기획 확인).
+// 한도를 넘기는 건 항상 "가장 늦게 출품한 작품"이어야 한다
 @SpringBootTest
 @ActiveProfiles("local")
 @Transactional
@@ -217,6 +218,63 @@ class ArtworkPlanLimitServiceTest {
         List<Notification> ownerNotifications = notifications.findByRecipientIdOrderByCreatedAtDesc(
                 owner.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
         assertTrue(ownerNotifications.stream().anyMatch(n -> n.getType() == NotificationType.PLAN_LIMIT_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("플랜 업그레이드(PLAN_CHANGE)로 여러 작품이 한꺼번에 공개되면, 작가에게 전시 기준으로 묶어서 1건만 알림이 간다")
+    void bundlesPlanUpgradeNotificationPerArtist() {
+        Account owner = accounts.saveAndFlush(Account.builder().role(Role.EXHIBITION_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Exhibition exhibition = exhibitions.saveAndFlush(Exhibition.builder()
+                .account(owner).univName("대학").deptName("학과").slug("plan-limit-" + UUID.randomUUID()).build());
+        ExhibitionZone zone = zones.saveAndFlush(ExhibitionZone.builder().exhibition(exhibition).name("A").orderId(1).build());
+
+        Account artistAccount = accounts.saveAndFlush(Account.builder().role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Artist artist = artists.saveAndFlush(Artist.builder().account(artistAccount).nameKo("작가").build());
+
+        Artwork a1 = submitted(artist, exhibition, zone, 10, "A-1");
+        Artwork a2 = submitted(artist, exhibition, zone, 20, "A-2");
+        Artwork a3 = submitted(artist, exhibition, zone, 30, "A-3");
+
+        Plan smallPlan = plans.saveAndFlush(Plan.builder().name("작은 플랜").maxArtworkCount(1).build());
+        Subscription subscription = subscriptions.saveAndFlush(Subscription.builder()
+                .exhibition(exhibition).plan(smallPlan).status(SubscriptionStatus.ACTIVE)
+                .billingCycle(BillingCycle.MONTHLY).months(1)
+                .startedAt(LocalDateTime.now()).endedAt(LocalDateTime.now().plusMonths(1))
+                .build());
+        em.flush();
+        em.clear();
+
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
+        em.flush();
+        em.clear();
+        assertTrue(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+        assertTrue(artworks.findById(a3.getId()).orElseThrow().exceedsPlanLimit());
+
+        // 플랜 업그레이드로 한도가 3으로 늘어났다고 시뮬레이션
+        Plan biggerPlan = plans.saveAndFlush(Plan.builder().name("큰 플랜").maxArtworkCount(3).build());
+        subscription = subscriptions.findById(subscription.getId()).orElseThrow();
+        subscription.changePlan(biggerPlan, BillingCycle.MONTHLY, 1);
+        subscriptions.saveAndFlush(subscription);
+        em.flush();
+        em.clear();
+
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.PLAN_CHANGE);
+        em.flush();
+        em.clear();
+
+        assertFalse(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+        assertFalse(artworks.findById(a3.getId()).orElseThrow().exceedsPlanLimit());
+
+        List<Notification> sent = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                artistAccount.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        List<Notification> bundled = sent.stream()
+                .filter(n -> n.getType() == NotificationType.PLAN_UPGRADE_ARTWORKS_PUBLISHED)
+                .toList();
+        assertEquals(1, bundled.size());
+        assertEquals("2", bundled.get(0).getPayload().get("artworkCount"));
+        assertTrue(bundled.get(0).getPayload().get("artworkTitles").contains("A-2"));
+        assertTrue(bundled.get(0).getPayload().get("artworkTitles").contains("A-3"));
+        assertTrue(sent.stream().noneMatch(n -> n.getType() == NotificationType.ARTWORK_PLAN_LIMIT_CLEARED));
     }
 
     private Artwork submitted(Artist artist, Exhibition exhibition, ExhibitionZone zone, int orderIndex, String title) {

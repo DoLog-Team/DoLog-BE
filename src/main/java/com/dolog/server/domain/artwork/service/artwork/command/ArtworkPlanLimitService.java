@@ -73,12 +73,21 @@ public class ArtworkPlanLimitService {
             long hiddenCount = candidates.stream().filter(Artwork::exceedsPlanLimit).count();
             notifyExceeded(exhibitionId, candidates.get(0).getExhibition(), hiddenCount);
 
-            // 작가 본인의 출품으로 한도를 넘긴 경우에만 작가에게 개별 알린다 
+            // 작가 본인의 출품으로 한도를 넘긴 경우에만 작가에게 개별 알린다
             if (cause == PlanLimitRecomputeCause.ARTWORK_CHANGE) {
                 newlyExceeded.forEach(artwork -> notifyArtistExceeded(exhibitionId, artwork));
             }
         }
-        newlyCleared.forEach(artwork -> notifyCleared(exhibitionId, artwork));
+
+        if (!newlyCleared.isEmpty()) {
+            if (cause == PlanLimitRecomputeCause.ARTWORK_CHANGE) {
+                // 다른 작품이 숨겨지거나 연결 해제돼서 자리가 난 경우 — 작품별로 각각 알린다
+                newlyCleared.forEach(artwork -> notifyCleared(exhibitionId, artwork));
+            } else {
+                // 플랜 업그레이드로 자리가 난 경우 — 전시·작가 기준으로 묶어서 1건만 알린다 
+                notifyPlanUpgradeCleared(exhibitionId, newlyCleared);
+            }
+        }
     }
 
     // 활성 구독이 없거나, 플랜에 작품 수 한도가 없으면 null (= 검사 안 함)
@@ -131,6 +140,36 @@ public class ArtworkPlanLimitService {
                 notificationService.send(artist.getAccount(), NotificationType.ARTWORK_PLAN_LIMIT_EXCEEDED, payload, exhibitionId);
             }
         }
+    }
+
+    // 플랜 업그레이드로 자리가 나 공개로 전환된 작품들을, 작가별로 묶어서(그 작가의 작품만) 한 건씩 알린다
+    private void notifyPlanUpgradeCleared(UUID exhibitionId, List<Artwork> clearedArtworks) {
+        String exhibitionName = resolveExhibitionName(clearedArtworks.get(0).getExhibition());
+
+        Map<UUID, com.dolog.server.domain.account.entity.Account> recipients = new java.util.LinkedHashMap<>();
+        Map<UUID, List<String>> titlesByAccountId = new java.util.LinkedHashMap<>();
+
+        for (Artwork artwork : clearedArtworks) {
+            for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+                Artist artist = map.getArtist();
+                if (artist.getAccount() == null) {
+                    continue;
+                }
+                UUID accountId = artist.getAccount().getId();
+                recipients.putIfAbsent(accountId, artist.getAccount());
+                titlesByAccountId.computeIfAbsent(accountId, k -> new java.util.ArrayList<>()).add(artwork.getTitle());
+            }
+        }
+
+        recipients.forEach((accountId, account) -> {
+            List<String> titles = titlesByAccountId.get(accountId);
+            Map<String, String> payload = Map.of(
+                    "exhibitionName", exhibitionName,
+                    "artworkTitles", String.join(", ", titles),
+                    "artworkCount", String.valueOf(titles.size())
+            );
+            notificationService.send(account, NotificationType.PLAN_UPGRADE_ARTWORKS_PUBLISHED, payload, exhibitionId);
+        });
     }
 
     private String resolveExhibitionName(Exhibition exhibition) {
