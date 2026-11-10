@@ -277,6 +277,63 @@ class ArtworkPlanLimitServiceTest {
         assertTrue(sent.stream().noneMatch(n -> n.getType() == NotificationType.ARTWORK_PLAN_LIMIT_CLEARED));
     }
 
+    @Test
+    @DisplayName("플랜 다운그레이드(PLAN_CHANGE)로 여러 작품이 한꺼번에 미노출되면, 작가에게 전시 기준으로 묶어서 1건만 알림이 간다")
+    void bundlesPlanDowngradeNotificationPerArtist() {
+        Account owner = accounts.saveAndFlush(Account.builder().role(Role.EXHIBITION_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Exhibition exhibition = exhibitions.saveAndFlush(Exhibition.builder()
+                .account(owner).univName("대학").deptName("학과").slug("plan-limit-" + UUID.randomUUID()).build());
+        ExhibitionZone zone = zones.saveAndFlush(ExhibitionZone.builder().exhibition(exhibition).name("A").orderId(1).build());
+
+        Account artistAccount = accounts.saveAndFlush(Account.builder().role(Role.ARTIST_ADMIN).accountStatus(AccountStatus.ACTIVE).build());
+        Artist artist = artists.saveAndFlush(Artist.builder().account(artistAccount).nameKo("작가").build());
+
+        Artwork a1 = submitted(artist, exhibition, zone, 10, "A-1");
+        Artwork a2 = submitted(artist, exhibition, zone, 20, "A-2");
+        Artwork a3 = submitted(artist, exhibition, zone, 30, "A-3");
+
+        Plan bigPlan = plans.saveAndFlush(Plan.builder().name("큰 플랜").maxArtworkCount(3).build());
+        Subscription subscription = subscriptions.saveAndFlush(Subscription.builder()
+                .exhibition(exhibition).plan(bigPlan).status(SubscriptionStatus.ACTIVE)
+                .billingCycle(BillingCycle.MONTHLY).months(1)
+                .startedAt(LocalDateTime.now()).endedAt(LocalDateTime.now().plusMonths(1))
+                .build());
+        em.flush();
+        em.clear();
+
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
+        em.flush();
+        em.clear();
+        assertFalse(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+        assertFalse(artworks.findById(a3.getId()).orElseThrow().exceedsPlanLimit());
+
+        // 플랜 다운그레이드로 한도가 1로 줄었다고 시뮬레이션
+        Plan smallPlan = plans.saveAndFlush(Plan.builder().name("작은 플랜").maxArtworkCount(1).build());
+        subscription = subscriptions.findById(subscription.getId()).orElseThrow();
+        subscription.changePlan(smallPlan, BillingCycle.MONTHLY, 1);
+        subscriptions.saveAndFlush(subscription);
+        em.flush();
+        em.clear();
+
+        service.recompute(exhibition.getId(), PlanLimitRecomputeCause.PLAN_CHANGE);
+        em.flush();
+        em.clear();
+
+        assertTrue(artworks.findById(a2.getId()).orElseThrow().exceedsPlanLimit());
+        assertTrue(artworks.findById(a3.getId()).orElseThrow().exceedsPlanLimit());
+
+        List<Notification> sent = notifications.findByRecipientIdOrderByCreatedAtDesc(
+                artistAccount.getId(), org.springframework.data.domain.PageRequest.of(0, 10));
+        List<Notification> bundled = sent.stream()
+                .filter(n -> n.getType() == NotificationType.PLAN_DOWNGRADE_ARTWORKS_HIDDEN)
+                .toList();
+        assertEquals(1, bundled.size());
+        assertEquals("2", bundled.get(0).getPayload().get("artworkCount"));
+        assertTrue(bundled.get(0).getPayload().get("artworkTitles").contains("A-2"));
+        assertTrue(bundled.get(0).getPayload().get("artworkTitles").contains("A-3"));
+        assertTrue(sent.stream().noneMatch(n -> n.getType() == NotificationType.ARTWORK_PLAN_LIMIT_EXCEEDED));
+    }
+
     private Artwork submitted(Artist artist, Exhibition exhibition, ExhibitionZone zone, int orderIndex, String title) {
         Artwork artwork = Artwork.builder().title(title).description("설명").build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder().artwork(artwork).artist(artist).artistRole("").build());
