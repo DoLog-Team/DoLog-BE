@@ -392,10 +392,10 @@ class ExhibitionArtistServiceImplTest {
         when(artistRepository.findByAccountId(accountId))
                 .thenReturn(Optional.of(artist));
         when(exhibitionArtistMapRepository
-                .existsByExhibitionIdAndArtistIdAndStatus(
+                .existsByExhibitionIdAndArtistIdAndStatusIn(
                         exhibition.getId(),
                         artist.getId(),
-                        ExhibitionArtistStatus.JOINED
+                        List.of(ExhibitionArtistStatus.JOINED, ExhibitionArtistStatus.PENDING)
                 ))
                 .thenReturn(true);
         when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
@@ -422,10 +422,10 @@ class ExhibitionArtistServiceImplTest {
         );
         lockOrder.verify(artistRepository).findByAccountId(accountId);
         lockOrder.verify(exhibitionArtistMapRepository)
-                .existsByExhibitionIdAndArtistIdAndStatus(
+                .existsByExhibitionIdAndArtistIdAndStatusIn(
                         exhibition.getId(),
                         artist.getId(),
-                        ExhibitionArtistStatus.JOINED
+                        List.of(ExhibitionArtistStatus.JOINED, ExhibitionArtistStatus.PENDING)
                 );
         lockOrder.verify(exhibitionRepository)
                 .findByIdForUpdate(exhibition.getId());
@@ -457,10 +457,10 @@ class ExhibitionArtistServiceImplTest {
         when(artistRepository.findByAccountId(accountId))
                 .thenReturn(Optional.of(artist));
         when(exhibitionArtistMapRepository
-                .existsByExhibitionIdAndArtistIdAndStatus(
+                .existsByExhibitionIdAndArtistIdAndStatusIn(
                         exhibitionId,
                         artist.getId(),
-                        ExhibitionArtistStatus.JOINED
+                        List.of(ExhibitionArtistStatus.JOINED, ExhibitionArtistStatus.PENDING)
                 ))
                 .thenReturn(false);
 
@@ -478,6 +478,41 @@ class ExhibitionArtistServiceImplTest {
     }
 
     @Test
+    @DisplayName("수락 대기중(PENDING)인 작가도 같은 나가기 API로 참여 신청을 취소하면 WITHDRAWN으로 전환된다")
+    void pendingArtistCancelsJoinRequestViaLeaveExhibition() {
+        UUID accountId = UUID.randomUUID();
+        Artist artist = artist("대기중 작가", "pending@test.com");
+        Exhibition exhibition = buildExhibition(UUID.randomUUID());
+        ExhibitionArtistMap map = map(exhibition, artist, ExhibitionArtistStatus.PENDING);
+
+        when(artistRepository.findByAccountId(accountId))
+                .thenReturn(Optional.of(artist));
+        when(exhibitionArtistMapRepository
+                .existsByExhibitionIdAndArtistIdAndStatusIn(
+                        exhibition.getId(),
+                        artist.getId(),
+                        List.of(ExhibitionArtistStatus.JOINED, ExhibitionArtistStatus.PENDING)
+                ))
+                .thenReturn(true);
+        when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
+                .thenReturn(Optional.of(exhibition));
+        when(exhibitionArtistMapRepository.findByExhibitionIdAndArtistId(
+                exhibition.getId(),
+                artist.getId()
+        )).thenReturn(Optional.of(map));
+        when(artworkRepository.findSubmittedArtworksByExhibitionIdAndArtistIdIn(
+                exhibition.getId(),
+                List.of(artist.getId())
+        )).thenReturn(List.of());
+
+        service.leaveExhibition(accountId, exhibition.getId());
+
+        assertEquals(ExhibitionArtistStatus.WITHDRAWN, map.getStatus());
+        verify(notificationService).send(eq(exhibition.getAccount()), eq(NotificationType.ARTIST_WITHDRAWN),
+                any(), eq(exhibition.getId()));
+    }
+
+    @Test
     @DisplayName("락 대기 중 참여 상태가 바뀌면 출품을 건드리지 않고 404를 반환한다")
     void rechecksJoinedStatusAfterExhibitionLock() {
         UUID accountId = UUID.randomUUID();
@@ -492,10 +527,10 @@ class ExhibitionArtistServiceImplTest {
         when(artistRepository.findByAccountId(accountId))
                 .thenReturn(Optional.of(artist));
         when(exhibitionArtistMapRepository
-                .existsByExhibitionIdAndArtistIdAndStatus(
+                .existsByExhibitionIdAndArtistIdAndStatusIn(
                         exhibition.getId(),
                         artist.getId(),
-                        ExhibitionArtistStatus.JOINED
+                        List.of(ExhibitionArtistStatus.JOINED, ExhibitionArtistStatus.PENDING)
                 ))
                 .thenReturn(true);
         when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))
@@ -535,10 +570,10 @@ class ExhibitionArtistServiceImplTest {
         when(artistRepository.findByAccountId(accountId))
                 .thenReturn(Optional.of(leavingArtist));
         when(exhibitionArtistMapRepository
-                .existsByExhibitionIdAndArtistIdAndStatus(
+                .existsByExhibitionIdAndArtistIdAndStatusIn(
                         exhibition.getId(),
                         leavingArtist.getId(),
-                        ExhibitionArtistStatus.JOINED
+                        List.of(ExhibitionArtistStatus.JOINED, ExhibitionArtistStatus.PENDING)
                 ))
                 .thenReturn(true);
         when(exhibitionRepository.findByIdForUpdate(exhibition.getId()))

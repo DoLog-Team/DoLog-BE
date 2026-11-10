@@ -7,7 +7,9 @@ public enum ExhibitionArtistStatus {
         return switch (this) {
             case PENDING ->
                     nextStatus == JOINED
-                            || nextStatus == DENIED;
+                            || nextStatus == DENIED
+                            // 작가 본인이 수락 대기중인 참여 신청을 취소하는 경우. 관리자 거절(DENIED)과는 의미가 다르다.
+                            || nextStatus == WITHDRAWN;
 
             case JOINED ->
                     nextStatus == WITHDRAWN

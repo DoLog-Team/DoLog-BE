@@ -24,4 +24,13 @@ class ExhibitionArtistStatusTest {
 
         assertFalse(ExhibitionArtistStatus.JOINED.canBeAddedByAdmin());
     }
+
+    @Test
+    @DisplayName("PENDING은 JOINED/DENIED뿐 아니라, 작가 본인이 신청을 취소하는 WITHDRAWN으로도 전환할 수 있다")
+    void pendingCanTransitionToWithdrawn() {
+        assertTrue(ExhibitionArtistStatus.PENDING.canChangeTo(ExhibitionArtistStatus.WITHDRAWN));
+        assertTrue(ExhibitionArtistStatus.PENDING.canChangeTo(ExhibitionArtistStatus.JOINED));
+        assertTrue(ExhibitionArtistStatus.PENDING.canChangeTo(ExhibitionArtistStatus.DENIED));
+        assertFalse(ExhibitionArtistStatus.PENDING.canChangeTo(ExhibitionArtistStatus.REMOVED));
+    }
 }
