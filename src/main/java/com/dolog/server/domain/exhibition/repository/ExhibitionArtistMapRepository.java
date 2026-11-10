@@ -26,6 +26,11 @@ public interface ExhibitionArtistMapRepository extends JpaRepository<ExhibitionA
             UUID artistId,
             ExhibitionArtistStatus status
     );
+    boolean existsByExhibitionIdAndArtistIdAndStatusIn(
+            UUID exhibitionId,
+            UUID artistId,
+            Collection<ExhibitionArtistStatus> statuses
+    );
     List<ExhibitionArtistMap> findByExhibitionId(UUID exhibitionId);
     Optional<ExhibitionArtistMap> findByExhibitionIdAndArtistId(UUID exhibitionId, UUID artistId);
     boolean existsByArtistId(UUID artistId);

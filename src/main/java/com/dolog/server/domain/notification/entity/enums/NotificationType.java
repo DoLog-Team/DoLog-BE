@@ -20,6 +20,9 @@ public enum NotificationType {
     EXHIBITION_UNPUBLISHED,     // 소속 전시가 비공개로 전환되어 전시에만 공개였던 작품이 노출되지 않게 됨
     EXHIBITION_REPUBLISHED,     // 소속 전시가 다시 공개되어 작품이 다시 노출됨
     ARTWORK_PLAN_LIMIT_CLEARED, // 플랜 한도 자리 확보로 미노출이 풀려 작품이 다시 노출됨
+    ARTWORK_PLAN_LIMIT_EXCEEDED, // 출품 시점에 플랜 한도를 초과해 작품이 미노출 처리됨
+    PLAN_UPGRADE_ARTWORKS_PUBLISHED, // 플랜 업그레이드로 미노출이었던 작품(들)이 공개로 전환됨 (전시 기준 묶음)
+    PLAN_DOWNGRADE_ARTWORKS_HIDDEN, // 플랜 다운그레이드로 공개였던 작품(들)이 미노출로 전환됨 (전시 기준 묶음)
 
     // 전시 어드민 알림
     ARTIST_JOIN_REQUESTED,      // 작가 참여 신청

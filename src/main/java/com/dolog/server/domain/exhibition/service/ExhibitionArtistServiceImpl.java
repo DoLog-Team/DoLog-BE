@@ -196,7 +196,7 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         notifyArtistRemoved(exhibition, map.getArtist());
     }
 
-    // 작가 본인의 전시 나가기 (참여 이력과 프로필은 유지한다)
+    // 작가 본인의 전시 나가기 (참여 이력과 프로필은 유지한다). 수락 대기중(PENDING)인 참여 신청 취소도 같은 API를 쓴다.
     @Override
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public void leaveExhibition(UUID accountId, UUID exhibitionId) {
@@ -204,13 +204,15 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                 .orElseThrow(ArtistNotFoundException::new);
 
         UUID artistId = artist.getId();
+        List<ExhibitionArtistStatus> leavableStatuses =
+                List.of(ExhibitionArtistStatus.JOINED, ExhibitionArtistStatus.PENDING);
 
         // 참여 여부를 먼저 확인하여 무관한 작가가 전시 행 락을 잡지 못하게 한다.
         if (!exhibitionArtistMapRepository
-                .existsByExhibitionIdAndArtistIdAndStatus(
+                .existsByExhibitionIdAndArtistIdAndStatusIn(
                         exhibitionId,
                         artistId,
-                        ExhibitionArtistStatus.JOINED
+                        leavableStatuses
                 )) {
             throw new ExhibitionException(
                     ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_JOINED
@@ -226,13 +228,12 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
         // 락을 기다리는 동안 상태가 바뀌었을 수 있으므로 참여 관계를 다시 조회한다.
         ExhibitionArtistMap map = exhibitionArtistMapRepository
                 .findByExhibitionIdAndArtistId(exhibitionId, artistId)
-                .filter(joinedMap ->
-                        joinedMap.getStatus() == ExhibitionArtistStatus.JOINED
-                )
+                .filter(joinedMap -> leavableStatuses.contains(joinedMap.getStatus()))
                 .orElseThrow(() -> new ExhibitionException(
                         ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_JOINED
                 ));
 
+        requireStatusTransition(map, ExhibitionArtistStatus.WITHDRAWN);
         map.updateStatus(ExhibitionArtistStatus.WITHDRAWN);
         cancelArtworkSubmissions(exhibitionId, List.of(artistId));
 

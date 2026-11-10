@@ -131,7 +131,7 @@ public class ArtworkUpdateProcessor {
 
         // 구역이 바뀌면 전체 동선 순서가 달라지므로 플랜 한도를 다시 센다 (#421의 일괄 구역 지정과 동일)
         if (zoneChanged) {
-            artworkPlanLimitService.recompute(exhibitionId);
+            artworkPlanLimitService.recompute(exhibitionId, PlanLimitRecomputeCause.ARTWORK_CHANGE);
         }
 
         return ArtworkUpdateFullResponse.from(artwork);

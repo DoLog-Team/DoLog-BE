@@ -22,36 +22,40 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PlanExpiringNotificationScheduler {
 
-    private static final int DAYS_LEFT = 7;
+    private static final List<Integer> DAYS_LEFT_CHECKPOINTS = List.of(7, 3, 1);
 
     private final SubscriptionRepository subscriptionRepository;
     private final ExhibitionDetailRepository exhibitionDetailRepository;
     private final NotificationService notificationService;
 
-    // 매일 오전 9시(한국 시간)에 종료일이 7일 남은 활성 구독의 전시 어드민에게 알림
-    // 대상 구간을 하루 폭(6~7일 뒤)으로 잡아서, 같은 구독에 같은 알림이 반복되지 않게 한다
+    // 매일 오전 9시(한국 시간)에 종료일이 D-7/D-3/D-1인 활성 구독의 전시 어드민에게 알림
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Seoul")
     @Transactional
     public void notifyPlanExpiringSoon() {
         LocalDateTime now = LocalDateTime.now();
-        List<Subscription> targets = subscriptionRepository.findByStatusAndEndedAtBetween(
-                SubscriptionStatus.ACTIVE, now.plusDays(DAYS_LEFT - 1), now.plusDays(DAYS_LEFT)
-        );
+        int totalSent = 0;
 
-        for (Subscription subscription : targets) {
-            Exhibition exhibition = subscription.getExhibition();
-            notificationService.send(
-                    exhibition.getAccount(),
-                    NotificationType.PLAN_EXPIRING_SOON,
-                    Map.of(
-                            "exhibitionName", resolveExhibitionName(exhibition),
-                            "daysLeft", String.valueOf(DAYS_LEFT)
-                    ),
-                    exhibition.getId()
+        for (int daysLeft : DAYS_LEFT_CHECKPOINTS) {
+            List<Subscription> targets = subscriptionRepository.findByStatusAndEndedAtBetween(
+                    SubscriptionStatus.ACTIVE, now.plusDays(daysLeft - 1), now.plusDays(daysLeft)
             );
+
+            for (Subscription subscription : targets) {
+                Exhibition exhibition = subscription.getExhibition();
+                notificationService.send(
+                        exhibition.getAccount(),
+                        NotificationType.PLAN_EXPIRING_SOON,
+                        Map.of(
+                                "exhibitionName", resolveExhibitionName(exhibition),
+                                "daysLeft", String.valueOf(daysLeft)
+                        ),
+                        exhibition.getId()
+                );
+            }
+            totalSent += targets.size();
         }
 
-        log.info("플랜 만료 임박 알림 {}건 발송", targets.size());
+        log.info("플랜 만료 임박 알림 {}건 발송", totalSent);
     }
 
     // 전시 이름은 상세 정보의 제목을 쓰고, 없으면 slug로 대신한다

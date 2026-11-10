@@ -88,7 +88,7 @@ public class ArtworkVisibilityProcessor {
         ExhibitionZone zone = artworkValidator.validateZone(zoneId, artwork.getExhibition().getId());
         artwork.updateZone(zone);
         artworkOrderAdapter.assign(artwork);
-        artworkPlanLimitService.recompute(artwork.getExhibition().getId());
+        artworkPlanLimitService.recompute(artwork.getExhibition().getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
     }
 
     // 전시 어드민의 숨김/재공개. 공개 상태(status)는 건드리지 않는다.
@@ -110,7 +110,7 @@ public class ArtworkVisibilityProcessor {
         }
 
         if (applyHidden(artwork, hidden)) {
-            artworkPlanLimitService.recompute(artwork.getExhibition().getId());
+            artworkPlanLimitService.recompute(artwork.getExhibition().getId(), PlanLimitRecomputeCause.ARTWORK_CHANGE);
             notifyArtists(artwork, hiddenNotificationType(hidden));
         }
 
@@ -133,7 +133,7 @@ public class ArtworkVisibilityProcessor {
                 .toList();
 
         if (!changed.isEmpty()) {
-            artworkPlanLimitService.recompute(exhibitionId);
+            artworkPlanLimitService.recompute(exhibitionId, PlanLimitRecomputeCause.ARTWORK_CHANGE);
             changed.forEach(artwork -> notifyArtists(artwork, hiddenNotificationType(hidden)));
         }
 
