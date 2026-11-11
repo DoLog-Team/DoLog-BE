@@ -266,7 +266,7 @@ public class ArtworkDetailQueryService {
         combined.addAll(sameZone);
 
         return combined.stream()
-                .limit(2)
+                .limit(4)
                 .map(art -> {
 
                     boolean isSameArtist =
