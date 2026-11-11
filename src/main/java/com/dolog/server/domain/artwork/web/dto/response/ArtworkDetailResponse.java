@@ -52,8 +52,8 @@ public class ArtworkDetailResponse {
 
     private List<RelatedBtsInfo> relatedBts;
 
-    // 동일 카테고리
-    private List<RelatedArtworkInfo> sameCategoryArtworks;
+    // 동일 구역(zone)
+    private List<RelatedArtworkInfo> sameZoneArtworks;
 
     // 작품 둘러보기
     private List<RelatedArtworkInfo> alphabeticalArtworks;

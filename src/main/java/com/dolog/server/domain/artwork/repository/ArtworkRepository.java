@@ -113,11 +113,11 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
 
 
     // ==============================================================================
-    // 3. 동일 카테고리 내 작가 기준 조회
+    // 3. 동일 구역(zone) 내 작가 기준 조회
     // ==============================================================================
     @Query(value = "SELECT DISTINCT a.*, " +
             "CASE WHEN am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) THEN 2 " +
-            "     WHEN a.category = :category THEN 1 " +
+            "     WHEN a.zone_id = :zoneId THEN 1 " +
             "     ELSE 0 END as score " +
             "FROM artworks a " +
             "LEFT JOIN artwork_artist_maps am ON a.id = am.artwork_id AND am.deleted_at IS NULL " +
@@ -126,13 +126,13 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             "AND a.status = 'PUBLISHED' " +
             "AND (:exhibitionView = false OR (a.hidden_at IS NULL AND a.plan_limit_exceeded_at IS NULL AND (vz.id IS NULL OR vz.is_hidden = false))) " +
             "AND a.id != :artworkId " +
-            "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) OR a.category = :category) " +
+            "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) OR a.zone_id = :zoneId) " +
             "ORDER BY score DESC, a.id DESC",
             nativeQuery = true)
     List<Artwork> findRelatedArtworks(
             @Param("exhibitionId") UUID exhibitionId,
             @Param("artworkId") UUID artworkId,
-            @Param("category") String category,
+            @Param("zoneId") UUID zoneId,
             @Param("exhibitionView") boolean exhibitionView,
             Pageable pageable
     );
