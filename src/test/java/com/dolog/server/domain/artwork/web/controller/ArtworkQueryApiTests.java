@@ -163,7 +163,7 @@ class ArtworkQueryApiTests {
                 .andExpect(jsonPath("$.data.slug").value(nullValue()))
                 .andExpect(jsonPath("$.data.zoneId").value(nullValue()))
                 .andExpect(jsonPath("$.data.zoneName").value(nullValue()))
-                .andExpect(jsonPath("$.data.sameCategoryArtworks", hasSize(0)))
+                .andExpect(jsonPath("$.data.sameZoneArtworks", hasSize(0)))
                 .andExpect(jsonPath("$.data.alphabeticalArtworks", hasSize(0)));
 
         mvc.perform(api(dologDetail(deleted))).andExpect(status().isNotFound());
@@ -359,13 +359,30 @@ class ArtworkQueryApiTests {
         mvc.perform(api(exhibitionDetail(current)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.alphabeticalArtworks", hasSize(0)))
-                .andExpect(jsonPath("$.data.sameCategoryArtworks", hasSize(0)));
+                .andExpect(jsonPath("$.data.sameZoneArtworks", hasSize(0)));
 
         // 두록 URL 은 숨김은 무시하고 비공개만 뺀다
         mvc.perform(api(dologDetail(current)))
                 .andExpect(jsonPath("$.data.alphabeticalArtworks[*].id", contains(prevHidden.getId().toString())))
                 .andExpect(jsonPath("$.data.alphabeticalArtworks[0].type").value("prev"))
-                .andExpect(jsonPath("$.data.sameCategoryArtworks[*].id", contains(prevHidden.getId().toString())));
+                .andExpect(jsonPath("$.data.sameZoneArtworks[*].id", contains(prevHidden.getId().toString())));
+    }
+
+    @Test
+    @DisplayName("연관 작품은 카테고리가 아니라 같은 구역(zone) 기준으로 묶인다")
+    void relatedArtworksGroupByZoneNotCategory() throws Exception {
+        Artist other = artist("남작가");
+        ExhibitionZone zone2 = zone(exhibition, "2구역", 2);
+
+        Artwork current = submitted(artworkOf(me, "가운데", "회화"), zone, ArtworkStatus.PUBLISHED, 20);
+        Artwork sameZoneDifferentCategory = submitted(artworkOf(other, "같은 구역", "조각"), zone, ArtworkStatus.PUBLISHED, 21);
+        Artwork sameCategoryDifferentZone = submitted(artworkOf(other, "다른 구역", "회화"), zone2, ArtworkStatus.PUBLISHED, 1);
+        endRequest();
+
+        mvc.perform(api(exhibitionDetail(current)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sameZoneArtworks[*].id",
+                        contains(sameZoneDifferentCategory.getId().toString())));
     }
 
     // ---------------- 게시 전 전시 ----------------
@@ -471,7 +488,11 @@ class ArtworkQueryApiTests {
     }
 
     private Artwork artworkOf(Artist artist, String title) {
-        Artwork artwork = Artwork.builder().title(title).category("회화").description("설명").build();
+        return artworkOf(artist, title, "회화");
+    }
+
+    private Artwork artworkOf(Artist artist, String title, String category) {
+        Artwork artwork = Artwork.builder().title(title).category(category).description("설명").build();
         artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
                 .artwork(artwork).artist(artist).artistRole("").build());
         return artworks.saveAndFlush(artwork);

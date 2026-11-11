@@ -163,7 +163,7 @@ public class ArtworkDetailQueryService {
                                 .toList()
                 )
                 .relatedBts(getRelatedBts(artworkId))
-                .sameCategoryArtworks(relatedArtworks)
+                .sameZoneArtworks(relatedArtworks)
                 .alphabeticalArtworks(navigationArtworks)
                 .build();
     }
@@ -219,7 +219,7 @@ public class ArtworkDetailQueryService {
                 artworkRepository.findRelatedArtworks(
                         exhibitionId,
                         artwork.getId(),
-                        artwork.getCategory(),
+                        artwork.getExhibitionZone() != null ? artwork.getExhibitionZone().getId() : null,
                         exhibitionView,
                         PageRequest.of(0, 10)
                 );
@@ -230,7 +230,7 @@ public class ArtworkDetailQueryService {
                         .collect(Collectors.toSet());
 
         List<Artwork> sameArtist = new ArrayList<>();
-        List<Artwork> sameCategory = new ArrayList<>();
+        List<Artwork> sameZone = new ArrayList<>();
 
         for (Artwork candidate : candidates) {
 
@@ -245,15 +245,15 @@ public class ArtworkDetailQueryService {
             if (isSameArtist) {
                 sameArtist.add(candidate);
             } else {
-                sameCategory.add(candidate);
+                sameZone.add(candidate);
             }
         }
 
-        Collections.shuffle(sameCategory);
+        Collections.shuffle(sameZone);
 
         List<Artwork> combined = new ArrayList<>();
         combined.addAll(sameArtist);
-        combined.addAll(sameCategory);
+        combined.addAll(sameZone);
 
         return combined.stream()
                 .limit(2)
