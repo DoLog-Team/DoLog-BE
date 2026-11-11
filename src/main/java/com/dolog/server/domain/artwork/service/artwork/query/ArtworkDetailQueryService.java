@@ -135,7 +135,7 @@ public class ArtworkDetailQueryService {
                 .productionEndMonth(hideMonthDay ? null : artwork.getProductionEndMonth())
                 .productionEndDay(hideMonthDay ? null : artwork.getProductionEndDay())
                 .purchaseUrl(artwork.getPurchaseUrl())
-                .purchaseChatUrl(artwork.getPurchaseChatUrl())
+                .purchaseChatUrl(representativePurchaseContactUrl(artwork))
                 .showPurchaseButton(artwork.getShowPurchaseButton())
                 .youtubeUrl(artwork.getYoutubeUrl())
                 .mainImage(artwork.getMainImg())
@@ -166,6 +166,16 @@ public class ArtworkDetailQueryService {
                 .sameZoneArtworks(relatedArtworks)
                 .alphabeticalArtworks(navigationArtworks)
                 .build();
+    }
+
+    // 구매 오픈채팅 주소는 작품 자체 필드가 아니라 "작품을 등록한(=가장 먼저 참여한) 대표 작가"의
+    // 프로필 소통 주소를 그대로 보여준다 — 프로필을 고치면 이미 올라간 작품에도 바로 반영되도록.
+    private String representativePurchaseContactUrl(Artwork artwork) {
+        return artwork.getArtworkArtistMaps().stream()
+                .min(Comparator.comparing(ArtworkArtistMap::getId))
+                .map(ArtworkArtistMap::getArtistProfile)
+                .map(ArtistProfile::getPurchaseContactUrl)
+                .orElse(null);
     }
 
     // 전시에서 제외되거나 나간 작가는 이름과 역할만 남기고 프로필은 내보내지 않는다 (#352).

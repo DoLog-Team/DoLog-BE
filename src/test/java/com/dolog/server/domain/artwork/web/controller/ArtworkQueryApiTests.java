@@ -204,6 +204,9 @@ class ArtworkQueryApiTests {
         artwork.replaceMaterials(List.of("백자토", "청화안료"));
         artworks.saveAndFlush(artwork);
         submitted(artwork, zone, ArtworkStatus.PUBLISHED);
+        // 구매 오픈채팅 주소는 작품 자체 값이 아니라 대표 작가(me) 프로필의 소통 주소를 따른다
+        myProfile.updateProfile(null, null, null, null, "https://chat", null);
+        profiles.saveAndFlush(myProfile);
         endRequest();
 
         mvc.perform(api(exhibitionDetail(artwork)))
@@ -383,6 +386,36 @@ class ArtworkQueryApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sameZoneArtworks[*].id",
                         contains(sameZoneDifferentCategory.getId().toString())));
+    }
+
+    @Test
+    @DisplayName("구매 오픈채팅 주소는 작품 자체 값이 아니라 가장 먼저 등록한 대표 작가의 프로필 소통 주소를 따른다")
+    void purchaseChatUrlFollowsRepresentativeArtistProfile() throws Exception {
+        myProfile.updateProfile(null, null, null, null, "https://chat/me", null);
+        profiles.saveAndFlush(myProfile);
+
+        Artist other = artist("남작가");
+        ArtistProfile otherProfile = profiles.saveAndFlush(ArtistProfile.builder()
+                .artist(other).nameKo("남작가").purchaseContactUrl("https://chat/other").build());
+
+        Artwork artwork = Artwork.builder().title("공동 작품").description("설명").category("회화")
+                .showPurchaseButton(true).build();
+        artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                .artwork(artwork).artist(me).artistProfile(myProfile).artistRole("").build());
+        artworks.saveAndFlush(artwork);
+
+        artwork.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                .artwork(artwork).artist(other).artistProfile(otherProfile).artistRole("공동").build());
+        artwork = submitted(artwork, zone, ArtworkStatus.PUBLISHED);
+        endRequest();
+
+        mvc.perform(api(exhibitionDetail(artwork)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.purchaseChatUrl").value("https://chat/me"));
+
+        mvc.perform(api(dologDetail(artwork)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.purchaseChatUrl").value("https://chat/me"));
     }
 
     // ---------------- 게시 전 전시 ----------------
