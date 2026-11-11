@@ -54,7 +54,10 @@ public class ArtworkEditResponse {
     private List<ImageInfo> images;
     private List<ArtistInfo> artists;
 
-    public static ArtworkEditResponse of(Artwork artwork, String exhibitionName) {
+    // 작품 작성 완료율(%): 작품 기본/상세 필수값 + 출품 정보 필수값(출품한 경우)을 합산
+    private int completionRate;
+
+    public static ArtworkEditResponse of(Artwork artwork, String exhibitionName, int completionRate) {
         return ArtworkEditResponse.builder()
                 .artworkId(artwork.getId())
                 .title(artwork.getTitle())
@@ -88,6 +91,7 @@ public class ArtworkEditResponse {
                 .zoneName(artwork.getExhibitionZone() != null ? artwork.getExhibitionZone().getName() : null)
                 .images(artwork.getArtworkImg().stream().map(ImageInfo::from).toList())
                 .artists(artwork.getArtworkArtistMaps().stream().map(ArtistInfo::from).toList())
+                .completionRate(completionRate)
                 .build();
     }
 

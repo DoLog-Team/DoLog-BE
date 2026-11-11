@@ -514,6 +514,18 @@ class ArtworkCommandApiTests {
     }
 
     @Test
+    @DisplayName("내 작품 상세(편집용) 조회 응답에 작성 완료율이 담긴다 (/artworks/me와 같은 계산)")
+    void myArtworkDetailIncludesCompletionRate() throws Exception {
+        // 미출품 작품의 완료율 분모는 category/productionEndYear 2개뿐 — 카테고리만 채우면 50%
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").category("카테고리").build(), me));
+
+        mvc.perform(withToken(get("/api/artworks/{id}/me", artwork.getId()), myToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.completionRate").value(50));
+    }
+
+    @Test
     @DisplayName("내 작품 목록 응답에 플랜 한도 초과 여부가 담긴다")
     void myArtworkListIncludesPlanLimitExceeded() throws Exception {
         Artwork exceeded = artworks.saveAndFlush(linked(Artwork.builder()
