@@ -56,7 +56,7 @@ public class ArtworkMyQueryService {
         Artist artist = artworkValidator.getLoginArtist(accountId);
         Artwork artwork = artworkValidator.getOwnedArtwork(artworkId, artist);
 
-        return ArtworkEditResponse.of(artwork, resolveExhibitionName(artwork));
+        return ArtworkEditResponse.of(artwork, resolveExhibitionName(artwork), artworkFieldRequirement.completionRate(artwork));
     }
 
     private ArtworkMyItemResponse toResponse(Artwork artwork) {
