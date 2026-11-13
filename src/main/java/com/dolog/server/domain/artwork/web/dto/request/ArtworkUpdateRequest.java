@@ -86,4 +86,10 @@ public class ArtworkUpdateRequest implements ArtworkInfoFields {
     private MultipartFile mainImageFile;
 
     private MultipartFile locationMapFile;
+
+    // true면 대표 이미지를 지운다. 안 보내면 그대로 둔다 (새 파일 없이 삭제용).
+    private Boolean clearMainImage;
+
+    // true면 위치 이미지를 지운다. 안 보내면 그대로 둔다 (새 파일 없이 삭제용).
+    private Boolean clearLocationMap;
 }

@@ -66,12 +66,21 @@ public class ArtworkUpdateProcessor {
                     .forEach(map -> map.updateRole(request.getArtistRole()));
         }
 
-        artwork.updateMainImg(
-                artworkFileHandler.replaceMainImage(artwork.getMainImg(), request.getMainImageFile())
-        );
-        artwork.updateLocationMap(
-                artworkFileHandler.replaceLocationMap(artwork.getLocationMap(), request.getLocationMapFile())
-        );
+        String newMainImg = artworkFileHandler.replaceMainImage(artwork.getMainImg(), request.getMainImageFile());
+        if (newMainImg != null) {
+            artwork.updateMainImg(newMainImg);
+        } else if (Boolean.TRUE.equals(request.getClearMainImage())) {
+            artworkFileHandler.deleteAfterCommit(artwork.getMainImg());
+            artwork.clearMainImg();
+        }
+
+        String newLocationMap = artworkFileHandler.replaceLocationMap(artwork.getLocationMap(), request.getLocationMapFile());
+        if (newLocationMap != null) {
+            artwork.updateLocationMap(newLocationMap);
+        } else if (Boolean.TRUE.equals(request.getClearLocationMap())) {
+            artworkFileHandler.deleteAfterCommit(artwork.getLocationMap());
+            artwork.clearLocationMap();
+        }
 
         if (artwork.isAutoDrafted() && artworkFieldRequirement.isSatisfied(artwork)) {
             artwork.autoPublish();
