@@ -389,6 +389,26 @@ class ArtworkQueryApiTests {
     }
 
     @Test
+    @DisplayName("두록 상세의 관련 작품은 구역이 아니라 같은 작가 기준으로 묶인다 (전시 출품 여부 무관)")
+    void dologRelatedArtworksGroupByArtistNotZone() throws Exception {
+        Artist other = artist("남작가");
+        ExhibitionZone zone2 = zone(exhibition, "2구역", 2);
+
+        Artwork current = submitted(artworkOf(me, "가운데"), zone, ArtworkStatus.PUBLISHED, 20);
+        Artwork sameZoneDifferentArtist = submitted(artworkOf(other, "같은 구역 다른 작가"), zone, ArtworkStatus.PUBLISHED, 21);
+        Artwork sameArtistDifferentZone = submitted(artworkOf(me, "다른 구역 같은 작가"), zone2, ArtworkStatus.PUBLISHED, 1);
+        Artwork sameArtistStandalone = artworkOf(me, "독립 작품");
+        sameArtistStandalone.changeStatus(ArtworkStatus.PUBLISHED);
+        artworks.saveAndFlush(sameArtistStandalone);
+        endRequest();
+
+        mvc.perform(api(dologDetail(current)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sameZoneArtworks[*].id", containsInAnyOrder(
+                        sameArtistDifferentZone.getId().toString(), sameArtistStandalone.getId().toString())));
+    }
+
+    @Test
     @DisplayName("구매 오픈채팅 주소는 작품 자체 값이 아니라 가장 먼저 등록한 대표 작가의 프로필 소통 주소를 따른다")
     void purchaseChatUrlFollowsRepresentativeArtistProfile() throws Exception {
         myProfile.updateProfile(null, null, null, null, "https://chat/me", null);
