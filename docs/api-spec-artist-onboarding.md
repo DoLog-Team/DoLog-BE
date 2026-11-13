@@ -64,7 +64,7 @@
 - `nameKo: ""`이면 공통 프로필의 국문 성명을 null로 저장한다. 공백만 있는 문자열은 허용하지 않는다.
 - 국문 성명을 삭제한 뒤 `GET /api/artists/{artistId}`에서도 `nameKo: null`을 반환한다.
 - `bio`는 최대 200자다.
-- 이미지는 JPG/JPEG/PNG, 5MB 이하만 허용한다.
+- 이미지는 JPG, JPEG, PNG, HEIC 형식으로 원본 파일 크기가 5MB 이하여야 한다. HEIC 파일의 `Content-Type`은 `image/heic`로 전송한다. 업로드한 이미지는 WebP로 저장한다.
 
 ```json
 {

@@ -29,6 +29,7 @@ import com.dolog.server.domain.exhibition.entity.ExhibitionMap;
 import com.dolog.server.domain.exhibition.repository.ExhibitionArtistMapRepository;
 import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.util.FileService;
+import com.sksamuel.scrimage.ImmutableImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -133,7 +136,7 @@ class ArtistServiceImplTest {
         assertEquals("직접 입력", profile.getNameKo());
         assertEquals("Artist SK", profile.getNameEn());
         assertEquals("새 소개\n둘째 줄", profile.getBio());
-        verify(profileImageValidator).validate(null);
+        verify(profileImageValidator).validateAndDecode(null);
         verify(artistRepository, never()).findById(any());
     }
 
@@ -172,7 +175,7 @@ class ArtistServiceImplTest {
 
         assertEquals(profileId, response.profileId());
         assertEquals("새 프로필명", profile.getNameKo());
-        verify(profileImageValidator).validate(null);
+        verify(profileImageValidator).validateAndDecode(null);
     }
 
     @Test
@@ -208,7 +211,7 @@ class ArtistServiceImplTest {
         );
 
         assertEquals(profileId, response.profileId());
-        verify(profileImageValidator).validate(null);
+        verify(profileImageValidator).validateAndDecode(null);
     }
 
     @Test
@@ -456,7 +459,9 @@ class ArtistServiceImplTest {
         when(artistProfileRepository.findByArtistId(artistId))
                 .thenReturn(Optional.of(profile));
         when(image.isEmpty()).thenReturn(false);
-        when(fileService.uploadFile(image, "artist-profiles"))
+        ImmutableImage decodedImage = mock(ImmutableImage.class);
+        when(profileImageValidator.validateAndDecode(image)).thenReturn(decodedImage);
+        when(fileService.uploadImage(decodedImage, "artist-profiles"))
                 .thenReturn("https://cdn.test/new.webp");
 
         artistService.updateMyArtistProfile(
@@ -466,8 +471,10 @@ class ArtistServiceImplTest {
         );
 
         assertEquals("https://cdn.test/new.webp", profile.getProfileImg());
-        verify(profileImageValidator).validate(image);
-        verify(fileService).deleteFile("https://cdn.test/old.webp");
+        var order = inOrder(profileImageValidator, fileService);
+        order.verify(profileImageValidator).validateAndDecode(image);
+        order.verify(fileService).uploadImage(decodedImage, "artist-profiles");
+        order.verify(fileService).deleteFile("https://cdn.test/old.webp");
     }
 
     @Test
@@ -497,9 +504,9 @@ class ArtistServiceImplTest {
         );
 
         assertNull(profile.getProfileImg());
-        verify(profileImageValidator).validate(emptyImage);
+        verify(profileImageValidator).validateAndDecode(emptyImage);
         verify(fileService).deleteFile("https://cdn.test/old.webp");
-        verify(fileService, never()).uploadFile(any(), any());
+        verify(fileService, never()).uploadImage(any(), any());
     }
 
     @Test

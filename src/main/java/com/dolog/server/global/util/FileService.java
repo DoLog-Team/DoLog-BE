@@ -13,6 +13,7 @@ import software.amazon.awssdk.services.s3.model.GetUrlRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -35,8 +36,15 @@ public class FileService {
         String originalFilename = file.getOriginalFilename();
         validateImageExtension(originalFilename);
 
-        // 2. 이미지를 Scrimage 객체로 로드
-        ImmutableImage image = ImmutableImage.loader().fromStream(file.getInputStream());
+        ImmutableImage image;
+        try (InputStream inputStream = file.getInputStream()) {
+            image = ImmutableImage.loader().fromStream(inputStream);
+        }
+        return uploadImage(image, subFolder);
+    }
+
+    public String uploadImage(ImmutableImage image, String subFolder) throws IOException {
+        if (image == null) return null;
 
         // 3. 리사이징 (가로 1600px 제한)
         // scaleToWidth는 비율을 유지하면서 가로를 조절합니다.

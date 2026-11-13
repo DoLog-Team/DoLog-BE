@@ -35,16 +35,7 @@ public class ArtistProfileImageValidator {
             HEIC_CONTENT_TYPE
     );
 
-    public void validate(MultipartFile file) {
-        // The existing upload path still accepts only JPEG and PNG profile images.
-        validateAndDecode(file, false);
-    }
-
     public ImmutableImage validateAndDecode(MultipartFile file) {
-        return validateAndDecode(file, true);
-    }
-
-    private ImmutableImage validateAndDecode(MultipartFile file, boolean allowHeic) {
         if (file == null || file.isEmpty()) {
             return null;
         }
@@ -56,8 +47,7 @@ public class ArtistProfileImageValidator {
                 || !ALLOWED_EXTENSIONS.contains(extension)
                 || contentType == null
                 || !ALLOWED_CONTENT_TYPES.contains(contentType)
-                || heic != HEIC_CONTENT_TYPE.equals(contentType)
-                || (heic && !allowHeic)) {
+                || heic != HEIC_CONTENT_TYPE.equals(contentType)) {
             throw new ArtistProfileImageInvalidException();
         }
 

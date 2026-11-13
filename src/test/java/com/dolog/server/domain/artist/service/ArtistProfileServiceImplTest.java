@@ -30,6 +30,7 @@ import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
 import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArtistItemResponse;
 import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.util.FileService;
+import com.sksamuel.scrimage.ImmutableImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -124,7 +125,9 @@ class ArtistProfileServiceImplTest {
                 )).thenReturn(true);
         when(profileRepository.existsByArtistId(artist.getId()))
                 .thenReturn(false);
-        when(fileService.uploadFile(profileImg, "artist-profiles"))
+        ImmutableImage decodedImage = mock(ImmutableImage.class);
+        when(profileImageValidator.validateAndDecode(profileImg)).thenReturn(decodedImage);
+        when(fileService.uploadImage(decodedImage, "artist-profiles"))
                 .thenReturn("https://cdn.test/profile.webp");
         when(profileRepository.save(any(ArtistProfile.class)))
                 .thenReturn(ArtistProfile.builder()
@@ -148,7 +151,7 @@ class ArtistProfileServiceImplTest {
                 savedProfile.getPurchaseContactUrl());
         assertEquals("https://cdn.test/profile.webp",
                 savedProfile.getProfileImg());
-        verify(profileImageValidator).validate(profileImg);
+        verify(profileImageValidator).validateAndDecode(profileImg);
     }
 
     @Test

@@ -116,7 +116,7 @@ class ArtistProfileClearApiTest {
             request.file(new MockMultipartFile("profileImg", "profile.png", MediaType.IMAGE_PNG_VALUE,
                     bytes.toByteArray()));
             if (expectedStatus == 200) {
-                when(files.uploadFile(any(), eq("artist-profiles"))).thenReturn(NEW_IMAGE);
+                when(files.uploadImage(any(), eq("artist-profiles"))).thenReturn(NEW_IMAGE);
             }
         }
 
@@ -128,9 +128,9 @@ class ArtistProfileClearApiTest {
         } else {
             verify(files).deleteFile(OLD_IMAGE);
             if (NEW_IMAGE.equals(expectedImage)) {
-                verify(files).uploadFile(any(), eq("artist-profiles"));
+                verify(files).uploadImage(any(), eq("artist-profiles"));
             } else {
-                verify(files, never()).uploadFile(any(), any());
+                verify(files, never()).uploadImage(any(), any());
                 // 이미 삭제된 이미지에 대한 재요청도 성공한다.
                 mvc.perform(update(byId, "{\"deleteProfileImg\":true}").with(user(details(owner))))
                         .andExpect(status().isOk());
@@ -147,7 +147,7 @@ class ArtistProfileClearApiTest {
 
         assertPersistedState(null, null);
         verify(files).deleteFile(OLD_IMAGE);
-        verify(files, never()).uploadFile(any(), any());
+        verify(files, never()).uploadImage(any(), any());
     }
 
     @Test

@@ -29,6 +29,7 @@ import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
 import com.dolog.server.global.util.FileService;
 import com.dolog.server.global.util.TextUtils;
+import com.sksamuel.scrimage.ImmutableImage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -262,18 +263,15 @@ public class ArtistServiceImpl implements ArtistService {
             throw new ArtistBadRequestException();
         }
 
-        profileImageValidator.validate(profileImg);
+        ImmutableImage image = profileImageValidator.validateAndDecode(profileImg);
         String oldImageUrl = profile.getProfileImg();
         String newImageUrl = null;
 
         if (deleteImage || (profileImg != null && profileImg.isEmpty())) {
             profile.clearProfileImg();
             fileService.deleteFile(oldImageUrl);
-        } else if (profileImg != null) {
-            newImageUrl = fileService.uploadFile(
-                    profileImg,
-                    "artist-profiles"
-            );
+        } else if (image != null) {
+            newImageUrl = fileService.uploadImage(image, "artist-profiles");
             fileService.deleteFile(oldImageUrl);
         }
 
