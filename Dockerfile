@@ -1,6 +1,10 @@
 # Runtime image (JRE) — 패치버전 고정으로 재현성 확보 (dependabot(docker)이 자동 갱신)
 FROM eclipse-temurin:17.0.20_8-jre
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libheif-examples libheif-plugin-libde265 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 RUN useradd -r -u 1001 appuser

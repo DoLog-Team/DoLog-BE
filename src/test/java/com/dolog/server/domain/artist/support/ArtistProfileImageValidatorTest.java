@@ -28,7 +28,7 @@ class ArtistProfileImageValidatorTest {
                 "image/png"
         );
 
-        assertDoesNotThrow(() -> validator.validate(image));
+        assertDoesNotThrow(() -> validator.validateAndDecode(image));
     }
 
     @Test
@@ -43,7 +43,7 @@ class ArtistProfileImageValidatorTest {
 
         assertThrows(
                 ArtistProfileImageInvalidException.class,
-                () -> validator.validate(image)
+                () -> validator.validateAndDecode(image)
         );
     }
 
@@ -59,7 +59,7 @@ class ArtistProfileImageValidatorTest {
 
         assertThrows(
                 ArtistProfileImageInvalidException.class,
-                () -> validator.validate(image)
+                () -> validator.validateAndDecode(image)
         );
     }
 
@@ -74,7 +74,7 @@ class ArtistProfileImageValidatorTest {
                 "image/png"
         );
 
-        assertDoesNotThrow(() -> validator.validate(image));
+        assertDoesNotThrow(() -> validator.validateAndDecode(image));
     }
 
     private MockMultipartFile image(

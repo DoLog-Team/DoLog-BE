@@ -40,6 +40,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.artist.ExhibitionArti
 import com.dolog.server.domain.like.repository.ArtistProfileLikeRepository;
 import com.dolog.server.global.util.FileService;
 import com.dolog.server.global.exception.jwt.JwtInvalidException;
+import com.sksamuel.scrimage.ImmutableImage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -104,11 +105,8 @@ public class ArtistProfileServiceImpl implements ArtistProfileService {
         }
 
         // 2. 파일 업로드 및 엔티티 저장
-        profileImageValidator.validate(profileImg);
-        String dbImageUrl = fileService.uploadFile(
-                profileImg,
-                "artist-profiles"
-        );
+        ImmutableImage image = profileImageValidator.validateAndDecode(profileImg);
+        String dbImageUrl = fileService.uploadImage(image, "artist-profiles");
         ArtistProfile profile = ArtistProfile.builder()
                 .artist(artist)
                 .nameKo(request.getNameKo().trim())
