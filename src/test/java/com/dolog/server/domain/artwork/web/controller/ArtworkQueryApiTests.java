@@ -389,6 +389,27 @@ class ArtworkQueryApiTests {
     }
 
     @Test
+    @DisplayName("전시 작품 상세의 관련 작품은 공동 작가 작품이어도 중복 없이 한 번만 나온다")
+    void relatedArtworksDoNotDuplicateForCoAuthoredWork() throws Exception {
+        Artist other = artist("남작가");
+        Artwork current = submitted(artworkOf(me, "가운데"), zone, ArtworkStatus.PUBLISHED, 20);
+
+        Artwork coAuthored = Artwork.builder().title("공동 작품").description("설명").category("회화").build();
+        coAuthored.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                .artwork(coAuthored).artist(me).artistRole("").build());
+        coAuthored.getArtworkArtistMaps().add(ArtworkArtistMap.builder()
+                .artwork(coAuthored).artist(other).artistRole("공동").build());
+        artworks.saveAndFlush(coAuthored);
+        submitted(coAuthored, zone, ArtworkStatus.PUBLISHED, 21);
+        endRequest();
+
+        mvc.perform(api(exhibitionDetail(current)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sameZoneArtworks[*].id",
+                        contains(coAuthored.getId().toString())));
+    }
+
+    @Test
     @DisplayName("두록 상세의 관련 작품은 구역이 아니라 같은 작가 기준으로 묶인다 (전시 출품 여부 무관)")
     void dologRelatedArtworksGroupByArtistNotZone() throws Exception {
         Artist other = artist("남작가");

@@ -115,18 +115,22 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
     // ==============================================================================
     // 3. 동일 구역(zone) 내 작가 기준 조회
     // ==============================================================================
+    // 공동 작가 작품에서 중복이 생기지 않도록, 작가 일치 여부는 am 조인(행이 작가 수만큼 늘어남) 대신
+    // EXISTS 서브쿼리로 판정한다 — 그래야 작품당 정확히 한 행, score도 하나로만 계산된다.
     @Query(value = "SELECT DISTINCT a.*, " +
-            "CASE WHEN am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) THEN 2 " +
+            "CASE WHEN EXISTS (SELECT 1 FROM artwork_artist_maps am WHERE am.deleted_at IS NULL AND am.artwork_id = a.id " +
+            "       AND am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId)) THEN 2 " +
             "     WHEN a.zone_id = :zoneId THEN 1 " +
             "     ELSE 0 END as score " +
             "FROM artworks a " +
-            "LEFT JOIN artwork_artist_maps am ON a.id = am.artwork_id AND am.deleted_at IS NULL " +
             "LEFT JOIN exhibition_zones vz ON vz.id = a.zone_id " +
             "WHERE a.deleted_at IS NULL AND a.exhibition_id = :exhibitionId " +
             "AND a.status = 'PUBLISHED' " +
             "AND (:exhibitionView = false OR (a.hidden_at IS NULL AND a.plan_limit_exceeded_at IS NULL AND (vz.id IS NULL OR vz.is_hidden = false))) " +
             "AND a.id != :artworkId " +
-            "AND (am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId) OR a.zone_id = :zoneId) " +
+            "AND (EXISTS (SELECT 1 FROM artwork_artist_maps am WHERE am.deleted_at IS NULL AND am.artwork_id = a.id " +
+            "       AND am.artist_id IN (SELECT cm.artist_id FROM artwork_artist_maps cm WHERE cm.deleted_at IS NULL AND cm.artwork_id = :artworkId)) " +
+            "     OR a.zone_id = :zoneId) " +
             "ORDER BY score DESC, a.id DESC",
             nativeQuery = true)
     List<Artwork> findRelatedArtworks(
