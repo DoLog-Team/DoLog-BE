@@ -478,6 +478,23 @@ class ArtworkCommandApiTests {
     }
 
     @Test
+    @DisplayName("clearMainImage를 true로 보내면 새 파일 없이도 대표 이미지가 지워진다")
+    void clearsMainImageWithoutNewFile() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").mainImg("https://s3/old.webp").build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("clearMainImage", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.mainImage").value(nullValue()));
+        // 테스트 트랜잭션은 커밋되지 않으므로 삭제가 일어나면 안 된다 (커밋 후 삭제는 ArtworkFileHandlerTest 에서 확인)
+        verify(fileService, never()).deleteFile(any());
+
+        em.flush();
+        em.clear();
+        assertNull(artworks.findById(artwork.getId()).orElseThrow().getMainImg());
+    }
+
+    @Test
     @DisplayName("위치 이미지를 보내면 출품 여부와 상관없이 업로드한 URL 로 교체되고, 기존 파일은 커밋 전에는 지우지 않는다")
     void replacesLocationMap() throws Exception {
         Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
@@ -500,6 +517,22 @@ class ArtworkCommandApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.locationMap").value("https://s3/old-map.webp"));
         verify(fileService, never()).deleteFile(any());
+    }
+
+    @Test
+    @DisplayName("clearLocationMap을 true로 보내면 새 파일 없이도 위치 이미지가 지워진다")
+    void clearsLocationMapWithoutNewFile() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder()
+                .title("작품").description("설명").locationMap("https://s3/old-map.webp").build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("clearLocationMap", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.locationMap").value(nullValue()));
+        verify(fileService, never()).deleteFile(any());
+
+        em.flush();
+        em.clear();
+        assertNull(artworks.findById(artwork.getId()).orElseThrow().getLocationMap());
     }
 
     @Test

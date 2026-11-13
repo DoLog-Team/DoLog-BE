@@ -235,6 +235,10 @@ public class Artwork extends BaseEntity implements Orderable {
         if (mainImg != null) this.mainImg = mainImg;
     }
 
+    public void clearMainImg() {
+        this.mainImg = null;
+    }
+
     public boolean isLinkedTo(UUID artistId) {
         return artworkArtistMaps.stream()
                 .anyMatch(map -> map.getArtist().getId().equals(artistId));
@@ -350,6 +354,10 @@ public class Artwork extends BaseEntity implements Orderable {
 
     public void updateLocationMap(String locationMap) {
         if (locationMap != null) this.locationMap = locationMap;
+    }
+
+    public void clearLocationMap() {
+        this.locationMap = null;
     }
 
     public void cancelExhibitionSubmission() {
