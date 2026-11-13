@@ -267,6 +267,7 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
             JOIN a.artworkArtistMaps m
             WHERE m.artist.id = :artistId
               AND a.status = com.dolog.server.domain.artwork.entity.enums.ArtworkStatus.PUBLISHED
+              AND a.exhibitionOnly = false
             ORDER BY a.createdAt DESC, a.id DESC
             """)
     List<Artwork> findPublishedByArtistId(@Param("artistId") UUID artistId);
