@@ -283,6 +283,47 @@ class ArtworkCommandApiTests {
     }
 
     @Test
+    @DisplayName("clearProductionEndDate를 true로 보내면 종료 날짜 3개가 지워진다 (종료 날짜 체크 해제)")
+    void clearsProductionEndDate() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder().title("작품")
+                .description("설명").category("카테고리")
+                .productionEndYear(2024).productionEndMonth(5).productionEndDay(10)
+                .build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken)
+                        .param("clearProductionEndDate", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productionEndYear").value(nullValue()))
+                .andExpect(jsonPath("$.data.productionEndMonth").value(nullValue()))
+                .andExpect(jsonPath("$.data.productionEndDay").value(nullValue()));
+
+        em.flush();
+        em.clear();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertNull(found.getProductionEndYear());
+        assertNull(found.getProductionEndMonth());
+        assertNull(found.getProductionEndDay());
+    }
+
+    @Test
+    @DisplayName("clearProductionEndDate를 안 보내면 기존 종료 날짜가 그대로 유지된다")
+    void keepsProductionEndDateWhenClearFlagNotSent() throws Exception {
+        Artwork artwork = artworks.saveAndFlush(linked(Artwork.builder().title("작품")
+                .description("설명").category("카테고리")
+                .productionEndYear(2024).productionEndMonth(5).productionEndDay(10)
+                .build(), me));
+
+        mvc.perform(withToken(patch(artwork.getId()), myToken).param("title", "새 제목"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.productionEndYear").value(2024));
+
+        em.flush();
+        em.clear();
+        Artwork found = artworks.findById(artwork.getId()).orElseThrow();
+        assertEquals(2024, found.getProductionEndYear());
+    }
+
+    @Test
     @DisplayName("clearHeight를 true로 보내면 높이만 지워지고 가로/깊이는 유지된다")
     void clearsHeightOnly() throws Exception {
         Artwork artwork = artworkOf(me, "작품");
