@@ -69,6 +69,9 @@ public class ArtworkUpdateRequest implements ArtworkInfoFields {
     @Min(1) @Max(31)
     private Integer productionEndDay;
 
+    // true면 위 종료 날짜 3개를 null로 지운다. 안 보내면 그대로 둔다 (종료 날짜 체크 해제용).
+    private Boolean clearProductionEndDate;
+
     @Size(max = 255)
     private String purchaseUrl;
 
