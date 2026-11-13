@@ -101,9 +101,9 @@ public class ArtworkDetailQueryService {
 
         Set<UUID> joinedArtistIds = getJoinedArtistIds(exhibitionId, artwork);
 
-        List<ArtworkDetailResponse.RelatedArtworkInfo> relatedArtworks = exhibitionId != null
-                ? getRelatedArtworks(exhibitionId, artwork, exhibitionView)
-                : List.of();
+        List<ArtworkDetailResponse.RelatedArtworkInfo> relatedArtworks = exhibitionView
+                ? getRelatedArtworksByZone(exhibitionId, artwork)
+                : getRelatedArtworksByArtist(artwork);
         List<ArtworkDetailResponse.RelatedArtworkInfo> navigationArtworks = exhibitionId != null
                 ? getNavigationArtworks(exhibitionId, artwork, exhibitionView)
                 : List.of();
@@ -218,11 +218,11 @@ public class ArtworkDetailQueryService {
                 .toList();
     }
 
+    // 전시 작품 상세: 같은 구역(zone) 작품을 우선 "같은 작가" 다음 "랜덤"으로 채운다.
     private List<ArtworkDetailResponse.RelatedArtworkInfo>
-    getRelatedArtworks(
+    getRelatedArtworksByZone(
             UUID exhibitionId,
-            Artwork artwork,
-            boolean exhibitionView
+            Artwork artwork
     ) {
 
         List<Artwork> candidates =
@@ -230,14 +230,11 @@ public class ArtworkDetailQueryService {
                         exhibitionId,
                         artwork.getId(),
                         artwork.getExhibitionZone() != null ? artwork.getExhibitionZone().getId() : null,
-                        exhibitionView,
+                        true,
                         PageRequest.of(0, 10)
                 );
 
-        Set<UUID> currentArtistIds =
-                artwork.getArtworkArtistMaps().stream()
-                        .map(map -> map.getArtist().getId())
-                        .collect(Collectors.toSet());
+        Set<UUID> currentArtistIds = currentArtistIds(artwork);
 
         List<Artwork> sameArtist = new ArrayList<>();
         List<Artwork> sameZone = new ArrayList<>();
@@ -283,6 +280,34 @@ public class ArtworkDetailQueryService {
                     );
                 })
                 .toList();
+    }
+
+    // 두록 작품 상세: 전시 출품 여부·구역과 무관하게 같은 작가의 다른 공개 작품만 보여준다.
+    private List<ArtworkDetailResponse.RelatedArtworkInfo>
+    getRelatedArtworksByArtist(Artwork artwork) {
+
+        Map<UUID, Artwork> candidates = new LinkedHashMap<>();
+        for (UUID artistId : currentArtistIds(artwork)) {
+            for (Artwork candidate : artworkRepository.findPublishedByArtistId(artistId)) {
+                if (!candidate.getId().equals(artwork.getId())) {
+                    candidates.putIfAbsent(candidate.getId(), candidate);
+                }
+            }
+        }
+
+        List<Artwork> shuffled = new ArrayList<>(candidates.values());
+        Collections.shuffle(shuffled);
+
+        return shuffled.stream()
+                .limit(4)
+                .map(art -> convertToRelatedInfo(art, "artist"))
+                .toList();
+    }
+
+    private Set<UUID> currentArtistIds(Artwork artwork) {
+        return artwork.getArtworkArtistMaps().stream()
+                .map(map -> map.getArtist().getId())
+                .collect(Collectors.toSet());
     }
 
     private List<ArtworkDetailResponse.RelatedArtworkInfo>
