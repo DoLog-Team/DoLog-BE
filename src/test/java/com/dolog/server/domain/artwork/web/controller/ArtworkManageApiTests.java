@@ -418,6 +418,43 @@ class ArtworkManageApiTests {
     }
 
     @Test
+    @DisplayName("그룹 삭제로 자동 임시저장된 작품에 그룹을 다시 지정하면 다시 공개되고, 작가가 직접 임시저장한 작품은 그대로다")
+    void bulkZoneRepublishesAutoDraftedArtwork() throws Exception {
+        Artwork autoDrafted = submitted(artworkOf(me, "자동 임시저장 작품"), null, 10);
+        autoDrafted.autoDraft(LocalDateTime.now());
+        artworks.saveAndFlush(autoDrafted);
+        Artwork manualDraft = submitted(artworkOf(me, "직접 임시저장 작품"), null, 10);
+        endRequest();
+
+        mvc.perform(withToken(bulkZone(zoneA.getId(), autoDrafted, manualDraft), ownerToken))
+                .andExpect(status().isOk());
+
+        endRequest();
+        Artwork republished = artworks.findById(autoDrafted.getId()).orElseThrow();
+        assertEquals(ArtworkStatus.PUBLISHED, republished.getStatus());
+        assertFalse(republished.isAutoDrafted());
+        assertEquals(ArtworkStatus.DRAFT, artworks.findById(manualDraft.getId()).orElseThrow().getStatus());
+    }
+
+    @Test
+    @DisplayName("자동 임시저장된 작품이라도 그룹 말고 다른 필수값이 비어 있으면 그룹을 지정해도 임시저장 그대로다")
+    void bulkZoneKeepsAutoDraftedArtworkWhenOtherFieldMissing() throws Exception {
+        fieldSettings.saveAndFlush(ExhibitionFieldSettings.builder().exhibition(exhibition).requiredMainImg(true).build());
+        Artwork autoDrafted = submitted(artworkOf(me, "대표 이미지 없는 작품"), null, 10);
+        autoDrafted.autoDraft(LocalDateTime.now());
+        artworks.saveAndFlush(autoDrafted);
+        endRequest();
+
+        mvc.perform(withToken(bulkZone(zoneA.getId(), autoDrafted), ownerToken))
+                .andExpect(status().isOk());
+
+        endRequest();
+        Artwork stillDraft = artworks.findById(autoDrafted.getId()).orElseThrow();
+        assertEquals(ArtworkStatus.DRAFT, stillDraft.getStatus());
+        assertTrue(stillDraft.isAutoDrafted());
+    }
+
+    @Test
     @DisplayName("그룹이 바뀐 작품이 있을 때만 플랜 한도를 다시 계산한다 (순서가 바뀌므로)")
     void bulkZoneRecomputesPlanLimitOnlyWhenChanged() throws Exception {
         Artwork inB = submitted(artworkOf(me, "B 작품"), zoneB, 10);
