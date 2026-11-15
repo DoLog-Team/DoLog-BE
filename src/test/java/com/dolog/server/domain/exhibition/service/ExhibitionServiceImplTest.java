@@ -27,6 +27,7 @@ import com.dolog.server.domain.exhibition.web.dto.response.basic.ArtistJoinCodeR
 import com.dolog.server.domain.exhibition.web.dto.response.basic.ExhibitionAdminHomeResponse;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.global.util.FileService;
+import com.dolog.server.global.util.SiteUrlProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -87,6 +88,9 @@ class ExhibitionServiceImplTest {
 
     @Mock
     private HostRepository hostRepository;
+
+    @Mock
+    private SiteUrlProvider siteUrlProvider;
 
     @Mock
     private NotificationService notificationService;
@@ -176,6 +180,41 @@ class ExhibitionServiceImplTest {
         assertEquals(7, response.getPublishedArtworkCount());
         assertEquals(2, response.getHiddenArtworkCount());
         assertEquals(java.util.List.of("address", "hostName"), response.getMissingPublishFields());
+    }
+
+    @Test
+    @DisplayName("전시 어드민 홈의 전시 주소는 환경별 사이트 주소에 slug 를 붙인다")
+    void getAdminHomeBuildsExhibitionUrlFromSiteUrl() {
+        UUID exhibitionId = UUID.randomUUID();
+        UUID accountId = UUID.randomUUID();
+        Account owner = Account.builder().id(accountId).build();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).account(owner).slug("dev-test-03").build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+        when(exhibitionDetailRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByExhibitionIdAndStatusInOrderByCreatedAtDesc(eq(exhibitionId), any()))
+                .thenReturn(Optional.empty());
+        when(exhibitionMapRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(hostRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.empty());
+        when(siteUrlProvider.exhibitionUrl("dev-test-03")).thenReturn("https://dolog-test.netlify.app/dev-test-03");
+
+        ExhibitionAdminHomeResponse response = service.getAdminHome(exhibitionId, accountId);
+
+        assertEquals("https://dolog-test.netlify.app/dev-test-03", response.getExhibitionUrl());
+    }
+
+    @Test
+    @DisplayName("전시 메타의 주소는 전시 홈 경로(/{slug})로 만든다")
+    void getExhibitionMetaBuildsUrlFromSiteUrl() {
+        UUID exhibitionId = UUID.randomUUID();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).slug("dev-test-03").build();
+        ExhibitionDetail detail = ExhibitionDetail.builder().exhibition(exhibition).title("전시").build();
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+        when(exhibitionDetailRepository.findByExhibitionId(exhibitionId)).thenReturn(Optional.of(detail));
+        when(siteUrlProvider.exhibitionUrl("dev-test-03")).thenReturn("https://dolog.kr/dev-test-03");
+
+        assertEquals("https://dolog.kr/dev-test-03", service.getExhibitionMeta(exhibitionId).getUrl());
     }
 
     @Test

@@ -24,9 +24,7 @@ public class ExhibitionMetaResponse {
     private ExhibitionType exhibitionType; // 전시 유형 (ONLINE, OFFLINE 등)
     private String url;            // slug 기반의 Full URL
 
-    public static ExhibitionMetaResponse of(Exhibition exhibition, ExhibitionDetail detail) {
-
-        String fullUrl = "https://dolog.kr/exhibitions/" + exhibition.getSlug();
+    public static ExhibitionMetaResponse of(Exhibition exhibition, ExhibitionDetail detail, String exhibitionUrl) {
 
         return ExhibitionMetaResponse.builder()
                 .id(exhibition.getId().toString())
@@ -41,7 +39,7 @@ public class ExhibitionMetaResponse {
                 .collegeName(exhibition.getCollegeName() != null ? exhibition.getCollegeName() : "")
                 .departmentName(exhibition.getDeptName())
                 .exhibitionType(exhibition.getExhibitionType())
-                .url(fullUrl)
+                .url(exhibitionUrl)
                 .build();
     }
 }
