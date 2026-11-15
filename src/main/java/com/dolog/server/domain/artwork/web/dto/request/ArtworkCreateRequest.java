@@ -44,7 +44,7 @@ public class ArtworkCreateRequest {
     // 선택값
     private String description;
 
-    @Size(max = 255)
+    @Size(max = 200)
     private String shortIntro;
 
     @Min(1000) @Max(9999)

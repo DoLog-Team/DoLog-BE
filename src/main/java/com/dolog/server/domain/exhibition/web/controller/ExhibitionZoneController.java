@@ -94,7 +94,7 @@ public class ExhibitionZoneController {
     public SuccessResponse<ExhibitionZoneUpdateResponse> updateZone(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable UUID zoneId,
-            @RequestBody ExhibitionZoneUpdateRequest request
+            @Valid @RequestBody ExhibitionZoneUpdateRequest request
     ) {
         ExhibitionZoneUpdateResponse data = exhibitionZoneService.updateZone(zoneId, user.getId(), isDologAdmin(user), request);
         return SuccessResponse.ok(data, "구역 정보가 성공적으로 수정되었습니다.");

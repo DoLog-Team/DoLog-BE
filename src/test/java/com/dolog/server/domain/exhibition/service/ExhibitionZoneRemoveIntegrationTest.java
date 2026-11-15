@@ -327,6 +327,22 @@ class ExhibitionZoneRemoveIntegrationTest {
         });
     }
 
+    @Test
+    @DisplayName("그룹 설명은 1000자까지 저장된다")
+    void saveZonesStoresDescriptionUpTo1000() throws Exception {
+        Fixture f = new Fixture();
+        String description = "가".repeat(1000);
+        String json = """
+                {"zones": [{"id": "%s", "name": "남길 그룹", "orderId": 1, "description": "%s"}]}
+                """.formatted(f.keptZoneId, description);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId,
+                new ObjectMapper().readValue(json, ExhibitionZoneBulkSaveRequest.class));
+
+        inTransaction(() -> assertEquals(description,
+                exhibitionZoneRepository.findById(f.keptZoneId).orElseThrow().getDescription()));
+    }
+
     private static byte[] uuidBytes(UUID id) {
         return ByteBuffer.allocate(16)
                 .putLong(id.getMostSignificantBits())
