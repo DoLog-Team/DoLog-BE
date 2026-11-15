@@ -37,6 +37,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -517,6 +518,25 @@ public class ArtistServiceImpl implements ArtistService {
                 .liked(liked)
                 .viewCount(viewCount)
                 .build();
+    }
+
+    @Override
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ArtistViewResponse recordView(UUID artistId, String visitorId) {
+        if (!artistRepository.existsById(artistId)) {
+            throw new ArtistNotFoundException();
+        }
+        UUID profileId = artistProfileRepository.findByArtistId(artistId)
+                .map(ArtistProfile::getId)
+                .orElseThrow(ArtistProfileNotFoundException::new);
+
+        boolean counted = artistRepository.insertViewLogIfAbsent(artistId, visitorId) == 1;
+        if (counted && artistProfileRepository.incrementViewCount(profileId) != 1) {
+            throw new ArtistProfileNotFoundException();
+        }
+
+        long viewCount = artistProfileRepository.findViewCountById(profileId);
+        return new ArtistViewResponse(artistId, viewCount, counted, visitorId);
     }
 
     @Override

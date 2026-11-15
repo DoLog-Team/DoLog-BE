@@ -5,12 +5,14 @@ import com.dolog.server.domain.artist.web.dto.request.ArtistUpdateRequest;
 import com.dolog.server.domain.artist.web.dto.response.ArtistListResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistPublicResponse;
 import com.dolog.server.domain.artist.web.dto.response.ArtistUpdateResponse;
+import com.dolog.server.domain.artist.web.dto.response.ArtistViewResponse;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
 import com.dolog.server.global.response.SuccessResponse;
 import com.dolog.server.global.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -90,5 +93,19 @@ public class ArtistController {
                 artistService.getArtist(artistId, visitorId),
                 "작가 상세 조회 성공"
         );
+    }
+
+    @Operation(summary = "두록 작가 조회수 기록",
+            description = "비로그인 가능. 작가 상세 페이지에 일정 시간 머문 뒤 호출합니다. "
+                    + "같은 방문자(visitor_id)는 두록 상세에서 작가마다 한 번만 셉니다. "
+                    + "visitor_id가 없으면 발급해 쿠키로 내려줍니다.")
+    @PostMapping("/{artistId}/views")
+    public SuccessResponse<ArtistViewResponse> recordArtistView(
+            @PathVariable UUID artistId,
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        String visitorId = visitorIdResolver.resolveOrIssue(request, response, null);
+        return SuccessResponse.ok(artistService.recordView(artistId, visitorId), "조회수가 기록되었습니다.");
     }
 }
