@@ -31,8 +31,8 @@ public interface ArtworkRepository extends JpaRepository<Artwork, UUID>, JpaSpec
 
     // 삭제될 zone에 속한 작품들의 zone을 해제한다 (작품은 유지)
     @Modifying(flushAutomatically = true)
-    @Query("UPDATE Artwork a SET a.exhibitionZone = null WHERE a.exhibitionZone IN :zones")
-    void clearZone(@Param("zones") Collection<ExhibitionZone> zones);
+    @Query(value = "UPDATE artworks SET zone_id = NULL WHERE zone_id IN (:zoneIds)", nativeQuery = true)
+    void clearZone(@Param("zoneIds") Collection<UUID> zoneIds);
 
     @EntityGraph(attributePaths = {"artworkArtistMaps", "artworkArtistMaps.artist"})
     @Query("SELECT DISTINCT aam.artwork FROM ArtworkArtistMap aam " +

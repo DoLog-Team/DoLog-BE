@@ -211,7 +211,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
             ungroupedArtworks.addAll(artworks);
         }
 
-        artworkRepository.clearZone(zones);
+        artworkRepository.clearZone(zones.stream().map(ExhibitionZone::getId).toList());
         exhibitionGuideMapRepository.clearZone(zones);
         exhibitionZoneRepository.deleteAll(zones);
         return ungroupedArtworks;
