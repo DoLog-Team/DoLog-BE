@@ -26,7 +26,7 @@ public class ExhibitionZone extends BaseEntity {
     @Column(length = 100)
     private String name;
 
-    @Column(length = 255)
+    @Column(length = 1000)
     private String description;
 
     @Column(name = "order_id")

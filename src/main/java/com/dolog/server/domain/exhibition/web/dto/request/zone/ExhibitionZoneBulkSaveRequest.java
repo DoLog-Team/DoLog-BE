@@ -3,6 +3,7 @@ package com.dolog.server.domain.exhibition.web.dto.request.zone;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -26,11 +27,13 @@ public class ExhibitionZoneBulkSaveRequest {
         private UUID id;
 
         @NotBlank
+        @Size(max = 100)
         private String name;
 
         @NotNull
         private Integer orderId;
 
+        @Size(max = 1000)
         private String description;
     }
 }
