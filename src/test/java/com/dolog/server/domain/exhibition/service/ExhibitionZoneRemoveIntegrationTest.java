@@ -43,6 +43,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 
+import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -307,6 +309,31 @@ class ExhibitionZoneRemoveIntegrationTest {
                 ArtworkStatus.DRAFT, artworkRepository.findById(artworkId).orElseThrow().getStatus()));
     }
 
+    @Test
+    @DisplayName("삭제된 작품이 남아 있는 그룹을 지워도 저장되고, 삭제된 작품도 그룹 연결이 풀린다")
+    void saveZonesRemovesZoneWithDeletedArtwork() throws Exception {
+        Fixture f = new Fixture();
+        UUID removedZoneId = f.zone("삭제된 작품이 있는 그룹", 2);
+        UUID deletedArtworkId = f.deletedArtwork("삭제된 작품", removedZoneId);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId, requestKeeping(f.keptZoneId));
+
+        inTransaction(() -> {
+            assertFalse(exhibitionZoneRepository.existsById(removedZoneId));
+            Object zoneId = entityManager.createNativeQuery("SELECT zone_id FROM artworks WHERE id = :id")
+                    .setParameter("id", uuidBytes(deletedArtworkId))
+                    .getSingleResult();
+            assertNull(zoneId);
+        });
+    }
+
+    private static byte[] uuidBytes(UUID id) {
+        return ByteBuffer.allocate(16)
+                .putLong(id.getMostSignificantBits())
+                .putLong(id.getLeastSignificantBits())
+                .array();
+    }
+
     private void inTransaction(Runnable assertions) {
         transactionTemplate.executeWithoutResult(status -> {
             entityManager.clear();
@@ -380,6 +407,18 @@ class ExhibitionZoneRemoveIntegrationTest {
                         .productionEndYear(2026)
                         .status(ArtworkStatus.PUBLISHED)
                         .build());
+                return artwork.getId();
+            });
+        }
+
+        UUID deletedArtwork(String title, UUID zoneId) {
+            return write(() -> {
+                Artwork artwork = artworkRepository.save(Artwork.builder()
+                        .exhibition(exhibitionRepository.getReferenceById(exhibitionId))
+                        .exhibitionZone(exhibitionZoneRepository.getReferenceById(zoneId))
+                        .title(title)
+                        .build());
+                artwork.markDeleted(LocalDateTime.now());
                 return artwork.getId();
             });
         }
