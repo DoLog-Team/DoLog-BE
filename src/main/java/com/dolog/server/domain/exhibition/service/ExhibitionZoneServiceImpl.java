@@ -124,11 +124,16 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_NOT_FOUND));
         requireOwnerUnlessDologAdmin(exhibition, accountId, isDologAdmin);
 
+        // orderId를 안 보내면(아직 순서를 안 정한 경우) 기존 구역 중 가장 뒤로 자동 지정한다
+        Integer orderId = request.getOrderId() != null
+                ? request.getOrderId()
+                : exhibitionZoneRepository.findMaxOrderIdByExhibitionId(exhibitionId).map(max -> max + 1).orElse(1);
+
         ExhibitionZone zone = ExhibitionZone.builder()
                 .exhibition(exhibition)
                 .name(request.getName())
                 .description(TextUtils.normalizeNewlines(request.getDescription()))
-                .orderId(request.getOrderId())
+                .orderId(orderId)
                 .build();
 
         exhibitionZoneRepository.save(zone);
