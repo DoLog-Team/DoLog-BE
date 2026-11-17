@@ -3,6 +3,7 @@ package com.dolog.server.domain.artwork.service.exhibition;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
+import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionGuideMapRepository;
 import com.dolog.server.domain.exhibition.repository.ExhibitionRepository;
@@ -70,5 +71,26 @@ class ArtworkExhibitionServiceImplTest {
         assertEquals(3, uncategorized.getArtworks().size());
         var painting = categories.stream().filter(c -> "회화".equals(c.getCategoryName())).findFirst().orElseThrow();
         assertEquals(2, painting.getArtworks().size());
+    }
+
+    @Test
+    @DisplayName("구역의 orderId가 null이어도 목록 조회가 터지지 않고 기본 순서(999)로 내려준다")
+    void zoneWithNullOrderIdDoesNotThrow() {
+        UUID exhibitionId = UUID.randomUUID();
+        Exhibition exhibition = Exhibition.builder().id(exhibitionId).isPublic(true).build();
+        ExhibitionZone zone = ExhibitionZone.builder().id(UUID.randomUUID()).name("4").orderId(null).build();
+
+        Artwork a = Artwork.builder().id(UUID.randomUUID()).title("t").category("회화").exhibitionZone(zone).build();
+        ReflectionTestUtils.setField(a, "artworkArtistMaps", new ArrayList<>());
+
+        when(exhibitionRepository.findById(exhibitionId)).thenReturn(Optional.of(exhibition));
+        when(exhibitionGuideMapRepository.findByExhibitionIdOrderByOrderIndexAscCreatedAtAsc(exhibitionId))
+                .thenReturn(List.of());
+        when(artworkRepository.findArtworksForList(eq(exhibitionId), any(), any())).thenReturn(List.of(a));
+
+        ExhibitionArtworkListResponse response = assertDoesNotThrow(
+                () -> service.getExhibitionArtworkList(exhibitionId, null, null, null));
+
+        assertEquals(999, response.getZones().get(0).getZoneOrderId());
     }
 }
