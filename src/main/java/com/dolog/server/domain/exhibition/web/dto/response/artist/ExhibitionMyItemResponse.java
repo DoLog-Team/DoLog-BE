@@ -17,6 +17,7 @@ public class ExhibitionMyItemResponse {
 
     private UUID exhibitionId;
     private String exhibitionName;
+    private String slug;
     private String exhibitionImg;
     private LocalDate startDate;
     private LocalDate endDate;
@@ -28,6 +29,7 @@ public class ExhibitionMyItemResponse {
         return ExhibitionMyItemResponse.builder()
                 .exhibitionId(map.getExhibition().getId())
                 .exhibitionName(exhibitionName)
+                .slug(map.getExhibition().getSlug())
                 .exhibitionImg(detail != null ? detail.getExhibitionImg() : null)
                 .startDate(detail != null ? detail.getStartDate() : null)
                 .endDate(detail != null ? detail.getEndDate() : null)

@@ -23,12 +23,13 @@ class ExhibitionMyItemResponseTest {
                 .startDate(LocalDate.of(2026, 10, 1))
                 .endDate(LocalDate.of(2026, 10, 10))
                 .build();
-        Exhibition exhibition = Exhibition.builder().id(UUID.randomUUID()).exhibitionDetail(detail).build();
+        Exhibition exhibition = Exhibition.builder().id(UUID.randomUUID()).slug("my-exhibition").exhibitionDetail(detail).build();
         ExhibitionArtistMap map = ExhibitionArtistMap.builder()
                 .exhibition(exhibition).status(ExhibitionArtistStatus.JOINED).build();
 
         ExhibitionMyItemResponse response = ExhibitionMyItemResponse.from(map, "전시명");
 
+        assertEquals("my-exhibition", response.getSlug());
         assertEquals("https://s3/poster.webp", response.getExhibitionImg());
         assertEquals(LocalDate.of(2026, 10, 1), response.getStartDate());
         assertEquals(LocalDate.of(2026, 10, 10), response.getEndDate());
