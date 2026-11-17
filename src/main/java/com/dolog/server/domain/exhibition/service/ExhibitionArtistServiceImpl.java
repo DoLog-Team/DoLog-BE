@@ -233,13 +233,16 @@ public class ExhibitionArtistServiceImpl implements ExhibitionArtistService{
                         ExhibitionErrorCode.EXHIBITION_ARTIST_NOT_JOINED
                 ));
 
+        // 승인 전(PENDING) 취소와 승인 후(JOINED) 나가기는 전시 어드민에게 다른 의미이므로 알림을 구분해 보낸다.
+        boolean wasPending = map.getStatus() == ExhibitionArtistStatus.PENDING;
+
         requireStatusTransition(map, ExhibitionArtistStatus.WITHDRAWN);
         map.updateStatus(ExhibitionArtistStatus.WITHDRAWN);
         cancelArtworkSubmissions(exhibitionId, List.of(artistId));
 
         notificationService.send(
                 map.getExhibition().getAccount(),
-                NotificationType.ARTIST_WITHDRAWN,
+                wasPending ? NotificationType.ARTIST_JOIN_CANCELLED : NotificationType.ARTIST_WITHDRAWN,
                 Map.of("artistName", java.util.Objects.toString(artist.getProfileNameKo(), "이름 미등록"), "exhibitionName", resolveExhibitionName(map.getExhibition())),
                 exhibitionId
         );
