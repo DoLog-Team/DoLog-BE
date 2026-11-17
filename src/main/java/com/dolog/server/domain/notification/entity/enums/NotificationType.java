@@ -26,6 +26,7 @@ public enum NotificationType {
 
     // 전시 어드민 알림
     ARTIST_JOIN_REQUESTED,      // 작가 참여 신청
+    ARTIST_JOIN_CANCELLED,      // 승인 전 참여 신청 취소
     ARTIST_WITHDRAWN,           // 소속 작가 참여 종료
     ARTWORK_CANCELLED,          // 소속 작가 작품 출품 취소
     ARTIST_ACCOUNT_DELETED,     // 소속 작가 계정 탈퇴

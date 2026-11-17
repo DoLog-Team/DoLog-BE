@@ -478,7 +478,7 @@ class ExhibitionArtistServiceImplTest {
     }
 
     @Test
-    @DisplayName("수락 대기중(PENDING)인 작가도 같은 나가기 API로 참여 신청을 취소하면 WITHDRAWN으로 전환된다")
+    @DisplayName("수락 대기중(PENDING)인 작가도 같은 나가기 API로 참여 신청을 취소하면 WITHDRAWN으로 전환되고, 어드민에겐 신청 취소 알림이 간다")
     void pendingArtistCancelsJoinRequestViaLeaveExhibition() {
         UUID accountId = UUID.randomUUID();
         Artist artist = artist("대기중 작가", "pending@test.com");
@@ -508,7 +508,7 @@ class ExhibitionArtistServiceImplTest {
         service.leaveExhibition(accountId, exhibition.getId());
 
         assertEquals(ExhibitionArtistStatus.WITHDRAWN, map.getStatus());
-        verify(notificationService).send(eq(exhibition.getAccount()), eq(NotificationType.ARTIST_WITHDRAWN),
+        verify(notificationService).send(eq(exhibition.getAccount()), eq(NotificationType.ARTIST_JOIN_CANCELLED),
                 any(), eq(exhibition.getId()));
     }
 
