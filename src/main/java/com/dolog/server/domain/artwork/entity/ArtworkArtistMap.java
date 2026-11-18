@@ -50,6 +50,10 @@ public class ArtworkArtistMap extends BaseEntity {
         return artistProfile != null ? artistProfile.getNameEn() : artist.getProfileNameEn();
     }
 
+    public String getPurchaseContactUrl() {
+        return artistProfile != null ? artistProfile.getPurchaseContactUrl() : artist.getPurchaseContactUrl();
+    }
+
     public void updateRole(String artistRole) {
         if (artistRole != null) {
             this.artistRole = artistRole;

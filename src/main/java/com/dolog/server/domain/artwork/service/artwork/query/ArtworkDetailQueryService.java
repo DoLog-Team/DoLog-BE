@@ -173,8 +173,7 @@ public class ArtworkDetailQueryService {
     private String representativePurchaseContactUrl(Artwork artwork) {
         return artwork.getArtworkArtistMaps().stream()
                 .min(Comparator.comparing(ArtworkArtistMap::getId))
-                .map(ArtworkArtistMap::getArtistProfile)
-                .map(ArtistProfile::getPurchaseContactUrl)
+                .map(ArtworkArtistMap::getPurchaseContactUrl)
                 .orElse(null);
     }
 
