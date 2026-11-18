@@ -459,6 +459,23 @@ class ArtworkQueryApiTests {
                 .andExpect(jsonPath("$.data.purchaseChatUrl").value("https://chat/me"));
     }
 
+    @Test
+    @DisplayName("전시에 출품한 적 없는 단독 작품도, 전시 출품 없이 연결되는 artistProfile 없이 작가 공통 프로필의 소통 주소로 대체된다")
+    void purchaseChatUrlFallsBackToArtistProfileForStandaloneArtwork() throws Exception {
+        myProfile.updateProfile(null, null, null, null, "https://chat/me", null);
+        profiles.saveAndFlush(myProfile);
+
+        Artwork artwork = artworkOf(me, "단독 구매 작품");
+        artwork.updatePurchaseInfo(null, null, true, null);
+        artwork.changeStatus(ArtworkStatus.PUBLISHED);
+        artworks.saveAndFlush(artwork);
+        endRequest();
+
+        mvc.perform(api(dologDetail(artwork)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.purchaseChatUrl").value("https://chat/me"));
+    }
+
     // ---------------- 게시 전 전시 ----------------
 
     @Test

@@ -51,6 +51,10 @@ public class Artist extends BaseEntity {
         return profile == null ? null : profile.getNameEn();
     }
 
+    public String getPurchaseContactUrl() {
+        return profile == null ? null : profile.getPurchaseContactUrl();
+    }
+
     public void linkProfile(ArtistProfile profile) {
         this.profile = profile;
     }
