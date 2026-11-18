@@ -7,6 +7,9 @@ on:
     - cron: '0 21 * * *'   # 21:00 UTC = 다음 날 KST 06:00 (KST 04:00 백업 2시간 후)
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
