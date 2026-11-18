@@ -26,13 +26,13 @@ PR 본문은 `.github/PULL_REQUEST_TEMPLATE.md`를 사용한다. 체크리스트
 
 | 파일 | 동작 |
 |---|---|
-| CI.yml | dev 대상 PR, dev push, 수동 실행에서 Gradle build/test |
+| CI.yml | dev 대상 PR, dev·`hotfix/**` push, 수동 실행에서 Gradle build/test |
 | deploy-dev.yml | dev CI 완료 성공 또는 수동 실행 후 dev 배포 |
-| deploy-prod.yml | 정식 Release published로 운영 배포, pre-release 제외 |
+| deploy-prod.yml | 정식 Release published(`v*` 태그, 승인 필요)로 CI 이미지를 운영 배포, pre-release 제외 |
 | db-diff.yml | 마이그레이션 변경의 전후 스키마 비교 |
 | backup-check.yml | 매일 UTC 21:00 백업 검사 및 실패 알림 |
 
-CI의 MySQL은 8.0이며 로컬/배포 Compose는 8.4다. CI에서만 통과한 SQL도 실제 대상 버전에서 확인한다. dev push의 CI는 멀티아치 이미지를 `dev`와 커밋 SHA 태그로 게시한다. 운영은 별도 릴리즈 태그를 사용한다.
+CI의 MySQL은 8.0이며 로컬/배포 Compose는 8.4다. CI에서만 통과한 SQL도 실제 대상 버전에서 확인한다. dev push의 CI는 arm64 이미지를 `dev`와 커밋 SHA 태그로, `hotfix/**` push는 커밋 SHA 태그로만 게시한다. 운영 배포는 이 SHA 이미지에 릴리스 태그를 붙여 그대로 쓴다(재빌드 없음).
 
 ## 공유 문서와 로컬 메모
 
