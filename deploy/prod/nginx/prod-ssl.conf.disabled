@@ -1,5 +1,13 @@
 # prod HTTPS(443) — 첫 인증서 발급 전에는 .disabled 상태여야 nginx가 뜬다 (init-cert.sh가 발급 후 활성화)
 # 도메인은= 하드코딩 (배포 scp가 서버 conf를 덮으므로 레포가 정본. 인증서는 init-cert.sh로 최초 1회 발급)
+
+# 요청 제한 (엣지/CDN 없음 → nginx가 최전방). conf.d는 http 컨텍스트에 include되므로 zone 정의를 여기 둔다.
+# 전시장 Wi-Fi처럼 관람객 다수가 같은 공인 IP(NAT)를 공유하므로 일반 API 한도는 넉넉히 잡는다.
+limit_req_zone $binary_remote_addr zone=api:10m rate=50r/s;
+# 로그인 무차별 대입 방지 — IP당 분당 30회 (오프닝 등 같은 Wi-Fi 다수 로그인 고려)
+limit_req_zone $binary_remote_addr zone=login:10m rate=30r/m;
+limit_req_status 429;
+
 server {
     listen 443 ssl;
     http2 on;
@@ -10,6 +18,19 @@ server {
 
     # 앱 API — /api 프리픽스 그대로 전달 (컨테이너 네트워크로 app 서비스에 직접)
     location /api {
+        limit_req zone=api burst=100 nodelay;
+        # 업로드 한도 — Spring multipart(max-file/request-size 8MB)와 동일. 미설정 시 nginx 기본 1MB에서 413
+        client_max_body_size 8m;
+        proxy_pass http://app:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 로그인 엔드포인트만 강한 제한 (/auth/refresh는 제외 — 정상 사용자 토큰 갱신 경로)
+    location ~ ^/api/auth/(login|social/login|exhibition/login)$ {
+        limit_req zone=login burst=10 nodelay;
         proxy_pass http://app:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
