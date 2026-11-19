@@ -9,16 +9,21 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # GitHub OIDC 토큰 → AWS Role assume (장기 액세스 키 없음)
 
 jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_READER_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_READER_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: ap-northeast-2
       BUCKET: dolog-prod-backup
     steps:
+      # Role 신뢰 정책: 이 레포 dev 브랜치만 / 권한: dolog-prod-backup의 db/ 목록 조회만
+      - name: AWS 자격 증명 (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::873593443627:role/dolog-github-backup-check
+          aws-region: ap-northeast-2
+
       - name: 최신 db 백업 신선도·크기 확인
         run: |
           read KEY SIZE LM < <(aws s3api list-objects-v2 --bucket "$BUCKET" --prefix db/ \
