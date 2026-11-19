@@ -67,7 +67,7 @@ Host dolog-dev
 
 `deploy/prod/backup-db.sh`는 MySQL을 `--single-transaction`으로 덤프하고 gzip 검증 및 최소 크기를 확인한다. 최근 24시간 앱 로그와 함께 S3의 `db/`, `log/`에 올리고 일요일에는 `weekly/`에도 복사한다. 로컬 3일 초과 파일은 정리한다. AWS CLI나 writer 키가 없으면 원격 업로드를 건너뛸 수 있으므로 마지막 OK 출력만 보지 말고 실제 S3 객체를 확인한다.
 
-서버 cron은 배포만으로 등록·변경되지 않는다. `timedatectl`과 `crontab -l`을 먼저 확인한다. 스크립트의 권장 시각은 UTC 19:00(KST 다음 날 04:00)이다. `backup-check.yml`은 UTC 21:00에 최신 백업의 26시간 이내 여부와 10KB 이상 크기를 검사하고 실패 시 Discord로 알린다.
+서버 cron은 배포만으로 등록·변경되지 않는다. `timedatectl`과 `crontab -l`을 먼저 확인한다. 스크립트의 권장 시각은 UTC 19:00(KST 다음 날 04:00)이다. `backup-check.yml`은 UTC 21:00에 최신 백업의 26시간 이내 여부와 10KB 이상 크기를 검사하고 실패 시 Discord로 알린다. 이 워크플로는 액세스 키 없이 GitHub OIDC로 AWS Role `dolog-github-backup-check`(dev 브랜치 실행만 허용, `dolog-prod-backup`의 `db/` 목록 조회만)를 맡는다. 다른 브랜치에서 수동 실행하면 인증이 거절된다.
 
 기존 기록의 S3 수명주기는 `db/`, `log/` 14일, `weekly/` 56일이다. 실제 버킷 정책은 별도 확인한다.
 
