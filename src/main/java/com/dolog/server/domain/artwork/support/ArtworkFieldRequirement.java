@@ -122,4 +122,15 @@ public class ArtworkFieldRequirement {
         republished.forEach(Artwork::autoPublish);
         return republished;
     }
+
+    // 전시 그룹이 모두 사라져 그룹 필수가 풀릴 때: 시스템이 자동 비공개했던 작품 중 이제 조건을 채운 작품을 다시 공개하고 돌려준다.
+    public List<Artwork> republishIfSatisfied(List<Artwork> autoDraftedArtworks) {
+
+        List<Artwork> republished = autoDraftedArtworks.stream()
+                .filter(this::isSatisfied)
+                .toList();
+
+        republished.forEach(Artwork::autoPublish);
+        return republished;
+    }
 }
