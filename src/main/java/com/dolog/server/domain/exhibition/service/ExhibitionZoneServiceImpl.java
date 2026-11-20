@@ -120,7 +120,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
             }
         }
 
-        draftUngroupedArtworks(exhibitionId, ungroupedArtworks);
+        syncArtworkStatus(exhibition, ungroupedArtworks);
 
         // 저장 결과를 orderId 순으로 응답
         return ExhibitionZoneListResponse.from(
@@ -168,7 +168,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         requireOwnerUnlessDologAdmin(zone.getExhibition(), accountId, isDologAdmin);
 
         List<Artwork> ungroupedArtworks = removeZones(zone.getExhibition(), List.of(zone));
-        draftUngroupedArtworks(zone.getExhibition().getId(), ungroupedArtworks);
+        syncArtworkStatus(zone.getExhibition(), ungroupedArtworks);
     }
 
     // 작품 그룹 숨김/재공개. 상태가 실제로 바뀐 경우에만 참여 작가에게 알림을 보낸다
@@ -222,15 +222,48 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         return ungroupedArtworks;
     }
 
-    private void draftUngroupedArtworks(UUID exhibitionId, List<Artwork> artworks) {
-        boolean drafted = false;
-        for (Artwork artwork : artworks) {
+    // 그룹이 풀린 공개 작품은 필수값을 다시 확인하고, 전시에 그룹이 하나도 안 남으면 그룹 삭제로 자동 임시저장됐던 작품을 다시 공개한다
+    private void syncArtworkStatus(Exhibition exhibition, List<Artwork> ungroupedArtworks) {
+        UUID exhibitionId = exhibition.getId();
+        boolean changed = false;
+        for (Artwork artwork : ungroupedArtworks) {
             boolean wasPublished = artwork.getStatus() == ArtworkStatus.PUBLISHED;
             artworkFieldRequirement.draftIfUnsatisfied(artwork);
-            drafted |= wasPublished && artwork.getStatus() != ArtworkStatus.PUBLISHED;
+            changed |= wasPublished && artwork.getStatus() != ArtworkStatus.PUBLISHED;
         }
-        if (drafted) {
+
+        if (!exhibitionZoneRepository.existsByExhibitionId(exhibitionId)) {
+            List<Artwork> republished = artworkFieldRequirement.republishIfSatisfied(
+                    artworkRepository.findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(exhibitionId, ArtworkStatus.DRAFT));
+            notifyArtworkRepublished(exhibition, republished);
+            changed |= !republished.isEmpty();
+        }
+
+        if (changed) {
             artworkPlanLimitService.recompute(exhibitionId, PlanLimitRecomputeCause.ARTWORK_CHANGE);
+        }
+    }
+
+    private void notifyArtworkRepublished(Exhibition exhibition, List<Artwork> artworks) {
+        if (artworks.isEmpty()) {
+            return;
+        }
+        String exhibitionName = resolveExhibitionName(exhibition);
+        for (Artwork artwork : artworks) {
+            Map<String, String> payload = Map.of(
+                    "exhibitionName", exhibitionName,
+                    "artworkTitle", artwork.getTitle(),
+                    "artworkId", artwork.getId().toString()
+            );
+
+            for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+                Artist artist = map.getArtist();
+                if (artist.getAccount() == null) {
+                    continue;
+                }
+                notificationService.send(
+                        artist.getAccount(), NotificationType.ARTWORK_REPUBLISHED, payload, exhibition.getId());
+            }
         }
     }
 
