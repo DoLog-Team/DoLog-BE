@@ -3,6 +3,8 @@ package com.dolog.server.domain.exhibition.service;
 import com.dolog.server.domain.account.entity.Account;
 import com.dolog.server.domain.account.entity.enums.Role;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
 import com.dolog.server.domain.exhibition.repository.ExhibitionDetailRepository;
@@ -37,6 +39,8 @@ class ExhibitionZoneServiceImplTest {
     @Mock private NotificationService notificationService;
     @Mock private ArtworkRepository artworkRepository;
     @Mock private ExhibitionGuideMapRepository exhibitionGuideMapRepository;
+    @Mock private ArtworkFieldRequirement artworkFieldRequirement;
+    @Mock private ArtworkPlanLimitService artworkPlanLimitService;
 
     @InjectMocks private ExhibitionZoneServiceImpl service;
 

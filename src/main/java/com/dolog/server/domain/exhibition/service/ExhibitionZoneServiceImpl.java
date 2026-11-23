@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -146,6 +147,7 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .build();
 
         exhibitionZoneRepository.save(zone);
+        syncArtworkStatus(exhibition, List.of());
 
         return ExhibitionZoneCreateResponse.from(zone);
     }
@@ -222,47 +224,63 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         return ungroupedArtworks;
     }
 
-    // 그룹이 풀린 공개 작품은 필수값을 다시 확인하고, 전시에 그룹이 하나도 안 남으면 그룹 삭제로 자동 임시저장됐던 작품을 다시 공개한다
+    // 그룹 저장 뒤 "공개 작품은 필수값을 채운다" 규칙을 맞춘다. 그룹은 전시에 그룹이 하나라도 있을 때만 필수다.
+    // - 그룹이 있으면: 그룹 없는 공개 작품을 자동 임시저장 (그룹 삭제로 풀린 작품, 그룹 0개 시절 공개된 작품 모두)
+    // - 그룹이 없으면: 자동 임시저장됐던 작품 중 필수값을 채운 작품을 다시 공개
+    // ungroupedArtworks 는 이번 저장에서 그룹이 삭제돼 풀린 작품 (그룹 제거 알림을 이미 받았으므로 임시저장 알림은 따로 보내지 않는다)
     private void syncArtworkStatus(Exhibition exhibition, List<Artwork> ungroupedArtworks) {
         UUID exhibitionId = exhibition.getId();
-        boolean changed = false;
-        for (Artwork artwork : ungroupedArtworks) {
-            boolean wasPublished = artwork.getStatus() == ArtworkStatus.PUBLISHED;
-            artworkFieldRequirement.draftIfUnsatisfied(artwork);
-            changed |= wasPublished && artwork.getStatus() != ArtworkStatus.PUBLISHED;
-        }
+        List<Artwork> changed;
 
-        if (!exhibitionZoneRepository.existsByExhibitionId(exhibitionId)) {
-            List<Artwork> republished = artworkFieldRequirement.republishIfSatisfied(
+        if (exhibitionZoneRepository.existsByExhibitionId(exhibitionId)) {
+            changed = draftUngroupedPublished(exhibitionId);
+            List<Artwork> newlyDrafted = changed.stream()
+                    .filter(artwork -> !ungroupedArtworks.contains(artwork))
+                    .toList();
+            notifyArtists(exhibition, newlyDrafted, NotificationType.ARTWORK_UNPUBLISHED, Map.of("requiredFieldNames", "그룹"));
+        } else {
+            changed = artworkFieldRequirement.republishIfSatisfied(
                     artworkRepository.findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(exhibitionId, ArtworkStatus.DRAFT));
-            notifyArtworkRepublished(exhibition, republished);
-            changed |= !republished.isEmpty();
+            notifyArtists(exhibition, changed, NotificationType.ARTWORK_REPUBLISHED, Map.of());
         }
 
-        if (changed) {
+        if (!changed.isEmpty()) {
             artworkPlanLimitService.recompute(exhibitionId, PlanLimitRecomputeCause.ARTWORK_CHANGE);
         }
     }
 
-    private void notifyArtworkRepublished(Exhibition exhibition, List<Artwork> artworks) {
+    private List<Artwork> draftUngroupedPublished(UUID exhibitionId) {
+        List<Artwork> drafted = new ArrayList<>();
+        for (Artwork artwork : artworkRepository.findByExhibitionIdAndStatus(exhibitionId, ArtworkStatus.PUBLISHED)) {
+            if (artwork.getExhibitionZone() != null) {
+                continue;
+            }
+            artworkFieldRequirement.draftIfUnsatisfied(artwork);
+            if (artwork.getStatus() != ArtworkStatus.PUBLISHED) {
+                drafted.add(artwork);
+            }
+        }
+        return drafted;
+    }
+
+    private void notifyArtists(
+            Exhibition exhibition, List<Artwork> artworks, NotificationType type, Map<String, String> extra) {
         if (artworks.isEmpty()) {
             return;
         }
         String exhibitionName = resolveExhibitionName(exhibition);
         for (Artwork artwork : artworks) {
-            Map<String, String> payload = Map.of(
-                    "exhibitionName", exhibitionName,
-                    "artworkTitle", artwork.getTitle(),
-                    "artworkId", artwork.getId().toString()
-            );
+            Map<String, String> payload = new HashMap<>(extra);
+            payload.put("exhibitionName", exhibitionName);
+            payload.put("artworkTitle", artwork.getTitle());
+            payload.put("artworkId", artwork.getId().toString());
 
             for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
                 Artist artist = map.getArtist();
                 if (artist.getAccount() == null) {
                     continue;
                 }
-                notificationService.send(
-                        artist.getAccount(), NotificationType.ARTWORK_REPUBLISHED, payload, exhibition.getId());
+                notificationService.send(artist.getAccount(), type, payload, exhibition.getId());
             }
         }
     }
