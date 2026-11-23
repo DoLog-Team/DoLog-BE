@@ -39,6 +39,7 @@ import com.dolog.server.domain.plan.entity.Subscription;
 import com.dolog.server.domain.plan.entity.enums.SubscriptionStatus;
 import com.dolog.server.domain.plan.repository.SubscriptionRepository;
 import com.dolog.server.global.util.FileService;
+import com.dolog.server.global.util.SiteUrlProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final HostRepository hostRepository;
     private final NotificationService notificationService;
     private final ExhibitionPublicityNotifier exhibitionPublicityNotifier;
+    private final SiteUrlProvider siteUrlProvider;
     private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final String CODE_CHARACTERS = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
@@ -248,7 +250,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         ExhibitionDetail detail = exhibitionDetailRepository.findByExhibitionId(exhibition.getId())
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.EXHIBITION_DETAIL_NOT_FOUND));
 
-        return ExhibitionMetaResponse.of(exhibition, detail);
+        return ExhibitionMetaResponse.of(exhibition, detail, siteUrlProvider.exhibitionUrl(exhibition.getSlug()));
     }
 
     @Override
@@ -283,7 +285,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 faviconImgUrl
         );
 
-        return ExhibitionMetaResponse.of(exhibition, detail);
+        return ExhibitionMetaResponse.of(exhibition, detail, siteUrlProvider.exhibitionUrl(exhibition.getSlug()));
     }
 
     @Override
@@ -658,6 +660,6 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         List<String> missingPublishFields = exhibitionPublishRequirement.missingFields(exhibition, detail, map, host);
 
         return ExhibitionAdminHomeResponse.of(exhibition, detail, planName, joinedCount, pendingCount,
-                publishedArtworkCount, hiddenArtworkCount, missingPublishFields, map, host);
+                publishedArtworkCount, hiddenArtworkCount, missingPublishFields, map, host, siteUrlProvider.exhibitionUrl(exhibition.getSlug()));
     }
 }

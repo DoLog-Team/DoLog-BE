@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -40,6 +41,13 @@ public interface ArtistRepository extends JpaRepository<Artist, UUID> {
     // 수정·삭제 시 본인 Artist 조회
     Optional<Artist> findByIdAndAccountId(UUID artistId, UUID accountId);
     boolean existsByPhoneAndIdNot(String phone, UUID artistId);
+
+    @Modifying
+    @Query(value = """
+            INSERT IGNORE INTO artist_view_logs (artist_id, visitor_id, created_at)
+            VALUES (:artistId, :visitorId, NOW(6))
+            """, nativeQuery = true)
+    int insertViewLogIfAbsent(@Param("artistId") UUID artistId, @Param("visitorId") String visitorId);
 
     @EntityGraph(attributePaths = {"account", "profile"})
     Page<Artist> findAll(Pageable pageable);

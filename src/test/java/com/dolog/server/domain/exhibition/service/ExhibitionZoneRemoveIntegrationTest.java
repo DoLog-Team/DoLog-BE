@@ -9,7 +9,10 @@ import com.dolog.server.domain.artist.repository.ArtistRepository;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.repository.ArtworkArtistMapRepository;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionGuideMap;
 import com.dolog.server.domain.exhibition.entity.ExhibitionZone;
@@ -40,6 +43,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 
+import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -47,6 +52,7 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -61,7 +67,7 @@ import static org.mockito.Mockito.verify;
         "spring.flyway.enabled=true"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(ExhibitionZoneServiceImpl.class)
+@Import({ExhibitionZoneServiceImpl.class, ArtworkFieldRequirement.class, ArtworkPlanLimitService.class})
 @Testcontainers(disabledWithoutDocker = true)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class ExhibitionZoneRemoveIntegrationTest {
@@ -230,6 +236,185 @@ class ExhibitionZoneRemoveIntegrationTest {
                 any(Account.class), eq(NotificationType.ARTWORK_GROUP_REMOVED), anyMap(), eq(f.exhibitionId));
     }
 
+    @Test
+    @DisplayName("그룹이 남아 있는 전시에서 공개 작품의 그룹을 삭제하면 작품은 자동으로 임시저장이 된다")
+    void saveZonesDraftsPublishedArtworkWhenOtherZoneRemains() throws Exception {
+        Fixture f = new Fixture();
+        UUID removedZoneId = f.zone("삭제할 그룹", 2);
+        UUID artworkId = f.publishedArtwork("공개 작품", removedZoneId);
+        UUID keptArtworkId = f.publishedArtwork("남는 공개 작품", f.keptZoneId);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId, requestKeeping(f.keptZoneId));
+
+        inTransaction(() -> {
+            Artwork artwork = artworkRepository.findById(artworkId).orElseThrow();
+            assertEquals(ArtworkStatus.DRAFT, artwork.getStatus());
+            assertNotNull(artwork.getAutoDraftedAt());
+            assertEquals(ArtworkStatus.PUBLISHED, artworkRepository.findById(keptArtworkId).orElseThrow().getStatus());
+        });
+    }
+
+    @Test
+    @DisplayName("그룹을 모두 삭제하면 그룹이 필수가 아니므로 공개 작품은 공개를 유지한다")
+    void saveZonesKeepsPublishedWhenNoZoneRemains() throws Exception {
+        Fixture f = new Fixture();
+        UUID artworkId = f.publishedArtwork("공개 작품", f.keptZoneId);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId,
+                new ObjectMapper().readValue("{\"zones\": []}", ExhibitionZoneBulkSaveRequest.class));
+
+        inTransaction(() -> {
+            Artwork artwork = artworkRepository.findById(artworkId).orElseThrow();
+            assertNull(artwork.getExhibitionZone());
+            assertEquals(ArtworkStatus.PUBLISHED, artwork.getStatus());
+        });
+    }
+
+    @Test
+    @DisplayName("그룹 여러 개를 삭제하고 마지막 그룹만 순서를 바꿔 남겨도 저장되고 그룹이 풀린 공개 작품은 임시저장이 된다")
+    void saveZonesRemovesSeveralZonesKeepingLastOne() throws Exception {
+        Fixture f = new Fixture();
+        UUID secondZoneId = f.zone("둘째 그룹", 2);
+        UUID lastZoneId = f.zone("마지막 그룹", 3);
+        UUID firstArtworkId = f.publishedArtwork("첫 작품", f.keptZoneId);
+        UUID secondArtworkId = f.publishedArtwork("둘째 작품", secondZoneId);
+        UUID lastArtworkId = f.publishedArtwork("마지막 작품", lastZoneId);
+        f.guideMap(secondZoneId);
+
+        String json = """
+                {"zones": [{"id": "%s", "name": "마지막 그룹", "orderId": 1}]}
+                """.formatted(lastZoneId);
+        ExhibitionZoneListResponse response = exhibitionZoneService.saveZones(
+                f.exhibitionId, f.ownerId, new ObjectMapper().readValue(json, ExhibitionZoneBulkSaveRequest.class));
+
+        assertEquals(1, response.getZones().size());
+        assertEquals(1, response.getZones().get(0).getOrderId());
+        inTransaction(() -> {
+            assertEquals(ArtworkStatus.DRAFT, artworkRepository.findById(firstArtworkId).orElseThrow().getStatus());
+            assertEquals(ArtworkStatus.DRAFT, artworkRepository.findById(secondArtworkId).orElseThrow().getStatus());
+            assertEquals(ArtworkStatus.PUBLISHED, artworkRepository.findById(lastArtworkId).orElseThrow().getStatus());
+        });
+    }
+
+    @Test
+    @DisplayName("그룹 삭제로 자동 임시저장된 작품은 남은 그룹까지 지워 그룹이 0개가 되면 다시 공개되고 자동 공개 알림이 간다")
+    void saveZonesRepublishesAutoDraftedWhenNoZoneRemains() throws Exception {
+        Fixture f = new Fixture();
+        UUID removedZoneId = f.zone("먼저 지울 그룹", 2);
+        UUID artworkId = f.publishedArtworkWithArtist("먼저 내려간 작품", removedZoneId);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId, requestKeeping(f.keptZoneId));
+        inTransaction(() -> assertEquals(
+                ArtworkStatus.DRAFT, artworkRepository.findById(artworkId).orElseThrow().getStatus()));
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId, emptyRequest());
+
+        inTransaction(() -> {
+            Artwork artwork = artworkRepository.findById(artworkId).orElseThrow();
+            assertEquals(ArtworkStatus.PUBLISHED, artwork.getStatus());
+            assertNull(artwork.getAutoDraftedAt());
+        });
+        verify(notificationService, times(1)).send(
+                any(Account.class), eq(NotificationType.ARTWORK_REPUBLISHED), anyMap(), eq(f.exhibitionId));
+    }
+
+    @Test
+    @DisplayName("그룹이 0개가 돼도 작가가 직접 임시저장한 작품과 다른 필수값이 빈 작품은 그대로 둔다")
+    void saveZonesKeepsManualOrUnsatisfiedDraftWhenNoZoneRemains() throws Exception {
+        Fixture f = new Fixture();
+        UUID manualDraftId = f.draftArtwork("작가가 내린 작품", "회화", false);
+        UUID unsatisfiedId = f.draftArtwork("카테고리 없는 작품", null, true);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId, emptyRequest());
+
+        inTransaction(() -> {
+            assertEquals(ArtworkStatus.DRAFT, artworkRepository.findById(manualDraftId).orElseThrow().getStatus());
+            Artwork unsatisfied = artworkRepository.findById(unsatisfiedId).orElseThrow();
+            assertEquals(ArtworkStatus.DRAFT, unsatisfied.getStatus());
+            assertNotNull(unsatisfied.getAutoDraftedAt());
+        });
+        verify(notificationService, never()).send(
+                any(), eq(NotificationType.ARTWORK_REPUBLISHED), anyMap(), any());
+    }
+
+    @Test
+    @DisplayName("그룹이 남아 있으면 자동 임시저장된 작품을 다시 공개하지 않는다")
+    void saveZonesKeepsAutoDraftedWhenZoneRemains() throws Exception {
+        Fixture f = new Fixture();
+        UUID autoDraftedId = f.draftArtwork("자동으로 내려간 작품", "회화", true, f.keptZoneId);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId, requestKeeping(f.keptZoneId));
+
+        inTransaction(() -> assertEquals(
+                ArtworkStatus.DRAFT, artworkRepository.findById(autoDraftedId).orElseThrow().getStatus()));
+    }
+
+    @Test
+    @DisplayName("마지막 그룹을 단건 삭제해도 그룹 삭제로 자동 임시저장된 작품이 다시 공개된다")
+    void deleteZoneRepublishesAutoDraftedWhenNoZoneRemains() {
+        Fixture f = new Fixture();
+        UUID autoDraftedId = f.draftArtwork("자동으로 내려간 작품", "회화", true);
+
+        exhibitionZoneService.deleteZone(f.keptZoneId, f.ownerId, false);
+
+        inTransaction(() -> assertEquals(
+                ArtworkStatus.PUBLISHED, artworkRepository.findById(autoDraftedId).orElseThrow().getStatus()));
+    }
+
+    @Test
+    @DisplayName("그룹 단건 삭제로 그룹이 풀린 공개 작품도 다른 그룹이 남아 있으면 임시저장이 된다")
+    void deleteZoneDraftsPublishedArtwork() {
+        Fixture f = new Fixture();
+        UUID zoneId = f.zone("단건 삭제 그룹", 2);
+        UUID artworkId = f.publishedArtwork("공개 작품", zoneId);
+
+        exhibitionZoneService.deleteZone(zoneId, f.ownerId, false);
+
+        inTransaction(() -> assertEquals(
+                ArtworkStatus.DRAFT, artworkRepository.findById(artworkId).orElseThrow().getStatus()));
+    }
+
+    @Test
+    @DisplayName("삭제된 작품이 남아 있는 그룹을 지워도 저장되고, 삭제된 작품도 그룹 연결이 풀린다")
+    void saveZonesRemovesZoneWithDeletedArtwork() throws Exception {
+        Fixture f = new Fixture();
+        UUID removedZoneId = f.zone("삭제된 작품이 있는 그룹", 2);
+        UUID deletedArtworkId = f.deletedArtwork("삭제된 작품", removedZoneId);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId, requestKeeping(f.keptZoneId));
+
+        inTransaction(() -> {
+            assertFalse(exhibitionZoneRepository.existsById(removedZoneId));
+            Object zoneId = entityManager.createNativeQuery("SELECT zone_id FROM artworks WHERE id = :id")
+                    .setParameter("id", uuidBytes(deletedArtworkId))
+                    .getSingleResult();
+            assertNull(zoneId);
+        });
+    }
+
+    @Test
+    @DisplayName("그룹 설명은 1000자까지 저장된다")
+    void saveZonesStoresDescriptionUpTo1000() throws Exception {
+        Fixture f = new Fixture();
+        String description = "가".repeat(1000);
+        String json = """
+                {"zones": [{"id": "%s", "name": "남길 그룹", "orderId": 1, "description": "%s"}]}
+                """.formatted(f.keptZoneId, description);
+
+        exhibitionZoneService.saveZones(f.exhibitionId, f.ownerId,
+                new ObjectMapper().readValue(json, ExhibitionZoneBulkSaveRequest.class));
+
+        inTransaction(() -> assertEquals(description,
+                exhibitionZoneRepository.findById(f.keptZoneId).orElseThrow().getDescription()));
+    }
+
+    private static byte[] uuidBytes(UUID id) {
+        return ByteBuffer.allocate(16)
+                .putLong(id.getMostSignificantBits())
+                .putLong(id.getLeastSignificantBits())
+                .array();
+    }
+
     private void inTransaction(Runnable assertions) {
         transactionTemplate.executeWithoutResult(status -> {
             entityManager.clear();
@@ -242,6 +427,10 @@ class ExhibitionZoneRemoveIntegrationTest {
                 {"zones": [{"id": "%s", "name": "남길 그룹", "orderId": 1}]}
                 """.formatted(zoneId);
         return new ObjectMapper().readValue(json, ExhibitionZoneBulkSaveRequest.class);
+    }
+
+    private ExhibitionZoneBulkSaveRequest emptyRequest() throws Exception {
+        return new ObjectMapper().readValue("{\"zones\": []}", ExhibitionZoneBulkSaveRequest.class);
     }
 
     private <T> T write(Supplier<T> work) {
@@ -289,6 +478,77 @@ class ExhibitionZoneRemoveIntegrationTest {
                         .artist(artist)
                         .artistRole("작가")
                         .build());
+                return artwork.getId();
+            });
+        }
+
+        UUID publishedArtwork(String title, UUID zoneId) {
+            return write(() -> {
+                Artwork artwork = artworkRepository.save(Artwork.builder()
+                        .exhibition(exhibitionRepository.getReferenceById(exhibitionId))
+                        .exhibitionZone(exhibitionZoneRepository.getReferenceById(zoneId))
+                        .title(title)
+                        .category("회화")
+                        .productionEndYear(2026)
+                        .status(ArtworkStatus.PUBLISHED)
+                        .build());
+                return artwork.getId();
+            });
+        }
+
+        UUID publishedArtworkWithArtist(String title, UUID zoneId) {
+            return write(() -> {
+                Artist artist = artistRepository.save(Artist.builder()
+                        .account(account("artist-" + UUID.randomUUID(), Role.ARTIST_ADMIN))
+                        .nameKo("작가")
+                        .build());
+                Artwork artwork = artworkRepository.save(Artwork.builder()
+                        .exhibition(exhibitionRepository.getReferenceById(exhibitionId))
+                        .exhibitionZone(exhibitionZoneRepository.getReferenceById(zoneId))
+                        .title(title)
+                        .category("회화")
+                        .productionEndYear(2026)
+                        .status(ArtworkStatus.PUBLISHED)
+                        .build());
+                artworkArtistMapRepository.save(ArtworkArtistMap.builder()
+                        .artwork(artwork)
+                        .artist(artist)
+                        .artistRole("작가")
+                        .build());
+                return artwork.getId();
+            });
+        }
+
+        // 임시저장 작품. autoDrafted 면 시스템이 내린 작품, 아니면 작가가 직접 내린 작품
+        UUID draftArtwork(String title, String category, boolean autoDrafted) {
+            return draftArtwork(title, category, autoDrafted, null);
+        }
+
+        UUID draftArtwork(String title, String category, boolean autoDrafted, UUID zoneId) {
+            return write(() -> {
+                Artwork artwork = artworkRepository.save(Artwork.builder()
+                        .exhibition(exhibitionRepository.getReferenceById(exhibitionId))
+                        .exhibitionZone(zoneId == null ? null : exhibitionZoneRepository.getReferenceById(zoneId))
+                        .title(title)
+                        .category(category)
+                        .productionEndYear(2026)
+                        .status(ArtworkStatus.DRAFT)
+                        .build());
+                if (autoDrafted) {
+                    artwork.autoDraft(LocalDateTime.now());
+                }
+                return artwork.getId();
+            });
+        }
+
+        UUID deletedArtwork(String title, UUID zoneId) {
+            return write(() -> {
+                Artwork artwork = artworkRepository.save(Artwork.builder()
+                        .exhibition(exhibitionRepository.getReferenceById(exhibitionId))
+                        .exhibitionZone(exhibitionZoneRepository.getReferenceById(zoneId))
+                        .title(title)
+                        .build());
+                artwork.markDeleted(LocalDateTime.now());
                 return artwork.getId();
             });
         }

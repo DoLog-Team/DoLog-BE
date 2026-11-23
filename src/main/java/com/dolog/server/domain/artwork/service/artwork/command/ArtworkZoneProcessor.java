@@ -4,6 +4,7 @@ import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
 import com.dolog.server.domain.artwork.service.order.ArtworkOrderAdapter;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.artwork.support.ArtworkValidator;
 import com.dolog.server.domain.artwork.web.dto.response.ArtworkBulkZoneResponse;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
@@ -27,6 +28,7 @@ public class ArtworkZoneProcessor {
     private final ArtworkOrderAdapter artworkOrderAdapter;
     private final NotificationService notificationService;
     private final ArtworkPlanLimitService artworkPlanLimitService;
+    private final ArtworkFieldRequirement artworkFieldRequirement;
 
     // 하나라도 이 전시 출품작이 아니면 아무것도 바꾸지 않는다
     public ArtworkBulkZoneResponse assignZone(
@@ -47,6 +49,9 @@ public class ArtworkZoneProcessor {
             }
 
             artwork.updateZone(zone);
+            if (artwork.isAutoDrafted() && artworkFieldRequirement.isSatisfied(artwork)) {
+                artwork.autoPublish();
+            }
             artworkOrderAdapter.assign(artwork);
             notifyArtists(artwork, exhibition, zone);
             changedCount++;

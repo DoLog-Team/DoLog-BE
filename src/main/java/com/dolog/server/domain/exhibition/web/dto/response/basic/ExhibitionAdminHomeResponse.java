@@ -72,7 +72,8 @@ public class ExhibitionAdminHomeResponse {
             long hiddenArtworkCount,
             List<String> missingPublishFields,
             ExhibitionMap map,
-            Host host
+            Host host,
+            String exhibitionUrl
     ) {
         return ExhibitionAdminHomeResponse.builder()
                 .title(detail != null ? detail.getTitle() : null)
@@ -88,7 +89,7 @@ public class ExhibitionAdminHomeResponse {
                 .siteName(detail != null ? detail.getTitle() : null)
                 .siteDescription(detail != null ? detail.getDescription() : null)
                 .siteThumbnail(detail != null ? detail.getExhibitionImg() : null)
-                .exhibitionUrl("https://dolog.kr/" + exhibition.getSlug())
+                .exhibitionUrl(exhibitionUrl)
                 .artistJoinCode(exhibition.getArtistJoinCode())
                 .publishedAt(exhibition.getPublishedAt())
                 .expiresAt(exhibition.getExpiresAt())

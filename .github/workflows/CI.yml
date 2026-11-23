@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: ["dev"]
   push:
-    branches: ["dev"]
+    branches: ["dev", "hotfix/**"]
   workflow_dispatch:
 
 concurrency:
@@ -20,6 +20,8 @@ permissions:
 env:
   JAVA_VERSION: '17'
   IMAGE: ${{ secrets.DOCKER_USERNAME }}/be
+  # 이미지 push 대상: dev(→ dev 배포)와 hotfix/**(→ 핫픽스 릴리스). 운영 배포는 이 :<sha> 이미지를 승격한다
+  PUSH_IMAGE: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/dev' || startsWith(github.ref, 'refs/heads/hotfix/')) }}
 
 jobs:
   build-and-test:
@@ -60,13 +62,7 @@ jobs:
           DATABASE_URL: jdbc:mysql://localhost:3306/dolog_db?serverTimezone=Asia/Seoul
           DATABASE_USERNAME: root
           DATABASE_PASSWORD: password
-          # S3 및 기타 필수 변수 (테스트 통과용 가짜 값)
-          ACCESS_KEY: ${{ secrets.ACCESS_KEY || 'dummy' }}
-          SECRET_KEY: ${{ secrets.SECRET_KEY || 'dummy' }}
-          BUCKET_NAME: ${{ secrets.BUCKET_NAME || 'dummy' }}
-          ADMIN_EMAIL: admin@test.com
-          ADMIN_PASSWORD: testpassword
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY || 'AymkFsUli6txMdsB2QvIAJAY+gcoQNDYQGEkPcWlj+o=' }}
+          # 나머지 값(S3·JWT·관리자)은 테스트 프로파일(local)의 application-local.properties 더미를 쓴다
 
       # 2) 테스트 결과 리포트 게시 (성공/실패 상관없이 실행)
       - name: Publish Test Results
@@ -75,35 +71,35 @@ jobs:
         with:
           files: "**/build/test-results/test/*.xml"
 
-      # 3) 도커 허브 로그인 및 푸시 (PR이 아닌 dev push일 때만 실행)
+      # 3) 도커 허브 로그인 및 푸시 (PUSH_IMAGE일 때만 — 테스트가 통과해야 여기까지 온다)
       - name: Login to Docker Hub
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+        if: env.PUSH_IMAGE == 'true'
         uses: docker/login-action@v4.6.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 멀티아치 준비 — 같은 태그 하나로 prod(EC2, amd64)와 dev(Oracle A1, arm64)를 모두 커버.
+      # arm64 단일 — 서버는 dev·prod 모두 Oracle A1(arm64). 러너(amd64)에서 QEMU로 빌드.
       # 이미지가 "JRE 베이스 + JAR 복사" 구조라 QEMU에서 무거운 컴파일이 돌 일은 없음 (JAR 빌드는 위 Gradle 단계에서 완료)
       - name: Set up QEMU
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+        if: env.PUSH_IMAGE == 'true'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+        if: env.PUSH_IMAGE == 'true'
         uses: docker/setup-buildx-action@v3
 
-      # :latest 없음 — dev 배포는 :dev, 운영 배포는 릴리즈가 만드는 :vX.Y.Z (A안)
+      # :latest 없음 — :dev는 dev에서만. 운영은 deploy-prod가 :<sha>에 :vX.Y.Z를 붙여 승격
       - name: Build & Push image
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/dev'
+        if: env.PUSH_IMAGE == 'true'
         uses: docker/build-push-action@v7.4.0
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           tags: |
-            ${{ env.IMAGE }}:dev
             ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ github.ref == 'refs/heads/dev' && format('{0}:dev', env.IMAGE) || '' }}
 
       # 테스트 실패 시 리포트 저장
       - name: Upload Test Report Artifact

@@ -2,8 +2,9 @@ name: Deploy Prod
 
 # 운영 배포 = GitHub Release(vX.Y.Z) 발행이 유일한 트리거 (A안 — docs/infra-ops-review.md 부록 B ③)
 # dev push는 운영에 닿지 않는다 (dev 배포는 deploy-dev.yml).
-# 전제: 릴리즈는 CI를 통과한 dev 커밋에서만 발행한다 (여기서는 테스트를 다시 돌리지 않음).
-# 롤백 = 이전 릴리즈 태그로 재발행(또는 이 워크플로의 자동 롤백).
+# 빌드하지 않는다: CI가 테스트 후 만든 :<sha> 이미지에 :vX.Y.Z를 붙여 digest로 배포(build once, promote).
+#   :<sha>가 없으면(CI 미통과·미완료 커밋) 실패 → CI를 통과한 dev/hotfix/** 커밋에서만 릴리스 가능.
+# 롤백 = deploy.sh 자동 롤백(헬스 체크 실패 시 이전 이미지·.env 복구), 수동은 서버에서 deploy.sh에 이전 이미지 지정.
 on:
   release:
     types: [published]
@@ -12,13 +13,16 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env:
   IMAGE: ${{ secrets.DOCKER_USERNAME }}/be
   VERSION: ${{ github.event.release.tag_name }}
 
 jobs:
-  build-and-deploy:
-    name: Build & Deploy ${{ github.event.release.tag_name }}
+  deploy:
+    name: Deploy ${{ github.event.release.tag_name }}
     # Pre-release 발행은 배포 제외 — 태그·릴리즈 노트만 생성되고 운영엔 나가지 않는다
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
@@ -30,42 +34,28 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      - name: Set up Temurin JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Build JAR
-        run: |
-          chmod +x gradlew
-          ./gradlew bootJar
-
       - name: Login to Docker Hub
         uses: docker/login-action@v4.6.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # CI와 동일한 멀티아치 — :<sha> 태그를 amd64 단일로 덮어써 dev(arm64)를 깨지 않기 위함
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build & Push image (:vX.Y.Z + :sha)
-        uses: docker/build-push-action@v7.4.0
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.IMAGE }}:${{ env.VERSION }}
-            ${{ env.IMAGE }}:${{ github.sha }}
+      # 재빌드하지 않는다 — CI가 테스트 후 push한 :<sha>에 릴리스 태그만 붙이고, 배포는 digest로 고정
+      - name: Promote CI image (:sha → :vX.Y.Z)
+        id: promote
+        run: |
+          SRC="$IMAGE:$GITHUB_SHA"
+          if ! docker buildx imagetools inspect "$SRC" > /dev/null 2>&1; then
+            echo "::error::CI 이미지가 없습니다 ($GITHUB_SHA). dev 또는 hotfix/** 에서 CI가 끝까지 성공한 커밋에만 릴리스할 수 있습니다. CI 완료 후 이 job을 다시 실행하세요."
+            exit 1
+          fi
+          docker buildx imagetools create -t "$IMAGE:$VERSION" "$SRC"
+          DIGEST=$(docker buildx imagetools inspect "$IMAGE:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "ref=$IMAGE@$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "배포 이미지: $IMAGE:$VERSION ($DIGEST)"
 
       # 배포 파일을 서버로 동기화 — 서버 상태가 항상 레포와 일치 (deploy-dev와 동일 패턴)
       - name: Copy deploy files
@@ -74,77 +64,23 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "deploy/prod"
+          source: "deploy/prod,deploy/scripts/deploy.sh"
           target: /home/${{ secrets.SSH_USER }}/dolog-prod
           strip_components: 2
           overwrite: true
 
-      - name: Deploy over SSH (compose)
+      # 배포 로직은 deploy/scripts/deploy.sh — 시크릿은 스크립트 본문이 아니라 envs로 전달
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          IMAGE_REF: ${{ steps.promote.outputs.ref }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: 22
-          script: |
-            cd /home/${{ secrets.SSH_USER }}/dolog-prod
-
-            if [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
-              echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-            fi
-
-            # 환경변수는 production 환경 Secret이 정본 — 매 배포마다 새로 기록
-            echo "${{ secrets.ENV_FILE }}" > .env
-            chmod 600 .env
-
-            # 이번 릴리즈 이미지 태그를 .env에 기록
-            echo "PROD_IMAGE=${{ env.IMAGE }}:${{ env.VERSION }}" >> .env
-
-            # 인증서 발급 이후에는 레포의 ssl 설정(.disabled)이 활성본을 대체 — 레포가 항상 정본
-            if [ -f nginx/prod-ssl.conf ] && [ -f nginx/prod-ssl.conf.disabled ]; then
-              mv -f nginx/prod-ssl.conf.disabled nginx/prod-ssl.conf
-            fi
-
-            # 롤백 대비 — 현재 컨테이너 이미지 ID 기억 + 직전 로그 보존(L0: compose recreate가 json-file 로그를 날림)
-            PREV_IMAGE=$(docker inspect --format '{{.Image}}' be 2>/dev/null || true)
-            mkdir -p /home/${{ secrets.SSH_USER }}/logs
-            docker logs be > /home/${{ secrets.SSH_USER }}/logs/be-$(date +%Y%m%d-%H%M%S).log 2>&1 || true
-
-            echo "[1/3] Pull & up (${{ env.VERSION }})..."
-            docker compose pull app
-            docker compose up -d mysql app
-            # nginx/certbot은 최초 인증서 발급(init-cert.sh) 이후에만 기동 가능
-            if [ -f nginx/prod-ssl.conf ]; then
-              docker compose up -d nginx certbot
-              docker compose exec -T nginx nginx -s reload || true
-            else
-              echo "(안내) 아직 인증서 미발급 상태 — ./init-cert.sh <도메인> <이메일> 실행 필요"
-            fi
-
-            echo "[2/3] Health check (최대 150초 폴링)..."
-            healthy=""
-            for i in $(seq 1 30); do
-              if curl -fsS http://localhost:9090/actuator/health > /dev/null 2>&1; then
-                healthy=1
-                break
-              fi
-              sleep 5
-            done
-
-            if [ -z "$healthy" ]; then
-              echo "Health check 실패 — 직전 이미지로 롤백합니다"
-              docker logs --tail 100 be || true
-              if [ -n "$PREV_IMAGE" ]; then
-                PROD_IMAGE="$PREV_IMAGE" docker compose up -d app
-                sleep 10
-                echo "롤백 후 컨테이너 상태:"
-                docker ps --filter name=be --format '{{.Names}} {{.Status}} {{.Image}}'
-              else
-                echo "롤백할 이전 이미지가 없습니다"
-              fi
-              exit 1
-            fi
-            echo "Health check OK"
-
-            echo "[3/3] Cleanup unused images..."
-            docker image prune -f
+          envs: ENV_FILE,DOCKER_USERNAME,DOCKER_PASSWORD,IMAGE_REF
+          script: bash /home/${{ secrets.SSH_USER }}/dolog-prod/deploy.sh prod "$IMAGE_REF"

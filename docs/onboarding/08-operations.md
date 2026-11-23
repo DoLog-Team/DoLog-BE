@@ -15,13 +15,31 @@ Oracle는 Compute와 VCN을 사용하고 이미지 및 DB 백업은 AWS S3를 �
 
 ## 배포와 롤백
 
-- dev: dev 브랜치 CI 성공 후 자동 배포된다. 수동 workflow_dispatch 경로도 있다.
-- prod: CI를 통과한 dev 커밋에서 새 `vX.Y.Z` 정식 Release를 발행한다. pre-release는 제외된다. 운영 워크플로는 테스트를 재실행하지 않으므로 발행 전에 대상 커밋의 CI를 확인한다.
+- dev: dev 브랜치 CI 성공 후 그 커밋의 `:<SHA>` 이미지로 자동 배포된다. 수동 workflow_dispatch 경로도 있다.
+- prod: CI를 통과한 dev 커밋(핫픽스는 `hotfix/**` 커밋)에서 새 `vX.Y.Z` 정식 Release를 발행한다. pre-release는 제외된다. 운영 워크플로는 이미지를 다시 빌드하지 않고 CI가 테스트 후 만든 `:<커밋 SHA>` 이미지를 배포한다. 그 이미지가 없으면(CI 실패·진행 중·취소) 배포가 실패하므로, 대상 커밋의 CI가 끝난 뒤 발행한다.
 - 호환성 깨짐은 major, 호환 기능 추가는 minor, 수정은 patch를 올린다. 기존 태그를 재사용하지 않는다.
 
-GitHub Releases에서 새 태그와 대상 커밋을 선택하고 변경 내용을 작성한 후 Publish release하면 운영 배포가 시작된다. `.github/workflows/deploy-prod.yml`은 이미지 빌드·게시, 서버 파일 복사, `.env`와 PROD_IMAGE 기록, 컨테이너 재기동, 관리 포트 9090 health 확인을 수행한다. 실패 시 이전 이미지로 돌아가는 경로가 있다. **이미지 롤백은 DB 마이그레이션을 되돌리지 않는다.**
+GitHub Releases에서 새 태그와 대상 커밋을 선택하고 변경 내용을 작성한 후 Publish release하면 운영 배포 job이 **승인 대기** 상태가 된다. production environment 승인자 중 한 명이 Actions 화면에서 승인하면 배포가 시작된다(본인 승인 가능). production은 `v*` 태그에서 실행된 job만 쓸 수 있으므로 태그는 `v`로 시작해야 한다. `.github/workflows/deploy-prod.yml`은 CI 이미지 `:<SHA>`에 `:vX.Y.Z` 태그를 붙이고, 서버 파일 복사 후 `deploy/scripts/deploy.sh`를 실행한다. dev 배포도 같은 스크립트를 쓴다. 스크립트는 이미지 pull, `.env`와 `PROD_IMAGE`/`DEV_IMAGE`(prod는 digest `image@sha256:...`) 기록, 앱 컨테이너만 교체(`--no-deps`, MySQL은 꺼져 있을 때만 기동), 관리 포트 9090 health 확인을 수행한다. health가 150초 안에 통과하지 않으면 **이전 이미지와 이전 `.env`로 자동 복구**하고 다시 health를 확인한 뒤 job을 실패로 끝낸다. **이미지 롤백은 DB 마이그레이션을 되돌리지 않는다.**
 
-수동 롤백은 DB가 이전 앱과 호환되는지 확인한 뒤 서버 `.env`의 `PROD_IMAGE`를 이전 정상 태그로 갱신하고 `docker compose up -d app`을 실행한다. 실행 환경변수만 일시 변경하면 다음 기동 때 다른 이미지가 선택될 수 있다.
+### 핫픽스
+
+dev에 아직 출시하지 않은 변경이 있을 때 운영 수정만 내보내는 절차다.
+
+1. 마지막 릴리스 태그에서 `hotfix/<요약>` 브랜치를 만든다: `git switch -c hotfix/<요약> vX.Y.Z`
+2. 수정을 커밋하고 push한다. `hotfix/**` push에서도 CI가 테스트하고 `:<SHA>` 이미지를 만든다(`:dev`는 만들지 않는다).
+3. CI 성공을 확인하고, Release의 Target을 그 hotfix 브랜치로, 태그를 다음 patch 버전(`vX.Y.Z+1`)으로 발행한다. 제목에 `(hotfix)`를 붙인다. 승인 후 배포된다.
+4. hotfix 브랜치를 dev로 backmerge하는 PR을 올린다.
+
+dev에 미출시 변경이 없으면 dev에서 고치고 평소처럼 릴리스한다.
+
+수동 롤백은 DB가 이전 앱과 호환되는지 확인한 뒤 서버에서 같은 스크립트에 이전 정상 이미지를 지정해 실행한다. 현재 `.env`를 그대로 재사용하고 이미지 줄만 바꾼다.
+
+```bash
+cd ~/dolog-prod
+ENV_FILE="$(cat .env)" bash deploy.sh prod <dockerhub-username>/be:vX.Y.Z
+```
+
+`docker compose up` 실행 시 환경변수만 일시 변경하면 `.env`에는 이전 값이 남아 다음 기동 때 다른 이미지가 선택될 수 있으므로 쓰지 않는다. MySQL 설정(compose의 mysql 서비스) 변경은 배포로 적용되지 않으므로 서버에서 `docker compose up -d mysql`로 직접 적용한다.
 
 ## 설정과 접근 권한
 
@@ -49,7 +67,7 @@ Host dolog-dev
 
 `deploy/prod/backup-db.sh`는 MySQL을 `--single-transaction`으로 덤프하고 gzip 검증 및 최소 크기를 확인한다. 최근 24시간 앱 로그와 함께 S3의 `db/`, `log/`에 올리고 일요일에는 `weekly/`에도 복사한다. 로컬 3일 초과 파일은 정리한다. AWS CLI나 writer 키가 없으면 원격 업로드를 건너뛸 수 있으므로 마지막 OK 출력만 보지 말고 실제 S3 객체를 확인한다.
 
-서버 cron은 배포만으로 등록·변경되지 않는다. `timedatectl`과 `crontab -l`을 먼저 확인한다. 스크립트의 권장 시각은 UTC 19:00(KST 다음 날 04:00)이다. `backup-check.yml`은 UTC 21:00에 최신 백업의 26시간 이내 여부와 10KB 이상 크기를 검사하고 실패 시 Discord로 알린다.
+서버 cron은 배포만으로 등록·변경되지 않는다. `timedatectl`과 `crontab -l`을 먼저 확인한다. 스크립트의 권장 시각은 UTC 19:00(KST 다음 날 04:00)이다. `backup-check.yml`은 UTC 21:00에 최신 백업의 26시간 이내 여부와 10KB 이상 크기를 검사하고 실패 시 Discord로 알린다. 이 워크플로는 액세스 키 없이 GitHub OIDC로 AWS Role `dolog-github-backup-check`(dev 브랜치 실행만 허용, `dolog-prod-backup`의 `db/` 목록 조회만)를 맡는다. 다른 브랜치에서 수동 실행하면 인증이 거절된다.
 
 기존 기록의 S3 수명주기는 `db/`, `log/` 14일, `weekly/` 56일이다. 실제 버킷 정책은 별도 확인한다.
 

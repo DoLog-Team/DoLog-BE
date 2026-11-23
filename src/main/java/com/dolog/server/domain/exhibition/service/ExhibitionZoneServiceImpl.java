@@ -3,7 +3,11 @@ package com.dolog.server.domain.exhibition.service;
 import com.dolog.server.domain.artist.entity.Artist;
 import com.dolog.server.domain.artwork.entity.Artwork;
 import com.dolog.server.domain.artwork.entity.ArtworkArtistMap;
+import com.dolog.server.domain.artwork.entity.enums.ArtworkStatus;
 import com.dolog.server.domain.artwork.repository.ArtworkRepository;
+import com.dolog.server.domain.artwork.service.artwork.command.ArtworkPlanLimitService;
+import com.dolog.server.domain.artwork.service.artwork.command.PlanLimitRecomputeCause;
+import com.dolog.server.domain.artwork.support.ArtworkFieldRequirement;
 import com.dolog.server.domain.exhibition.entity.Exhibition;
 import com.dolog.server.domain.exhibition.entity.ExhibitionDetail;
 import com.dolog.server.domain.notification.entity.enums.NotificationType;
@@ -27,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +50,8 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
     private final NotificationService notificationService;
     private final ArtworkRepository artworkRepository;
     private final ExhibitionGuideMapRepository exhibitionGuideMapRepository;
+    private final ArtworkFieldRequirement artworkFieldRequirement;
+    private final ArtworkPlanLimitService artworkPlanLimitService;
 
     @Override
     @Transactional(readOnly = true)
@@ -95,9 +102,9 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
         List<ExhibitionZone> removedZones = existingZones.stream()
                 .filter(zone -> !requestedIds.contains(zone.getId()))
                 .toList();
-        if (!removedZones.isEmpty()) {
-            removeZones(exhibition, removedZones);
-        }
+        List<Artwork> ungroupedArtworks = removedZones.isEmpty()
+                ? List.of()
+                : removeZones(exhibition, removedZones);
 
         for (ExhibitionZoneBulkSaveRequest.ZoneItem item : request.getZones()) {
             String description = TextUtils.normalizeNewlines(item.getDescription());
@@ -112,6 +119,8 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 existingById.get(item.getId()).replace(item.getName(), description, item.getOrderId());
             }
         }
+
+        syncArtworkStatus(exhibition, ungroupedArtworks);
 
         // 저장 결과를 orderId 순으로 응답
         return ExhibitionZoneListResponse.from(
@@ -158,7 +167,8 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .orElseThrow(() -> new ExhibitionException(ExhibitionErrorCode.ZONE_NOT_FOUND));
         requireOwnerUnlessDologAdmin(zone.getExhibition(), accountId, isDologAdmin);
 
-        removeZones(zone.getExhibition(), List.of(zone));
+        List<Artwork> ungroupedArtworks = removeZones(zone.getExhibition(), List.of(zone));
+        syncArtworkStatus(zone.getExhibition(), ungroupedArtworks);
     }
 
     // 작품 그룹 숨김/재공개. 상태가 실제로 바뀐 경우에만 참여 작가에게 알림을 보낸다
@@ -194,19 +204,67 @@ public class ExhibitionZoneServiceImpl implements ExhibitionZoneService {
                 .orElse(exhibition.getSlug());
     }
 
-    private void removeZones(Exhibition exhibition, List<ExhibitionZone> zones) {
+    private List<Artwork> removeZones(Exhibition exhibition, List<ExhibitionZone> zones) {
         String exhibitionName = resolveExhibitionName(exhibition);
+        List<Artwork> ungroupedArtworks = new ArrayList<>();
 
         for (ExhibitionZone zone : zones) {
             List<Artwork> artworks = artworkRepository
                     .findByExhibitionIdAndExhibitionZoneIdOrderByOrderIndexAsc(exhibition.getId(), zone.getId());
             notifyArtworkGroupRemoved(exhibition, exhibitionName, zone, artworks);
             artworks.forEach(artwork -> artwork.updateZone(null));
+            ungroupedArtworks.addAll(artworks);
         }
 
-        artworkRepository.clearZone(zones);
+        artworkRepository.clearZone(zones.stream().map(ExhibitionZone::getId).toList());
         exhibitionGuideMapRepository.clearZone(zones);
         exhibitionZoneRepository.deleteAll(zones);
+        return ungroupedArtworks;
+    }
+
+    // 그룹이 풀린 공개 작품은 필수값을 다시 확인하고, 전시에 그룹이 하나도 안 남으면 그룹 삭제로 자동 임시저장됐던 작품을 다시 공개한다
+    private void syncArtworkStatus(Exhibition exhibition, List<Artwork> ungroupedArtworks) {
+        UUID exhibitionId = exhibition.getId();
+        boolean changed = false;
+        for (Artwork artwork : ungroupedArtworks) {
+            boolean wasPublished = artwork.getStatus() == ArtworkStatus.PUBLISHED;
+            artworkFieldRequirement.draftIfUnsatisfied(artwork);
+            changed |= wasPublished && artwork.getStatus() != ArtworkStatus.PUBLISHED;
+        }
+
+        if (!exhibitionZoneRepository.existsByExhibitionId(exhibitionId)) {
+            List<Artwork> republished = artworkFieldRequirement.republishIfSatisfied(
+                    artworkRepository.findByExhibitionIdAndStatusAndAutoDraftedAtIsNotNull(exhibitionId, ArtworkStatus.DRAFT));
+            notifyArtworkRepublished(exhibition, republished);
+            changed |= !republished.isEmpty();
+        }
+
+        if (changed) {
+            artworkPlanLimitService.recompute(exhibitionId, PlanLimitRecomputeCause.ARTWORK_CHANGE);
+        }
+    }
+
+    private void notifyArtworkRepublished(Exhibition exhibition, List<Artwork> artworks) {
+        if (artworks.isEmpty()) {
+            return;
+        }
+        String exhibitionName = resolveExhibitionName(exhibition);
+        for (Artwork artwork : artworks) {
+            Map<String, String> payload = Map.of(
+                    "exhibitionName", exhibitionName,
+                    "artworkTitle", artwork.getTitle(),
+                    "artworkId", artwork.getId().toString()
+            );
+
+            for (ArtworkArtistMap map : artwork.getArtworkArtistMaps()) {
+                Artist artist = map.getArtist();
+                if (artist.getAccount() == null) {
+                    continue;
+                }
+                notificationService.send(
+                        artist.getAccount(), NotificationType.ARTWORK_REPUBLISHED, payload, exhibition.getId());
+            }
+        }
     }
 
     private void notifyArtworkGroupRemoved(

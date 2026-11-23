@@ -49,7 +49,7 @@ public class ArtworkUpdateFullRequest implements ArtworkInfoFields {
     private Boolean clearHeight;
     private Boolean clearDepth;
 
-    @Size(max = 255)
+    @Size(max = 200)
     private String shortIntro;
 
     @Min(1000) @Max(9999)
