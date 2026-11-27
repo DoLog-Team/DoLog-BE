@@ -14,15 +14,15 @@ public class ArtistProfileUpdateRequest {
             message = "국문 성명은 최대 10자까지 입력해주세요."
     )
     @Pattern(
-            regexp = "^$|^(?=.*[가-힣A-Za-z0-9])[가-힣A-Za-z0-9 ]+$",
-            message = "국문 성명은 한글, 영문, 숫자, 띄어쓰기만 사용할 수 있습니다."
+            regexp = "^$|^(?=.*[\\p{L}0-9])(?:\\p{L}\\p{M}*|[0-9 ])+$",
+            message = "국문 성명은 문자, 숫자, 띄어쓰기만 사용할 수 있습니다."
     )
     private String nameKo;
 
     @Size(max = 50, message = "영문 성명은 최대 50자까지 입력할 수 있습니다.")
     @Pattern(
-            regexp = "^[A-Za-z ]*$",
-            message = "영문 성명은 영문과 띄어쓰기만 사용할 수 있습니다."
+            regexp = "^(?:\\p{L}\\p{M}*| )*$",
+            message = "영문 성명은 문자와 띄어쓰기만 사용할 수 있습니다."
     )
     private String nameEn;
 
