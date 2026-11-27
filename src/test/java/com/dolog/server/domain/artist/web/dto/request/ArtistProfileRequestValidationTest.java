@@ -4,6 +4,9 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.UUID;
 
@@ -17,7 +20,7 @@ class ArtistProfileRequestValidationTest {
             .getValidator();
 
     @Test
-    @DisplayName("생성 요청의 국문 성명은 한글·영문·숫자·띄어쓰기만 허용한다")
+    @DisplayName("생성 요청의 국문 성명은 기존 숫자·띄어쓰기 허용과 특수문자 제한을 유지한다")
     void validatesCreateNameKoCharacters() {
         ArtistProfileCreateRequest request = validCreateRequest();
         request.setNameKo("김두록!");
@@ -30,7 +33,7 @@ class ArtistProfileRequestValidationTest {
     }
 
     @Test
-    @DisplayName("국문 성명 삭제는 허용하고 기존 문자·길이·공백 검증은 유지한다")
+    @DisplayName("국문 성명 삭제는 허용하고 기존 특수문자·길이·공백 검증은 유지한다")
     void allowsEmptyUpdateNameKoAndPreservesOtherValidation() {
         ArtistProfileUpdateRequest request = new ArtistProfileUpdateRequest();
         request.setNameKo("");
@@ -46,17 +49,116 @@ class ArtistProfileRequestValidationTest {
     }
 
     @Test
-    @DisplayName("수정 요청의 영문 성명은 최대 50자의 영문과 띄어쓰기만 허용한다")
+    @DisplayName("영문 성명은 기존 50자 제한을 유지한다")
     void validatesUpdateNameEn() {
         ArtistProfileUpdateRequest request =
                 new ArtistProfileUpdateRequest();
-        request.setNameEn("Dolog 김");
+        request.setNameEn("A".repeat(51));
 
         assertFalse(validator.validate(request).isEmpty());
 
-        request.setNameEn("Dolog Kim");
+        request.setNameEn("A".repeat(50));
 
         assertTrue(validator.validate(request).isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"山田 太郎", "やまだ", "ヤマダ", "王小明", "김두록", "Dolog Kim",
+            "José", "Jose\u0301", "अनिता", "สมชาย", "محمد", "Иван"})
+    @DisplayName("생성·수정 요청의 두 성명란 모두 언어를 제한하지 않는다")
+    void allowsMultilingualNamesForCreateAndUpdate(String name) {
+        ArtistProfileCreateRequest createRequest = validCreateRequest();
+        createRequest.setNameKo(name);
+        createRequest.setNameEn(name);
+        assertTrue(validator.validate(createRequest).isEmpty());
+
+        ArtistProfileUpdateRequest updateRequest = new ArtistProfileUpdateRequest();
+        updateRequest.setNameKo(name);
+        updateRequest.setNameEn(name);
+        assertTrue(validator.validate(updateRequest).isEmpty());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("생성 요청의 국문 성명은 기존 필수·공백 검증을 유지한다")
+    void rejectsMissingOrBlankCreateNameKo(String name) {
+        ArtistProfileCreateRequest request = validCreateRequest();
+        request.setNameKo(name);
+        assertFalse(validator.validate(request).isEmpty());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @DisplayName("수정 요청의 국문 성명은 기존 null·빈 문자열 허용을 유지한다")
+    void allowsNullOrEmptyUpdateNameKo(String name) {
+        ArtistProfileUpdateRequest request = new ArtistProfileUpdateRequest();
+        request.setNameKo(name);
+        assertTrue(validator.validate(request).isEmpty());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("영문 성명은 생성·수정 시 기존 null·빈 문자열·공백 허용을 유지한다")
+    void preservesOptionalNameEnValidation(String name) {
+        ArtistProfileCreateRequest createRequest = validCreateRequest();
+        createRequest.setNameEn(name);
+        assertTrue(validator.validate(createRequest).isEmpty());
+
+        ArtistProfileUpdateRequest updateRequest = new ArtistProfileUpdateRequest();
+        updateRequest.setNameEn(name);
+        assertTrue(validator.validate(updateRequest).isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"山田!", "Jean-Luc", "O'Connor", "山田\n太郎", "山田\t太郎", "山田\r太郎", "山田😀"})
+    @DisplayName("두 성명란은 생성·수정 시 기존 특수문자·줄바꿈·탭 제한을 유지한다")
+    void preservesRejectedNameCharacters(String name) {
+        ArtistProfileCreateRequest createRequest = validCreateRequest();
+        createRequest.setNameKo(name);
+        assertFalse(validator.validate(createRequest).isEmpty());
+        createRequest.setNameKo("김두록");
+        createRequest.setNameEn(name);
+        assertFalse(validator.validate(createRequest).isEmpty());
+
+        ArtistProfileUpdateRequest updateRequest = new ArtistProfileUpdateRequest();
+        updateRequest.setNameKo(name);
+        assertFalse(validator.validate(updateRequest).isEmpty());
+        updateRequest.setNameKo(null);
+        updateRequest.setNameEn(name);
+        assertFalse(validator.validate(updateRequest).isEmpty());
+    }
+
+    @Test
+    @DisplayName("국문란의 숫자 허용과 영문란의 숫자 제한은 생성·수정 시 유지한다")
+    void preservesNameDigitValidation() {
+        ArtistProfileCreateRequest createRequest = validCreateRequest();
+        createRequest.setNameKo("山田 2");
+        assertTrue(validator.validate(createRequest).isEmpty());
+        createRequest.setNameEn("山田 2");
+        assertFalse(validator.validate(createRequest).isEmpty());
+
+        ArtistProfileUpdateRequest updateRequest = new ArtistProfileUpdateRequest();
+        updateRequest.setNameKo("山田 2");
+        assertTrue(validator.validate(updateRequest).isEmpty());
+        updateRequest.setNameEn("山田 2");
+        assertFalse(validator.validate(updateRequest).isEmpty());
+    }
+
+    @Test
+    @DisplayName("생성 요청은 기존 국문 10자·영문 50자 제한을 유지한다")
+    void preservesCreateNameLengthLimits() {
+        ArtistProfileCreateRequest request = validCreateRequest();
+        request.setNameKo("山".repeat(10));
+        request.setNameEn("山".repeat(50));
+        assertTrue(validator.validate(request).isEmpty());
+
+        request.setNameKo("山".repeat(11));
+        assertFalse(validator.validate(request).isEmpty());
+        request.setNameKo("山田");
+        request.setNameEn("山".repeat(51));
+        assertFalse(validator.validate(request).isEmpty());
     }
 
     @Test
