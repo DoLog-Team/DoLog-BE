@@ -37,11 +37,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -136,8 +138,9 @@ class ArtistProfileControllerSecurityTest {
         verifyNoInteractions(artistService, artistProfileService);
     }
 
-    @Test
-    void artistUpdatesOwnCommonProfileUsingTokenAccount() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"작가 두록", "山田 太郎", "王小明", "José", "Jose\u0301", "अनिता", "محمد"})
+    void artistUpdatesOwnCommonProfileUsingTokenAccount(String name) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
         MockMultipartFile profileImg = new MockMultipartFile(
@@ -157,7 +160,9 @@ class ArtistProfileControllerSecurityTest {
                         "/api/artist-profiles/me"
                 )
                         .file(jsonPart(
-                                "{\"nameKo\":\"작가 두록\",\"bio\":\"소개\"}"
+                                objectMapper.writeValueAsString(Map.of(
+                                        "nameKo", name, "nameEn", name, "bio", "소개"
+                                ))
                         ))
                         .file(profileImg)
                         .contextPath("/api")
@@ -173,7 +178,8 @@ class ArtistProfileControllerSecurityTest {
 
         verify(artistService).updateMyArtistProfile(
                 eq(accountId),
-                any(),
+                argThat(request -> name.equals(request.getNameKo())
+                        && name.equals(request.getNameEn())),
                 eq(profileImg)
         );
     }
@@ -221,7 +227,7 @@ class ArtistProfileControllerSecurityTest {
                         "/api/artist-profiles/{profileId}",
                         profileId
                 )
-                        .file(jsonPart("{}"))
+                        .file(jsonPart("{\"nameKo\":\"山田 太郎\",\"nameEn\":\"محمد\"}"))
                         .contextPath("/api")
                         .with(user(userDetails(accountId, role))))
                 .andExpect(status().isOk())
@@ -233,7 +239,8 @@ class ArtistProfileControllerSecurityTest {
         verify(artistService).updateArtistProfile(
                 eq(accountId),
                 eq(profileId),
-                any(),
+                argThat(request -> "山田 太郎".equals(request.getNameKo())
+                        && "محمد".equals(request.getNameEn())),
                 eq(null)
         );
     }
@@ -707,16 +714,18 @@ class ArtistProfileControllerSecurityTest {
         verifyNoInteractions(artistProfileService);
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"김두록", "山田 太郎", "王小明", "José", "Jose\u0301", "अनिता", "محمد"})
     @DisplayName("두록 어드민의 프로필 생성은 201과 profileId를 반환한다")
-    void dologAdminCreatesProfile() throws Exception {
+    void dologAdminCreatesProfile(String name) throws Exception {
         UUID accountId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
         ArtistProfileCreateRequest request =
                 new ArtistProfileCreateRequest();
         request.setArtistId(UUID.randomUUID());
         request.setExhibitionId(UUID.randomUUID());
-        request.setNameKo("김두록");
+        request.setNameKo(name);
+        request.setNameEn(name);
 
         when(artistProfileService.createArtistProfile(
                 any(ArtistProfileCreateRequest.class),
@@ -742,6 +751,39 @@ class ArtistProfileControllerSecurityTest {
                 .andExpect(jsonPath("$.message").value("프로필 등록 성공"))
                 .andExpect(jsonPath("$.data.profileId")
                         .value(profileId.toString()));
+
+        verify(artistProfileService).createArtistProfile(
+                argThat(received -> name.equals(received.getNameKo())
+                        && name.equals(received.getNameEn())),
+                eq(null)
+        );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"   ", "山田!", "山田\n太郎", "山田\t太郎", "山山山山山山山山山山山"})
+    @DisplayName("생성·수정 API의 국문란은 기존 공백·특수문자·길이 검증을 유지한다")
+    void rejectsInvalidNameKoInCreateAndUpdate(String name) throws Exception {
+        ArtistProfileCreateRequest request = new ArtistProfileCreateRequest();
+        request.setArtistId(UUID.randomUUID());
+        request.setExhibitionId(UUID.randomUUID());
+        request.setNameKo(name);
+
+        mockMvc.perform(multipart("/api/artist-profiles")
+                        .file(jsonPart(objectMapper.writeValueAsString(request)))
+                        .contextPath("/api")
+                        .with(user(userDetails(UUID.randomUUID(), "DOLOG_ADMIN"))))
+                .andExpect(status().isBadRequest());
+
+        String updateJson = objectMapper.writeValueAsString(Map.of("nameKo", name));
+        for (String path : List.of("/api/artist-profiles/me", "/api/artist-profiles/" + UUID.randomUUID())) {
+            mockMvc.perform(multipart(HttpMethod.PATCH, path)
+                            .file(jsonPart(updateJson))
+                            .contextPath("/api")
+                            .with(user(userDetails(UUID.randomUUID(), "ARTIST_ADMIN"))))
+                    .andExpect(status().isBadRequest());
+        }
+
+        verifyNoInteractions(artistService, artistProfileService);
     }
 
     private CustomUserDetails userDetails(
