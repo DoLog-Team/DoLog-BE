@@ -33,6 +33,9 @@ import com.sksamuel.scrimage.ImmutableImage;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -724,9 +727,11 @@ class ArtistServiceImplTest {
         verify(artistRepository, never()).delete(any());
     }
 
-    @Test
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"사진", "회화"})
     @DisplayName("작가 상세는 최신 참여 프로필과 공개 전시·작품, 집계값을 반환한다")
-    void returnsArtistDetailInV2Format() {
+    void returnsArtistDetailInV2Format(String category) {
         UUID artistId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
         UUID exhibitionId = UUID.randomUUID();
@@ -782,6 +787,7 @@ class ArtistServiceImplTest {
                 .id(artworkId)
                 .title("숨")
                 .mainImg("https://cdn.test/artwork.webp")
+                .category(category)
                 .build();
 
         when(artistRepository.findById(artistId))
@@ -820,6 +826,7 @@ class ArtistServiceImplTest {
         assertEquals("두록아트홀",
                 response.getExhibitions().get(0).location());
         assertEquals(artworkId, response.getArtworks().get(0).artworkId());
+        assertEquals(category, response.getArtworks().get(0).category());
         assertEquals(12, response.getLikeCount());
         assertTrue(response.isLiked());
         assertEquals(340L, response.getViewCount());

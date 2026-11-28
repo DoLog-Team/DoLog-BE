@@ -480,7 +480,8 @@ public class ArtistServiceImpl implements ArtistService {
                 .map(artwork -> new ArtistPublicResponse.ArtworkItem(
                         artwork.getId(),
                         artwork.getTitle(),
-                        artwork.getMainImg()
+                        artwork.getMainImg(),
+                        artwork.getCategory()
                 ))
                 .toList();
 
