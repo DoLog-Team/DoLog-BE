@@ -47,7 +47,8 @@ public class ArtistPublicResponse {
     public record ArtworkItem(
             UUID artworkId,
             String title,
-            String mainImg
+            String mainImg,
+            String category
     ) {
     }
 }

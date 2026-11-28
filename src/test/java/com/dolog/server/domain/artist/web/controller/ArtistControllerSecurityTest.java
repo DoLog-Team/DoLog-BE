@@ -10,6 +10,9 @@ import com.dolog.server.global.jwt.JwtUserDetailsService;
 import com.dolog.server.domain.like.support.VisitorIdResolver;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -22,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
@@ -98,9 +102,11 @@ class ArtistControllerSecurityTest {
         verify(artistService).getArtists(null, 0, 10);
     }
 
-    @Test
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"사진", "회화"})
     @DisplayName("비로그인 사용자도 v2 형식의 작가 상세를 조회할 수 있다")
-    void publicArtistDetailReturnsV2Response() throws Exception {
+    void publicArtistDetailReturnsV2Response(String category) throws Exception {
         UUID artistId = UUID.randomUUID();
         UUID profileId = UUID.randomUUID();
         UUID exhibitionId = UUID.randomUUID();
@@ -131,7 +137,8 @@ class ArtistControllerSecurityTest {
                 .artworks(List.of(new ArtistPublicResponse.ArtworkItem(
                         artworkId,
                         "숨",
-                        "https://cdn.test/artwork.webp"
+                        "https://cdn.test/artwork.webp",
+                        category
                 )))
                 .likeCount(12)
                 .liked(true)
@@ -163,6 +170,8 @@ class ArtistControllerSecurityTest {
                 .andExpect(jsonPath("$.data.exhibitions[0].startDate").value("2026-11-28"))
                 .andExpect(jsonPath("$.data.artworks[0].artworkId").value(artworkId.toString()))
                 .andExpect(jsonPath("$.data.artworks[0].title").value("숨"))
+                .andExpect(jsonPath("$.data.artworks[0].category").hasJsonPath())
+                .andExpect(jsonPath("$.data.artworks[0].category").value(is(category)))
                 .andExpect(jsonPath("$.data.likeCount").value(12))
                 .andExpect(jsonPath("$.data.liked").value(true))
                 .andExpect(jsonPath("$.data.viewCount").value(340))
